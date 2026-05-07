@@ -7,6 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "build:server": "tsc -p server/tsconfig.json",
+    "start:server": "node dist-server/server/index.js",
     "server": "ts-node --project server/tsconfig.json server/index.ts",
     "server:dev": "nodemon --exec \"ts-node --project server/tsconfig.json server/index.ts\"",
     "setup": "ts-node --project server/tsconfig.json server/setup.ts",
