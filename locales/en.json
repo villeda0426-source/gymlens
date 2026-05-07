@@ -1,0 +1,131 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try Again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "share": "Share",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "or": "or",
+    "and": "and"
+  },
+  "tabs": {
+    "scan": "Scan",
+    "search": "Search",
+    "saved": "Saved",
+    "profile": "Profile"
+  },
+  "camera": {
+    "title": "GymLens",
+    "capture": "Tap to identify equipment",
+    "upload": "Upload from Library",
+    "analyzing": "Analyzing...",
+    "analyzing_subtitle": "Identifying your equipment",
+    "retake": "Retake",
+    "identify": "Identify Equipment",
+    "permission_title": "Camera Access Required",
+    "permission_message": "GymLens needs camera access to identify gym equipment.",
+    "permission_button": "Grant Access",
+    "no_camera": "No camera available"
+  },
+  "equipment": {
+    "tutorial": "Tutorial",
+    "safety": "Safety Tips",
+    "videos": "Videos",
+    "difficulty": "Difficulty",
+    "muscle_groups": "Muscle Groups",
+    "step": "Step",
+    "beginner": "Beginner",
+    "intermediate": "Intermediate",
+    "advanced": "Advanced",
+    "save_equipment": "Save Equipment",
+    "saved": "Saved",
+    "categories": {
+      "all": "All",
+      "machine": "Machines",
+      "free_weight": "Free Weights",
+      "cable": "Cables",
+      "cardio": "Cardio",
+      "accessory": "Accessories"
+    },
+    "confidence": "Confidence",
+    "identified_as": "Identified as"
+  },
+  "search": {
+    "placeholder": "Search equipment...",
+    "no_results": "No equipment found",
+    "no_results_subtitle": "Try a different search term or use the camera to identify equipment",
+    "try_camera": "Try Camera",
+    "results_count": "{{count}} results"
+  },
+  "saved": {
+    "title": "Saved Equipment",
+    "empty": "No saved equipment yet",
+    "empty_subtitle": "Scan or search for equipment to save it here",
+    "start_scanning": "Start Scanning"
+  },
+  "auth": {
+    "login": "Log In",
+    "register": "Sign Up",
+    "logout": "Log Out",
+    "email": "Email",
+    "password": "Password",
+    "username": "Username",
+    "email_placeholder": "you@example.com",
+    "password_placeholder": "Password",
+    "username_placeholder": "Your name",
+    "no_account": "Don't have an account?",
+    "have_account": "Already have an account?",
+    "sign_up": "Sign Up",
+    "sign_in": "Sign In",
+    "continue_guest": "Continue as Guest",
+    "guest_warning": "Guest mode: {{remaining}} free identifications remaining",
+    "signup_prompt_title": "Get Full Access",
+    "signup_prompt_message": "Create a free account to save your identification history, bookmark equipment, and sync across devices.",
+    "signup_prompt_cta": "Create Free Account",
+    "maybe_later": "Maybe Later"
+  },
+  "profile": {
+    "title": "Profile",
+    "settings": "Settings",
+    "language": "Language",
+    "history": "Identification History",
+    "saved_equipment": "Saved Equipment",
+    "feedback": "Send Feedback",
+    "sign_out": "Sign Out",
+    "no_history": "No identification history yet",
+    "member_since": "Member since {{date}}"
+  },
+  "feedback": {
+    "title": "Send Feedback",
+    "subtitle": "Help us improve GymLens",
+    "rating_label": "How would you rate this identification?",
+    "category_label": "What's the issue?",
+    "message_label": "Tell us more (optional)",
+    "message_placeholder": "Describe the issue or suggestion...",
+    "submit": "Submit Feedback",
+    "thank_you": "Thank You!",
+    "thank_you_message": "Your feedback helps us improve GymLens for everyone.",
+    "categories": {
+      "wrong_id": "Wrong Identification",
+      "missing_info": "Missing Information",
+      "video_quality": "Video Quality",
+      "other": "Other"
+    }
+  },
+  "language": {
+    "en": "English",
+    "es": "Español"
+  },
+  "errors": {
+    "network": "Network error. Please check your connection.",
+    "identification_failed": "Could not identify equipment. Please try a clearer photo.",
+    "auth_failed": "Authentication failed. Please try again.",
+    "save_failed": "Could not save. Please try again."
+  }
+}

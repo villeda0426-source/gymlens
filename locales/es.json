@@ -1,0 +1,131 @@
+{
+  "common": {
+    "loading": "Cargando...",
+    "error": "Algo salió mal",
+    "retry": "Intentar de nuevo",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "share": "Compartir",
+    "close": "Cerrar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "done": "Listo",
+    "or": "o",
+    "and": "y"
+  },
+  "tabs": {
+    "scan": "Escanear",
+    "search": "Buscar",
+    "saved": "Guardado",
+    "profile": "Perfil"
+  },
+  "camera": {
+    "title": "GymLens",
+    "capture": "Toca para identificar equipo",
+    "upload": "Subir desde Galería",
+    "analyzing": "Analizando...",
+    "analyzing_subtitle": "Identificando tu equipo",
+    "retake": "Repetir",
+    "identify": "Identificar Equipo",
+    "permission_title": "Acceso a Cámara Requerido",
+    "permission_message": "GymLens necesita acceso a la cámara para identificar equipos del gimnasio.",
+    "permission_button": "Conceder Acceso",
+    "no_camera": "Cámara no disponible"
+  },
+  "equipment": {
+    "tutorial": "Tutorial",
+    "safety": "Consejos de Seguridad",
+    "videos": "Videos",
+    "difficulty": "Dificultad",
+    "muscle_groups": "Grupos Musculares",
+    "step": "Paso",
+    "beginner": "Principiante",
+    "intermediate": "Intermedio",
+    "advanced": "Avanzado",
+    "save_equipment": "Guardar Equipo",
+    "saved": "Guardado",
+    "categories": {
+      "all": "Todo",
+      "machine": "Máquinas",
+      "free_weight": "Pesas Libres",
+      "cable": "Cables",
+      "cardio": "Cardio",
+      "accessory": "Accesorios"
+    },
+    "confidence": "Confianza",
+    "identified_as": "Identificado como"
+  },
+  "search": {
+    "placeholder": "Buscar equipos...",
+    "no_results": "No se encontró equipo",
+    "no_results_subtitle": "Intenta con otro término o usa la cámara para identificar equipo",
+    "try_camera": "Usar Cámara",
+    "results_count": "{{count}} resultados"
+  },
+  "saved": {
+    "title": "Equipo Guardado",
+    "empty": "No hay equipo guardado aún",
+    "empty_subtitle": "Escanea o busca equipo para guardarlo aquí",
+    "start_scanning": "Comenzar a Escanear"
+  },
+  "auth": {
+    "login": "Iniciar Sesión",
+    "register": "Registrarse",
+    "logout": "Cerrar Sesión",
+    "email": "Correo",
+    "password": "Contraseña",
+    "username": "Nombre de usuario",
+    "email_placeholder": "tu@ejemplo.com",
+    "password_placeholder": "Contraseña",
+    "username_placeholder": "Tu nombre",
+    "no_account": "¿No tienes cuenta?",
+    "have_account": "¿Ya tienes cuenta?",
+    "sign_up": "Registrarse",
+    "sign_in": "Iniciar Sesión",
+    "continue_guest": "Continuar como Invitado",
+    "guest_warning": "Modo invitado: {{remaining}} identificaciones gratuitas restantes",
+    "signup_prompt_title": "Acceso Completo",
+    "signup_prompt_message": "Crea una cuenta gratis para guardar tu historial, marcar equipos y sincronizar entre dispositivos.",
+    "signup_prompt_cta": "Crear Cuenta Gratis",
+    "maybe_later": "Quizás después"
+  },
+  "profile": {
+    "title": "Perfil",
+    "settings": "Configuración",
+    "language": "Idioma",
+    "history": "Historial de Identificaciones",
+    "saved_equipment": "Equipo Guardado",
+    "feedback": "Enviar Comentarios",
+    "sign_out": "Cerrar Sesión",
+    "no_history": "Sin historial de identificaciones aún",
+    "member_since": "Miembro desde {{date}}"
+  },
+  "feedback": {
+    "title": "Enviar Comentarios",
+    "subtitle": "Ayúdanos a mejorar GymLens",
+    "rating_label": "¿Cómo calificarías esta identificación?",
+    "category_label": "¿Cuál es el problema?",
+    "message_label": "Cuéntanos más (opcional)",
+    "message_placeholder": "Describe el problema o sugerencia...",
+    "submit": "Enviar Comentarios",
+    "thank_you": "¡Gracias!",
+    "thank_you_message": "Tu retroalimentación nos ayuda a mejorar GymLens para todos.",
+    "categories": {
+      "wrong_id": "Identificación Incorrecta",
+      "missing_info": "Información Faltante",
+      "video_quality": "Calidad de Video",
+      "other": "Otro"
+    }
+  },
+  "language": {
+    "en": "English",
+    "es": "Español"
+  },
+  "errors": {
+    "network": "Error de red. Por favor revisa tu conexión.",
+    "identification_failed": "No se pudo identificar el equipo. Por favor intenta con una foto más clara.",
+    "auth_failed": "Autenticación fallida. Por favor intenta de nuevo.",
+    "save_failed": "No se pudo guardar. Por favor intenta de nuevo."
+  }
+}
