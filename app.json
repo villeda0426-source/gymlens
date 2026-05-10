@@ -15,6 +15,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.gymlens.app",
+      "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "GymLens uses your camera to identify gym equipment.",
         "NSPhotoLibraryUsageDescription": "GymLens accesses your photo library to identify gym equipment."
