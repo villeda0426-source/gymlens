@@ -6,7 +6,7 @@
   "deploy": {
     "startCommand": "node dist-server/server/index.js",
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 30,
+    "healthcheckTimeout": 60,
     "restartPolicyType": "on_failure",
     "restartPolicyMaxRetries": 3
   }
