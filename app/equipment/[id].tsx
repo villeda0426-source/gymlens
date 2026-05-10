@@ -140,7 +140,7 @@ export default function EquipmentDetailScreen() {
     if (!equipment) return;
     await Share.share({
       title: equipment.name,
-      message: `Check out ${equipment.name} on GymLens!\n\n${equipment.description}`,
+      message: `Check out ${equipment.name} on CoachLift!\n\n${equipment.description}`,
     });
   };
 

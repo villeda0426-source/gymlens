@@ -21,7 +21,7 @@
     "profile": "Profile"
   },
   "camera": {
-    "title": "GymLens",
+    "title": "CoachLift",
     "capture": "Tap to identify equipment",
     "upload": "Upload from Library",
     "analyzing": "Analyzing...",
@@ -29,7 +29,7 @@
     "retake": "Retake",
     "identify": "Identify Equipment",
     "permission_title": "Camera Access Required",
-    "permission_message": "GymLens needs camera access to identify gym equipment.",
+    "permission_message": "CoachLift needs camera access to identify gym equipment.",
     "permission_button": "Grant Access",
     "no_camera": "No camera available"
   },
@@ -103,14 +103,14 @@
   },
   "feedback": {
     "title": "Send Feedback",
-    "subtitle": "Help us improve GymLens",
+    "subtitle": "Help us improve CoachLift",
     "rating_label": "How would you rate this identification?",
     "category_label": "What's the issue?",
     "message_label": "Tell us more (optional)",
     "message_placeholder": "Describe the issue or suggestion...",
     "submit": "Submit Feedback",
     "thank_you": "Thank You!",
-    "thank_you_message": "Your feedback helps us improve GymLens for everyone.",
+    "thank_you_message": "Your feedback helps us improve CoachLift for everyone.",
     "categories": {
       "wrong_id": "Wrong Identification",
       "missing_info": "Missing Information",

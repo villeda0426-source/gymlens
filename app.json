@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "GymLens",
-    "slug": "gymlens",
+    "name": "CoachLift",
+    "slug": "coachlift",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,11 +14,11 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.gymlens.app",
+      "bundleIdentifier": "com.coachlift.app",
       "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "GymLens uses your camera to identify gym equipment.",
-        "NSPhotoLibraryUsageDescription": "GymLens accesses your photo library to identify gym equipment."
+        "NSCameraUsageDescription": "CoachLift uses your camera to identify gym equipment.",
+        "NSPhotoLibraryUsageDescription": "CoachLift accesses your photo library to identify gym equipment."
       }
     },
     "android": {
@@ -26,7 +26,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0A0A0A"
       },
-      "package": "com.gymlens.app",
+      "package": "com.coachlift.app",
       "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"]
     },
     "web": {
@@ -38,11 +38,11 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "GymLens accesses your photos to identify gym equipment."
+          "photosPermission": "CoachLift accesses your photos to identify gym equipment."
         }
       ]
     ],
-    "scheme": "gymlens",
+    "scheme": "coachlift",
     "experiments": {
       "typedRoutes": true
     }

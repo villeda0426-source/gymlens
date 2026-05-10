@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const GUEST_SAVED_KEY = "gymlens_guest_saved";
+const GUEST_SAVED_KEY = "coachlift_guest_saved";
 
 interface EquipmentResult {
   id?: string;

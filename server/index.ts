@@ -24,7 +24,7 @@ app.use("/api/videos", videosRouter);
 
 const PORT = Number(process.env.PORT) || 3001;
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`GymLens server running on 0.0.0.0:${PORT}`);
+  console.log(`CoachLift server running on 0.0.0.0:${PORT}`);
 });
 
 export default app;

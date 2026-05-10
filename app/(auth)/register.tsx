@@ -45,7 +45,7 @@ export default function RegisterScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
-        <Text style={styles.logo}>GymLens</Text>
+        <Text style={styles.logo}>CoachLift</Text>
         <Text style={styles.title}>{t("auth.register")}</Text>
 
         <View style={styles.form}>

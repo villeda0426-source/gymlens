@@ -79,7 +79,7 @@ export default function SearchScreen() {
           <Text style={styles.emptyEmoji}>⚠️</Text>
           <Text style={styles.emptyTitle}>Could not reach server</Text>
           <Text style={styles.emptySubtitle}>
-            Make sure the GymLens server is running and your device is on the same network.
+            Make sure the CoachLift server is running and your device is on the same network.
           </Text>
           <TouchableOpacity onPress={() => search(query, activeCategory)} style={styles.cameraButton}>
             <Text style={styles.cameraButtonText}>Retry</Text>

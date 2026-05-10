@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import en from "@/locales/en.json";
 import es from "@/locales/es.json";
 
-const LANGUAGE_KEY = "gymlens_language";
+const LANGUAGE_KEY = "coachlift_language";
 
 export async function getStoredLanguage(): Promise<string> {
   try {

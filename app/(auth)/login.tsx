@@ -39,7 +39,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.inner}>
-        <Text style={styles.logo}>GymLens</Text>
+        <Text style={styles.logo}>CoachLift</Text>
         <Text style={styles.title}>{t("auth.login")}</Text>
 
         <View style={styles.form}>

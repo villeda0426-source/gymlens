@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const GUEST_USES_KEY = "gymlens_guest_uses";
+const GUEST_USES_KEY = "coachlift_guest_uses";
 const MAX_GUEST_USES = 3;
 
 interface AuthState {

@@ -1,5 +1,5 @@
 /**
- * Creates the GymLens database schema in Supabase.
+ * Creates the CoachLift database schema in Supabase.
  * Requires SUPABASE_DB_PASSWORD in .env (find it at:
  *   Supabase Dashboard → Project Settings → Database → Database password)
  *
