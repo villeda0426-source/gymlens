@@ -1,6 +1,7 @@
 import React from "react";
 import { View, ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { colors } from "@/constants/theme";
 
 interface SafeScreenProps {
   children: React.ReactNode;
@@ -10,7 +11,7 @@ interface SafeScreenProps {
 
 export default function SafeScreen({ children, style, edges = ["top", "bottom"] }: SafeScreenProps) {
   return (
-    <SafeAreaView style={[{ flex: 1, backgroundColor: "#0A0A0A" }, style]} edges={edges}>
+    <SafeAreaView style={[{ flex: 1, backgroundColor: colors.bg }, style]} edges={edges}>
       {children}
     </SafeAreaView>
   );

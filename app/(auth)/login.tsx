@@ -13,6 +13,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { colors, fonts } from "@/constants/theme";
 
 export default function LoginScreen() {
   const { t } = useTranslation();
@@ -39,7 +40,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.inner}>
-        <Text style={styles.logo}>CoachLift</Text>
+        <Text style={styles.logoCoach}>Coach<Text style={styles.logoLift}>lift</Text></Text>
         <Text style={styles.title}>{t("auth.login")}</Text>
 
         <View style={styles.form}>
@@ -48,7 +49,7 @@ export default function LoginScreen() {
             <TextInput
               style={styles.input}
               placeholder={t("auth.email_placeholder")}
-              placeholderTextColor="#888888"
+              placeholderTextColor={colors.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -62,7 +63,7 @@ export default function LoginScreen() {
             <TextInput
               style={styles.input}
               placeholder={t("auth.password_placeholder")}
-              placeholderTextColor="#888888"
+              placeholderTextColor={colors.textMuted}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -75,7 +76,7 @@ export default function LoginScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#0A0A0A" />
+              <ActivityIndicator color={colors.white} />
             ) : (
               <Text style={styles.buttonText}>{t("auth.sign_in")}</Text>
             )}
@@ -98,26 +99,27 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0A0A0A" },
+  container: { flex: 1, backgroundColor: colors.bg },
   inner: { flex: 1, paddingHorizontal: 28, paddingTop: 80, paddingBottom: 40 },
-  logo: { color: "#E8FF47", fontSize: 36, fontWeight: "900", letterSpacing: 2, marginBottom: 8 },
-  title: { color: "#F5F5F5", fontSize: 26, fontWeight: "700", marginBottom: 40 },
+  logoCoach: { color: colors.text, fontSize: 40, fontFamily: fonts.heading, marginBottom: 8 },
+  logoLift: { color: colors.coral },
+  title: { color: colors.text, fontSize: 26, fontFamily: fonts.bold, marginBottom: 40 },
   form: { gap: 20 },
   field: { gap: 8 },
-  label: { color: "#888888", fontSize: 13, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 },
+  label: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.semiBold, textTransform: "uppercase", letterSpacing: 0.5 },
   input: {
-    backgroundColor: "#141414", borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-    color: "#F5F5F5", fontSize: 15, borderWidth: 1, borderColor: "#2A2A2A",
+    backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+    color: colors.text, fontSize: 15, fontFamily: fonts.body, borderWidth: 1, borderColor: colors.cardBorder,
   },
   button: {
-    backgroundColor: "#E8FF47", borderRadius: 14, paddingVertical: 16,
+    backgroundColor: colors.coral, borderRadius: 14, paddingVertical: 16,
     alignItems: "center", marginTop: 8,
   },
   buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: "#0A0A0A", fontSize: 16, fontWeight: "800" },
+  buttonText: { color: colors.white, fontSize: 16, fontFamily: fonts.extraBold },
   footer: { flexDirection: "row", justifyContent: "center", marginTop: 32 },
-  footerText: { color: "#888888", fontSize: 14 },
-  link: { color: "#E8FF47", fontSize: 14, fontWeight: "700" },
+  footerText: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body },
+  link: { color: colors.coral, fontSize: 14, fontFamily: fonts.bold },
   guestButton: { alignItems: "center", marginTop: 16 },
-  guestText: { color: "#888888", fontSize: 14 },
+  guestText: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.body },
 });

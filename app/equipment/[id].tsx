@@ -21,11 +21,12 @@ import MuscleMapView from "@/components/Equipment/MuscleMapView";
 import FeedbackBanner from "@/components/UI/FeedbackBanner";
 import { useEquipmentStore } from "@/store/equipmentStore";
 import { useAuthStore } from "@/store/authStore";
+import { colors, fonts } from "@/constants/theme";
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  beginner: "#47FF8E",
-  intermediate: "#FFB547",
-  advanced: "#FF4747",
+  beginner: colors.lime,
+  intermediate: "#f59e0b",
+  advanced: colors.coral,
 };
 
 const TABS = ["tutorial", "safety", "videos"] as const;
@@ -148,7 +149,7 @@ export default function EquipmentDetailScreen() {
     return (
       <SafeScreen>
         <View style={styles.center}>
-          <ActivityIndicator color="#E8FF47" size="large" />
+          <ActivityIndicator color={colors.coral} size="large" />
         </View>
       </SafeScreen>
     );
@@ -311,7 +312,7 @@ export default function EquipmentDetailScreen() {
             <View style={styles.tabContent}>
               {videosLoading ? (
                 <View style={styles.videosLoading}>
-                  <ActivityIndicator color="#E8FF47" />
+                  <ActivityIndicator color={colors.coral} />
                   <Text style={styles.videosLoadingText}>Finding tutorial videos…</Text>
                 </View>
               ) : videos.length === 0 && videosFetched ? (
@@ -383,116 +384,114 @@ export default function EquipmentDetailScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
   errorEmoji: { fontSize: 48, marginBottom: 16 },
-  errorText: { color: "#F5F5F5", fontSize: 18, fontWeight: "700", marginBottom: 8, textAlign: "center" },
-  errorDetail: { color: "#888888", fontSize: 13, textAlign: "center", marginBottom: 24, lineHeight: 18 },
+  errorText: { color: colors.text, fontSize: 18, fontFamily: fonts.bold, marginBottom: 8, textAlign: "center" },
+  errorDetail: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.body, textAlign: "center", marginBottom: 24, lineHeight: 18 },
   errorActions: { flexDirection: "row", gap: 12 },
-  backButton: { backgroundColor: "#E8FF47", borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 },
-  backText: { color: "#0A0A0A", fontWeight: "700" },
-  backButtonOutline: { borderWidth: 1, borderColor: "#2A2A2A", borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 },
-  backButtonOutlineText: { color: "#888888", fontWeight: "700" },
+  backButton: { backgroundColor: colors.coral, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 },
+  backText: { color: colors.white, fontFamily: fonts.bold },
+  backButtonOutline: { borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 },
+  backButtonOutlineText: { color: colors.textSecondary, fontFamily: fonts.bold },
   header: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     paddingHorizontal: 16, paddingVertical: 12,
   },
   backBtn: { padding: 8 },
-  backIcon: { color: "#F5F5F5", fontSize: 32, fontWeight: "300", lineHeight: 32 },
+  backIcon: { color: colors.text, fontSize: 32, fontWeight: "300", lineHeight: 32 },
   headerActions: { flexDirection: "row", gap: 8 },
   actionBtn: {
     padding: 8, borderRadius: 10, flexDirection: "row", alignItems: "center", gap: 4,
   },
-  actionBtnSaved: { backgroundColor: "#E8FF4726", borderWidth: 1, borderColor: "#E8FF4750" },
+  actionBtnSaved: { backgroundColor: colors.coral + "18", borderWidth: 1, borderColor: colors.coral + "40" },
   actionIcon: { fontSize: 20 },
-  actionLabel: { color: "#888888", fontSize: 12, fontWeight: "600" },
-  actionLabelSaved: { color: "#E8FF47" },
+  actionLabel: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.semiBold },
+  actionLabelSaved: { color: colors.coral },
   heroMuscle: {
-    backgroundColor: "#0D0D0D",
+    backgroundColor: colors.bg,
     paddingTop: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#1A1A1A",
+    borderBottomColor: colors.cardBorder,
   },
   content: { padding: 20 },
   confidenceBadge: {
-    backgroundColor: "#E8FF4722", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4,
+    backgroundColor: colors.coral + "18", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4,
     alignSelf: "flex-start", marginBottom: 12,
   },
-  confidenceText: { color: "#E8FF47", fontSize: 11, fontWeight: "600" },
-  name: { color: "#F5F5F5", fontSize: 28, fontWeight: "800", marginBottom: 8, lineHeight: 34 },
-  description: { color: "#888888", fontSize: 14, lineHeight: 22, marginBottom: 16 },
+  confidenceText: { color: colors.coral, fontSize: 11, fontFamily: fonts.semiBold },
+  name: { color: colors.text, fontSize: 28, fontFamily: fonts.heading, marginBottom: 8, lineHeight: 34 },
+  description: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body, lineHeight: 22, marginBottom: 16 },
   metaRow: { flexDirection: "row", gap: 8, marginBottom: 20 },
   categoryTag: {
-    backgroundColor: "#2A2A2A", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5,
+    backgroundColor: colors.input, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5,
   },
-  categoryText: { color: "#F5F5F5", fontSize: 12, fontWeight: "600", textTransform: "uppercase" },
+  categoryText: { color: colors.text, fontSize: 12, fontFamily: fonts.semiBold, textTransform: "uppercase" },
   difficultyTag: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5 },
-  difficultyText: { fontSize: 12, fontWeight: "700", textTransform: "uppercase" },
+  difficultyText: { fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase" },
   section: { marginBottom: 20 },
-  sectionTitle: { color: "#888888", fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 },
+  sectionTitle: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 },
   tabBar: {
-    flexDirection: "row", backgroundColor: "#141414",
+    flexDirection: "row", backgroundColor: colors.input,
     borderRadius: 12, padding: 4, marginBottom: 20,
-    borderWidth: 1, borderColor: "#2A2A2A",
+    borderWidth: 1, borderColor: colors.cardBorder,
   },
   tab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 10 },
-  tabActive: { backgroundColor: "#E8FF47" },
-  tabText: { color: "#888888", fontSize: 13, fontWeight: "600" },
-  tabTextActive: { color: "#0A0A0A" },
+  tabActive: { backgroundColor: colors.coral },
+  tabText: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.semiBold },
+  tabTextActive: { color: colors.white },
   tabContent: { gap: 12 },
   stepCard: {
-    backgroundColor: "#141414", borderRadius: 12, padding: 16,
-    borderWidth: 1, borderColor: "#2A2A2A",
+    backgroundColor: colors.card, borderRadius: 12, padding: 16,
+    borderWidth: 1, borderColor: colors.cardBorder,
   },
   stepHeader: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
   stepNumber: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: "#E8FF47", alignItems: "center", justifyContent: "center", flexShrink: 0,
+    backgroundColor: colors.coral, alignItems: "center", justifyContent: "center", flexShrink: 0,
   },
-  stepNumberText: { color: "#0A0A0A", fontSize: 14, fontWeight: "800" },
-  stepInstruction: { color: "#F5F5F5", fontSize: 14, lineHeight: 22, flex: 1 },
+  stepNumberText: { color: colors.white, fontSize: 14, fontFamily: fonts.extraBold },
+  stepInstruction: { color: colors.text, fontSize: 14, fontFamily: fonts.body, lineHeight: 22, flex: 1 },
   safetyItem: {
     flexDirection: "row", gap: 12,
-    backgroundColor: "#FF474711", borderRadius: 12, padding: 16,
-    borderWidth: 1, borderColor: "#FF474733",
+    backgroundColor: colors.coral + "0f", borderRadius: 12, padding: 16,
+    borderWidth: 1, borderColor: colors.coral + "30",
   },
   safetyIcon: { fontSize: 18, flexShrink: 0 },
-  safetyText: { color: "#F5F5F5", fontSize: 14, lineHeight: 22, flex: 1 },
+  safetyText: { color: colors.text, fontSize: 14, fontFamily: fonts.body, lineHeight: 22, flex: 1 },
   toast: {
     position: "absolute",
     bottom: 100,
     alignSelf: "center",
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.text,
     borderRadius: 24,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "#3A3A3A",
     shadowColor: "#000",
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
   },
-  toastText: { color: "#F5F5F5", fontSize: 14, fontWeight: "600" },
-  noVideos: { color: "#888888", textAlign: "center", paddingVertical: 16 },
+  toastText: { color: colors.white, fontSize: 14, fontFamily: fonts.semiBold },
+  noVideos: { color: colors.textMuted, fontFamily: fonts.body, textAlign: "center", paddingVertical: 16 },
   videosLoading: { alignItems: "center", paddingVertical: 40, gap: 12 },
-  videosLoadingText: { color: "#888888", fontSize: 13 },
+  videosLoadingText: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.body },
   videosEmpty: { alignItems: "center", paddingVertical: 32, gap: 16 },
-  retryVideos: { backgroundColor: "#1E1E1E", borderRadius: 10, borderWidth: 1, borderColor: "#2A2A2A", paddingHorizontal: 20, paddingVertical: 8 },
-  retryVideosText: { color: "#E8FF47", fontSize: 13, fontWeight: "700" },
+  retryVideos: { backgroundColor: colors.card, borderRadius: 10, borderWidth: 1, borderColor: colors.cardBorder, paddingHorizontal: 20, paddingVertical: 8 },
+  retryVideosText: { color: colors.coral, fontSize: 13, fontFamily: fonts.bold },
   videoCard: {
-    flexDirection: "row", backgroundColor: "#141414",
+    flexDirection: "row", backgroundColor: colors.card,
     borderRadius: 12, overflow: "hidden",
-    borderWidth: 1, borderColor: "#2A2A2A",
+    borderWidth: 1, borderColor: colors.cardBorder,
   },
   videoThumb: { width: 120, height: 80 },
   videoThumbPlaceholder: {
     width: 120, height: 80,
-    backgroundColor: "#2A2A2A", alignItems: "center", justifyContent: "center",
+    backgroundColor: colors.input, alignItems: "center", justifyContent: "center",
   },
   videoInfo: { flex: 1, padding: 12, justifyContent: "space-between" },
   curatedBadge: {
-    backgroundColor: "#47FF8E22", borderRadius: 4,
+    backgroundColor: colors.lime + "18", borderRadius: 4,
     paddingHorizontal: 6, paddingVertical: 2, alignSelf: "flex-start", marginBottom: 4,
   },
-  curatedText: { color: "#47FF8E", fontSize: 10, fontWeight: "700" },
-  videoTitle: { color: "#F5F5F5", fontSize: 13, lineHeight: 18 },
-  videoDuration: { color: "#888888", fontSize: 11, marginTop: 4 },
+  curatedText: { color: colors.lime, fontSize: 10, fontFamily: fonts.bold },
+  videoTitle: { color: colors.text, fontSize: 13, fontFamily: fonts.body, lineHeight: 18 },
+  videoDuration: { color: colors.textMuted, fontSize: 11, fontFamily: fonts.body, marginTop: 4 },
 });

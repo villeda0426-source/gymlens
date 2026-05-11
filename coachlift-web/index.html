@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coachlift — Your gym, finally explained.</title>
+  <meta name="description" content="Point your phone at any gym machine and instantly learn how to use it safely. Coachlift uses AI to identify equipment, show tutorials, and keep you injury-free." />
+  <meta property="og:title" content="Coachlift — Your gym, finally explained." />
+  <meta property="og:description" content="AI-powered gym equipment identifier for iOS. Point. Scan. Learn." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #faf7f0;
+      --card: #ffffff;
+      --border: #ede8dc;
+      --input-bg: #f0ece3;
+      --coral: #e04e4e;
+      --coral-dark: #c43d3d;
+      --coral-light: #f5d5d5;
+      --lime: #6aaa00;
+      --lime-light: #e8f5d0;
+      --text: #1a1a1a;
+      --text-secondary: #666666;
+      --text-muted: #999999;
+      --font-heading: 'Playfair Display', Georgia, serif;
+      --font-body: 'Nunito', system-ui, sans-serif;
+      --radius: 14px;
+      --shadow: 0 4px 24px rgba(26,26,26,0.08);
+      --shadow-lg: 0 16px 48px rgba(26,26,26,0.12);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Utilities ──────────────────────────────────────────── */
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: var(--radius);
+      font-family: var(--font-body);
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      white-space: nowrap;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-coral {
+      background: var(--coral);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(224,78,78,0.35);
+    }
+    .btn-coral:hover { background: var(--coral-dark); box-shadow: 0 6px 20px rgba(224,78,78,0.4); }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 2px solid var(--border);
+    }
+    .btn-outline:hover { border-color: var(--text); background: rgba(26,26,26,0.04); }
+
+    .logo-text {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 24px;
+      color: var(--text);
+      text-decoration: none;
+      letter-spacing: -0.3px;
+    }
+    .logo-text span { color: var(--coral); }
+
+    /* ── Nav ──────────────────────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(250,247,240,0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 68px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-actions { display: flex; align-items: center; gap: 16px; }
+
+    /* ── Hero ──────────────────────────────────────────────────── */
+    .hero {
+      padding: 80px 0 100px;
+      overflow: hidden;
+    }
+
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--lime-light);
+      color: var(--lime);
+      border: 1px solid rgba(106,170,0,0.3);
+      border-radius: 100px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .hero-eyebrow::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--lime);
+    }
+
+    .hero-headline {
+      font-family: var(--font-heading);
+      font-size: clamp(38px, 5vw, 60px);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -1px;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+    .hero-headline em {
+      font-style: normal;
+      color: var(--coral);
+    }
+
+    .hero-sub {
+      font-size: 18px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      max-width: 440px;
+      margin-bottom: 36px;
+    }
+
+    .hero-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn-apple {
+      background: var(--text);
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+    .btn-apple:hover { background: #333; }
+
+    .hero-social-proof {
+      margin-top: 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    .avatars {
+      display: flex;
+    }
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--bg);
+      background: var(--coral-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--coral);
+      margin-right: -8px;
+    }
+    .avatar:nth-child(2) { background: #d5e8f5; color: #2e7ab6; }
+    .avatar:nth-child(3) { background: var(--lime-light); color: var(--lime); }
+
+    /* ── Phone Mockup ──────────────────────────────────────────── */
+    .hero-visual {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      position: relative;
+    }
+
+    .phone-wrap {
+      position: relative;
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-12px); }
+    }
+
+    .phone-frame {
+      width: 260px;
+      height: 540px;
+      background: var(--text);
+      border-radius: 44px;
+      padding: 12px;
+      box-shadow:
+        0 32px 80px rgba(26,26,26,0.3),
+        0 8px 24px rgba(26,26,26,0.15),
+        inset 0 0 0 1px rgba(255,255,255,0.08);
+      position: relative;
+    }
+
+    .phone-notch {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100px;
+      height: 28px;
+      background: var(--text);
+      border-radius: 0 0 18px 18px;
+      z-index: 5;
+    }
+
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      border-radius: 34px;
+      overflow: hidden;
+      background: var(--bg);
+      position: relative;
+    }
+
+    /* Simulated app UI inside the phone */
+    .app-header {
+      background: var(--bg);
+      padding: 36px 16px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .app-greeting { font-size: 10px; color: var(--text-muted); font-family: var(--font-body); margin-bottom: 2px; }
+    .app-logo { font-family: var(--font-heading); font-size: 18px; color: var(--text); }
+    .app-logo span { color: var(--coral); }
+
+    .app-cta {
+      margin: 12px 14px;
+      background: var(--coral);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .app-cta-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .app-cta-label { font-size: 10px; font-family: var(--font-body); font-weight: 700; color: #fff; }
+    .app-cta-sub { font-size: 8px; font-family: var(--font-body); color: rgba(255,255,255,0.7); margin-top: 1px; }
+
+    .app-section-label {
+      font-size: 9px; font-weight: 700; font-family: var(--font-body);
+      color: var(--text); padding: 0 14px; margin-bottom: 6px;
+    }
+
+    .app-card {
+      margin: 0 14px 10px;
+      background: var(--card);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+    }
+    .app-card-thumb {
+      width: 56px; height: 56px;
+      background: linear-gradient(135deg, #f0ece3, #e8e0d4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .app-card-body { padding: 8px 10px; }
+    .app-card-name { font-size: 9px; font-weight: 700; font-family: var(--font-body); color: var(--text); margin-bottom: 3px; }
+    .app-card-tag {
+      display: inline-block;
+      background: rgba(106,170,0,0.12);
+      color: var(--lime);
+      border: 1px solid rgba(106,170,0,0.25);
+      border-radius: 4px;
+      font-size: 7px;
+      font-weight: 700;
+      font-family: var(--font-body);
+      padding: 1px 5px;
+      margin-right: 3px;
+    }
+
+    .app-tip {
+      margin: 0 14px;
+      background: var(--card);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 10px;
+    }
+    .app-tip-badge {
+      display: inline-block;
+      background: rgba(106,170,0,0.12);
+      color: var(--lime);
+      border: 1px solid rgba(106,170,0,0.25);
+      border-radius: 4px;
+      font-size: 7px; font-weight: 700; font-family: var(--font-body);
+      padding: 2px 6px; margin-bottom: 5px;
+    }
+    .app-tip-text { font-size: 8px; font-family: var(--font-body); color: var(--text-secondary); line-height: 1.5; }
+
+    /* Floating glow blobs */
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(60px);
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    .blob-coral {
+      width: 300px; height: 300px;
+      background: var(--coral);
+      right: -80px; top: -60px;
+      opacity: 0.12;
+    }
+    .blob-lime {
+      width: 220px; height: 220px;
+      background: var(--lime);
+      right: 80px; bottom: -40px;
+      opacity: 0.1;
+    }
+
+    /* ── Features / How it works ──────────────────────────────── */
+    .how {
+      padding: 80px 0;
+      scroll-margin-top: 80px;
+    }
+
+    .section-eyebrow {
+      text-align: center;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(224,78,78,0.08);
+      color: var(--coral);
+      border: 1px solid rgba(224,78,78,0.2);
+      border-radius: 100px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 56px;
+    }
+
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    .section-sub {
+      font-size: 17px;
+      color: var(--text-secondary);
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .step-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px 28px;
+      position: relative;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .step-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-4px); }
+
+    .step-number {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: var(--coral);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      font-weight: 800;
+      font-family: var(--font-body);
+      margin-bottom: 20px;
+    }
+
+    .step-icon { font-size: 28px; margin-bottom: 12px; }
+    .step-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .step-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
+
+    .step-connector {
+      position: absolute;
+      top: 50px;
+      right: -13px;
+      width: 26px;
+      height: 2px;
+      background: var(--border);
+      z-index: 1;
+    }
+    .step-card:last-child .step-connector { display: none; }
+
+    /* ── Waitlist ──────────────────────────────────────────────── */
+    .waitlist {
+      padding: 80px 0 100px;
+      scroll-margin-top: 80px;
+    }
+
+    .waitlist-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 64px 48px;
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .waitlist-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--coral), var(--lime));
+    }
+
+    .waitlist-title {
+      font-family: var(--font-heading);
+      font-size: clamp(26px, 4vw, 36px);
+      font-weight: 900;
+      color: var(--text);
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .waitlist-sub {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 36px;
+      line-height: 1.65;
+    }
+
+    .waitlist-form {
+      display: flex;
+      gap: 10px;
+      max-width: 440px;
+      margin: 0 auto 16px;
+    }
+
+    .waitlist-input {
+      flex: 1;
+      padding: 14px 18px;
+      border-radius: var(--radius);
+      border: 1.5px solid var(--border);
+      background: var(--input-bg);
+      font-family: var(--font-body);
+      font-size: 15px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .waitlist-input::placeholder { color: var(--text-muted); }
+    .waitlist-input:focus {
+      border-color: var(--coral);
+      box-shadow: 0 0 0 3px rgba(224,78,78,0.12);
+    }
+
+    .waitlist-note {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Form states */
+    .form-msg {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 20px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      max-width: 440px;
+      margin: 0 auto;
+    }
+    .form-msg.success {
+      display: flex;
+      background: var(--lime-light);
+      color: var(--lime);
+      border: 1px solid rgba(106,170,0,0.3);
+    }
+    .form-msg.error {
+      display: flex;
+      background: var(--coral-light);
+      color: var(--coral);
+      border: 1px solid rgba(224,78,78,0.3);
+    }
+
+    /* ── Footer ──────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .footer-copy {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+    .footer-links a {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer-links a:hover { color: var(--text); }
+
+    /* ── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .hero-inner {
+        grid-template-columns: 1fr;
+        gap: 48px;
+        text-align: center;
+      }
+      .hero-sub { margin: 0 auto 36px; }
+      .hero-buttons { justify-content: center; }
+      .hero-social-proof { justify-content: center; }
+      .hero-visual { order: -1; }
+      .phone-frame { width: 220px; height: 460px; }
+
+      .steps { grid-template-columns: 1fr; }
+      .step-connector { display: none; }
+      .nav-links { display: none; }
+    }
+
+    @media (max-width: 560px) {
+      .hero { padding: 48px 0 64px; }
+      .waitlist-card { padding: 40px 24px; }
+      .waitlist-form { flex-direction: column; }
+      .waitlist-input, .waitlist-form .btn { width: 100%; justify-content: center; }
+      .hero-buttons { flex-direction: column; align-items: center; }
+      .hero-buttons .btn { width: 100%; justify-content: center; }
+      .footer-inner { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ──────────────────────────────────────────────────────── -->
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <a href="#" class="logo-text" style="display:flex;align-items:center;gap:8px;">
+        <img src="logo.png" alt="Coachlift" style="height:48px;width:auto;display:block;" />
+        Coach<span>lift</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#waitlist">Get early access</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <a href="#waitlist" class="btn btn-coral" style="padding: 10px 22px; font-size: 14px;">
+          Join Waitlist
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+
+<!-- ── Hero ─────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-inner">
+
+      <!-- Left: copy -->
+      <div class="hero-copy">
+        <div class="hero-eyebrow">Coming soon to iOS</div>
+
+        <h1 class="hero-headline">
+          Your gym,<br />finally <em>explained.</em>
+        </h1>
+
+        <p class="hero-sub">
+          Point your phone at any machine and instantly see what it works,
+          how to use it safely, and step-by-step tutorials — powered by AI.
+        </p>
+
+        <div class="hero-buttons">
+          <a href="#waitlist" class="btn btn-apple">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+            </svg>
+            Download on iOS
+          </a>
+          <a href="#how" class="btn btn-outline">
+            See how it works
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+
+        <div class="hero-social-proof">
+          <div class="avatars">
+            <div class="avatar">A</div>
+            <div class="avatar">M</div>
+            <div class="avatar">J</div>
+          </div>
+          <span>Join <strong>500+</strong> gym-goers on the waitlist</span>
+        </div>
+      </div>
+
+      <!-- Right: phone mockup -->
+      <div class="hero-visual">
+        <div class="blob blob-coral"></div>
+        <div class="blob blob-lime"></div>
+
+        <div class="phone-wrap">
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+
+              <div class="app-header">
+                <div class="app-greeting">Good morning 👋</div>
+                <div class="app-logo">Coach<span>lift</span></div>
+              </div>
+
+              <div style="height:12px;"></div>
+
+              <div class="app-cta">
+                <div class="app-cta-icon">📷</div>
+                <div>
+                  <div class="app-cta-label">Identify Equipment</div>
+                  <div class="app-cta-sub">Point camera at any gym machine</div>
+                </div>
+              </div>
+
+              <div style="height:14px;"></div>
+
+              <div class="app-section-label">Equipment Spotlight</div>
+              <div class="app-card">
+                <div class="app-card-thumb">🏋️</div>
+                <div class="app-card-body">
+                  <div class="app-card-name">Lat Pulldown Machine</div>
+                  <div style="margin-top:4px;">
+                    <span class="app-card-tag">lats</span>
+                    <span class="app-card-tag">back</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="height:10px;"></div>
+
+              <div class="app-tip">
+                <div class="app-tip-badge">Today's Tip</div>
+                <div class="app-tip-text">Focus on form over weight — quality reps build more muscle safely.</div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ── How it works ──────────────────────────────────────────────── -->
+<section class="how" id="how">
+  <div class="container">
+
+    <div class="section-header">
+      <div style="display:flex; justify-content:center; margin-bottom:16px;">
+        <span class="section-eyebrow">How it works</span>
+      </div>
+      <h2 class="section-title">Three steps to gym confidence</h2>
+      <p class="section-sub">
+        No personal trainer needed. Coachlift turns your phone into an
+        expert spotter — available anytime, for any machine.
+      </p>
+    </div>
+
+    <div class="steps">
+      <div class="step-card">
+        <div class="step-connector"></div>
+        <div class="step-number">1</div>
+        <div class="step-icon">📷</div>
+        <div class="step-title">Point &amp; scan</div>
+        <p class="step-desc">
+          Open Coachlift and point your camera at any gym machine or free weight.
+          Our AI identifies it in seconds.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-connector"></div>
+        <div class="step-number">2</div>
+        <div class="step-icon">🧠</div>
+        <div class="step-title">Get instant insights</div>
+        <p class="step-desc">
+          See the equipment name, the muscle groups it targets,
+          and curated video tutorials — all without leaving the gym floor.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-number">3</div>
+        <div class="step-icon">💪</div>
+        <div class="step-title">Train safely</div>
+        <p class="step-desc">
+          Follow step-by-step instructions and safety tips to get the most
+          out of every exercise with zero guesswork.
+        </p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ── Waitlist ──────────────────────────────────────────────────── -->
+<section class="waitlist" id="waitlist">
+  <div class="container">
+    <div class="waitlist-card">
+
+      <h2 class="waitlist-title">Get early access</h2>
+      <p class="waitlist-sub">
+        Coachlift is launching soon on iOS. Join the waitlist and be first in line
+        — no spam, just a heads-up when it's ready.
+      </p>
+
+      <form
+        id="waitlist-form"
+        action="https://formspree.io/f/xzdoybbv"
+        method="POST"
+      >
+        <div class="waitlist-form">
+          <input
+            type="email"
+            name="email"
+            class="waitlist-input"
+            placeholder="your@email.com"
+            required
+            autocomplete="email"
+          />
+          <button type="submit" class="btn btn-coral">Join Waitlist</button>
+        </div>
+      </form>
+
+      <div class="form-msg" id="form-success">
+        ✓ You're on the list! We'll be in touch soon.
+      </div>
+      <div class="form-msg" id="form-error">
+        ✕ Something went wrong. Please try again.
+      </div>
+
+      <p class="waitlist-note">No spam. Unsubscribe anytime.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ── Footer ────────────────────────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <a href="#" class="logo-text" style="font-size:20px;display:flex;align-items:center;gap:8px;">
+        <img src="logo.png" alt="Coachlift" style="height:36px;width:auto;display:block;" />
+        Coach<span>lift</span>
+      </a>
+      <div class="footer-links">
+        <a href="#how">How it works</a>
+        <a href="#waitlist">Waitlist</a>
+      </div>
+      <p class="footer-copy">© 2025 Coachlift. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
+
+
+<script>
+  const form = document.getElementById('waitlist-form');
+  const successMsg = document.getElementById('form-success');
+  const errorMsg = document.getElementById('form-error');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const btn = form.querySelector('button[type="submit"]');
+    const originalText = btn.textContent;
+    btn.textContent = 'Joining…';
+    btn.disabled = true;
+    successMsg.style.display = 'none';
+    errorMsg.style.display = 'none';
+
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { Accept: 'application/json' },
+      });
+
+      if (res.ok) {
+        form.style.display = 'none';
+        successMsg.classList.add('success');
+        successMsg.style.display = 'flex';
+        form.reset();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Submission failed');
+      }
+    } catch {
+      errorMsg.classList.add('error');
+      errorMsg.style.display = 'flex';
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>

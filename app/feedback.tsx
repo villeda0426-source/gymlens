@@ -8,7 +8,6 @@ import {
   ScrollView,
   ActivityIndicator,
   Animated,
-  Easing,
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -16,6 +15,8 @@ import * as Haptics from "expo-haptics";
 import SafeScreen from "@/components/Layout/SafeScreen";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
+import { colors, fonts } from "@/constants/theme";
+
 const CATEGORIES = ["wrong_id", "missing_info", "video_quality", "other"] as const;
 
 export default function FeedbackScreen() {
@@ -51,7 +52,6 @@ export default function FeedbackScreen() {
       setSubmitted(true);
       animateSuccess();
     } catch {
-      // silently fail — feedback is non-critical
       setSubmitted(true);
       animateSuccess();
     } finally {
@@ -89,7 +89,6 @@ export default function FeedbackScreen() {
       <ScrollView contentContainerStyle={styles.form} showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>{t("feedback.subtitle")}</Text>
 
-        {/* Star rating */}
         <Text style={styles.fieldLabel}>{t("feedback.rating_label")}</Text>
         <View style={styles.stars}>
           {[1, 2, 3, 4, 5].map((star) => (
@@ -105,7 +104,6 @@ export default function FeedbackScreen() {
           ))}
         </View>
 
-        {/* Category */}
         <Text style={styles.fieldLabel}>{t("feedback.category_label")}</Text>
         <View style={styles.categories}>
           {CATEGORIES.map((cat) => (
@@ -121,12 +119,11 @@ export default function FeedbackScreen() {
           ))}
         </View>
 
-        {/* Message */}
         <Text style={styles.fieldLabel}>{t("feedback.message_label")}</Text>
         <TextInput
           style={styles.textarea}
           placeholder={t("feedback.message_placeholder")}
-          placeholderTextColor="#888888"
+          placeholderTextColor={colors.textMuted}
           value={message}
           onChangeText={setMessage}
           multiline
@@ -140,7 +137,7 @@ export default function FeedbackScreen() {
           disabled={rating === 0 || loading}
         >
           {loading ? (
-            <ActivityIndicator color="#0A0A0A" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <Text style={styles.submitText}>{t("feedback.submit")}</Text>
           )}
@@ -155,45 +152,45 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 20, paddingVertical: 16,
   },
-  closeIcon: { color: "#888888", fontSize: 18, padding: 4 },
-  title: { color: "#F5F5F5", fontSize: 18, fontWeight: "700" },
+  closeIcon: { color: colors.textMuted, fontSize: 18, padding: 4 },
+  title: { color: colors.text, fontSize: 18, fontFamily: fonts.bold },
   form: { paddingHorizontal: 20, paddingBottom: 40, gap: 20 },
-  subtitle: { color: "#888888", fontSize: 14 },
-  fieldLabel: { color: "#888888", fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: -8 },
+  subtitle: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body },
+  fieldLabel: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: -8 },
   stars: { flexDirection: "row", gap: 12 },
-  star: { fontSize: 40, color: "#2A2A2A" },
-  starActive: { color: "#E8FF47" },
+  star: { fontSize: 40, color: colors.cardBorder },
+  starActive: { color: colors.coral },
   categories: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   categoryChip: {
-    backgroundColor: "#141414", borderRadius: 20,
+    backgroundColor: colors.card, borderRadius: 20,
     paddingHorizontal: 16, paddingVertical: 8,
-    borderWidth: 1, borderColor: "#2A2A2A",
+    borderWidth: 1, borderColor: colors.cardBorder,
   },
-  categoryChipActive: { backgroundColor: "#E8FF4722", borderColor: "#E8FF47" },
-  categoryChipText: { color: "#888888", fontSize: 13, fontWeight: "600" },
-  categoryChipTextActive: { color: "#E8FF47" },
+  categoryChipActive: { backgroundColor: colors.coral + "18", borderColor: colors.coral },
+  categoryChipText: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.semiBold },
+  categoryChipTextActive: { color: colors.coral },
   textarea: {
-    backgroundColor: "#141414", borderRadius: 12, padding: 16,
-    color: "#F5F5F5", fontSize: 14, minHeight: 100,
-    borderWidth: 1, borderColor: "#2A2A2A", lineHeight: 20,
+    backgroundColor: colors.card, borderRadius: 12, padding: 16,
+    color: colors.text, fontSize: 14, fontFamily: fonts.body, minHeight: 100,
+    borderWidth: 1, borderColor: colors.cardBorder, lineHeight: 20,
   },
   submitButton: {
-    backgroundColor: "#E8FF47", borderRadius: 14,
+    backgroundColor: colors.coral, borderRadius: 14,
     paddingVertical: 16, alignItems: "center",
   },
   submitDisabled: { opacity: 0.4 },
-  submitText: { color: "#0A0A0A", fontSize: 16, fontWeight: "800" },
+  submitText: { color: colors.white, fontSize: 16, fontFamily: fonts.extraBold },
   success: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40 },
   checkCircle: {
     width: 100, height: 100, borderRadius: 50,
-    backgroundColor: "#47FF8E", alignItems: "center", justifyContent: "center", marginBottom: 28,
+    backgroundColor: colors.lime, alignItems: "center", justifyContent: "center", marginBottom: 28,
   },
-  checkIcon: { color: "#0A0A0A", fontSize: 48, fontWeight: "900" },
-  thankYouTitle: { color: "#F5F5F5", fontSize: 28, fontWeight: "800", marginBottom: 12 },
-  thankYouMessage: { color: "#888888", fontSize: 15, textAlign: "center", lineHeight: 22, marginBottom: 40 },
+  checkIcon: { color: colors.white, fontSize: 48, fontFamily: fonts.extraBold },
+  thankYouTitle: { color: colors.text, fontSize: 28, fontFamily: fonts.heading, marginBottom: 12 },
+  thankYouMessage: { color: colors.textSecondary, fontSize: 15, fontFamily: fonts.body, textAlign: "center", lineHeight: 22, marginBottom: 40 },
   doneButton: {
-    backgroundColor: "#E8FF47", borderRadius: 14,
+    backgroundColor: colors.coral, borderRadius: 14,
     paddingHorizontal: 48, paddingVertical: 16,
   },
-  doneText: { color: "#0A0A0A", fontSize: 16, fontWeight: "800" },
+  doneText: { color: colors.white, fontSize: 16, fontFamily: fonts.extraBold },
 });

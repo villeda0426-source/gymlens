@@ -16,6 +16,7 @@ import EquipmentCard from "@/components/Equipment/EquipmentCard";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useEquipmentStore } from "@/store/equipmentStore";
+import { colors, fonts } from "@/constants/theme";
 
 const CATEGORIES = ["all", "machine", "free_weight", "cable", "cardio", "accessory"] as const;
 
@@ -24,7 +25,6 @@ export default function SavedScreen() {
   const router = useRouter();
   const { user, profile } = useAuthStore();
   const { guestSavedItems, loadSavedIds } = useEquipmentStore();
-  // Mirror the same gate as the detail screen
   const authenticatedUserId = user && profile ? user.id : null;
 
   const [userSaved, setUserSaved] = useState<any[]>([]);
@@ -73,7 +73,6 @@ export default function SavedScreen() {
         <Text style={styles.title}>{t("saved.title")}</Text>
       </View>
 
-      {/* Sign-in nudge for guests */}
       {!authenticatedUserId && (
         <TouchableOpacity
           onPress={() => router.push("/(auth)/login")}
@@ -102,7 +101,7 @@ export default function SavedScreen() {
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color="#E8FF47" size="large" />
+          <ActivityIndicator color={colors.coral} size="large" />
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.empty}>
@@ -122,7 +121,7 @@ export default function SavedScreen() {
           renderItem={({ item }) => <EquipmentCard item={item} />}
           contentContainerStyle={styles.list}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#E8FF47" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.coral} />
           }
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
@@ -138,22 +137,22 @@ export default function SavedScreen() {
 
 const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
-  title: { color: "#F5F5F5", fontSize: 28, fontWeight: "800" },
+  title: { color: colors.text, fontSize: 28, fontFamily: fonts.heading },
   syncBanner: {
     marginHorizontal: 16,
     marginBottom: 12,
-    backgroundColor: "#141414",
+    backgroundColor: colors.card,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: colors.cardBorder,
     paddingHorizontal: 14,
     paddingVertical: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  syncBannerText: { color: "#888888", fontSize: 12, flex: 1, marginRight: 8 },
-  syncBannerCta: { color: "#E8FF47", fontSize: 12, fontWeight: "700" },
+  syncBannerText: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.body, flex: 1, marginRight: 8 },
+  syncBannerCta: { color: colors.coral, fontSize: 12, fontFamily: fonts.bold },
   filters: {
     flexDirection: "row",
     paddingHorizontal: 12,
@@ -162,34 +161,35 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    backgroundColor: "#141414",
+    backgroundColor: colors.card,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: colors.cardBorder,
   },
-  chipActive: { backgroundColor: "#E8FF47", borderColor: "#E8FF47" },
-  chipText: { color: "#888888", fontSize: 12, fontWeight: "600" },
-  chipTextActive: { color: "#0A0A0A" },
+  chipActive: { backgroundColor: colors.coral, borderColor: colors.coral },
+  chipText: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.semiBold },
+  chipTextActive: { color: colors.white },
   list: { paddingHorizontal: 16, paddingBottom: 20 },
-  count: { color: "#888888", fontSize: 12, marginBottom: 8 },
+  count: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginBottom: 8 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
   emptyEmoji: { fontSize: 48, marginBottom: 16 },
-  emptyTitle: { color: "#F5F5F5", fontSize: 18, fontWeight: "700", marginBottom: 8 },
+  emptyTitle: { color: colors.text, fontSize: 18, fontFamily: fonts.bold, marginBottom: 8 },
   emptySubtitle: {
-    color: "#888888",
+    color: colors.textSecondary,
     fontSize: 14,
+    fontFamily: fonts.body,
     textAlign: "center",
     lineHeight: 20,
     marginBottom: 24,
   },
   cta: {
-    backgroundColor: "#E8FF47",
+    backgroundColor: colors.coral,
     borderRadius: 14,
     paddingHorizontal: 24,
     paddingVertical: 12,
   },
-  ctaText: { color: "#0A0A0A", fontSize: 14, fontWeight: "700" },
+  ctaText: { color: colors.white, fontSize: 14, fontFamily: fonts.bold },
 });

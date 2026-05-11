@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { setStoredLanguage } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
+import { colors, fonts } from "@/constants/theme";
 
 export default function LanguageToggle() {
   const { i18n } = useTranslation();
@@ -28,12 +29,12 @@ export default function LanguageToggle() {
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: "#2A2A2A",
+    backgroundColor: colors.input,
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "#E8FF47",
+    borderColor: colors.coral,
   },
-  text: { color: "#E8FF47", fontSize: 12, fontWeight: "700", letterSpacing: 1 },
+  text: { color: colors.coral, fontSize: 12, fontFamily: fonts.bold, letterSpacing: 1 },
 });

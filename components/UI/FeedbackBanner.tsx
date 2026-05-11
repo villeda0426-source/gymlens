@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
+import { colors, fonts } from "@/constants/theme";
 
 interface FeedbackBannerProps {
   identificationId?: string;
@@ -36,21 +37,21 @@ const styles = StyleSheet.create({
   banner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#141414",
+    backgroundColor: colors.card,
     borderTopWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: colors.cardBorder,
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 8,
   },
-  text: { color: "#F5F5F5", flex: 1, fontSize: 13 },
+  text: { color: colors.text, flex: 1, fontSize: 13, fontFamily: fonts.body },
   cta: {
-    backgroundColor: "#E8FF47",
+    backgroundColor: colors.coral,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  ctaText: { color: "#0A0A0A", fontSize: 12, fontWeight: "700" },
+  ctaText: { color: colors.white, fontSize: 12, fontFamily: fonts.bold },
   dismiss: { padding: 4 },
-  dismissText: { color: "#888888", fontSize: 16 },
+  dismissText: { color: colors.textMuted, fontSize: 16 },
 });

@@ -13,6 +13,7 @@ import SafeScreen from "@/components/Layout/SafeScreen";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import LanguageToggle from "@/components/UI/LanguageToggle";
+import { colors, fonts } from "@/constants/theme";
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
@@ -113,43 +114,43 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   guest: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
   guestEmoji: { fontSize: 48, marginBottom: 16 },
-  guestTitle: { color: "#F5F5F5", fontSize: 24, fontWeight: "800", marginBottom: 12 },
-  guestSubtitle: { color: "#888888", fontSize: 14, textAlign: "center", lineHeight: 20, marginBottom: 28 },
+  guestTitle: { color: colors.text, fontSize: 24, fontFamily: fonts.heading, marginBottom: 12 },
+  guestSubtitle: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body, textAlign: "center", lineHeight: 20, marginBottom: 28 },
   signUpButton: {
-    backgroundColor: "#E8FF47", borderRadius: 14, paddingHorizontal: 32, paddingVertical: 14,
+    backgroundColor: colors.coral, borderRadius: 14, paddingHorizontal: 32, paddingVertical: 14,
     width: "100%", alignItems: "center", marginBottom: 12,
   },
-  signUpText: { color: "#0A0A0A", fontSize: 16, fontWeight: "800" },
+  signUpText: { color: colors.white, fontSize: 16, fontFamily: fonts.extraBold },
   loginButton: { alignItems: "center", paddingVertical: 12 },
-  loginText: { color: "#888888", fontSize: 14 },
+  loginText: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body },
   hero: { alignItems: "center", paddingTop: 32, paddingBottom: 24, paddingHorizontal: 20 },
   avatar: {
     width: 80, height: 80, borderRadius: 40,
-    backgroundColor: "#E8FF47", alignItems: "center", justifyContent: "center", marginBottom: 16,
+    backgroundColor: colors.coral, alignItems: "center", justifyContent: "center", marginBottom: 16,
   },
-  avatarText: { color: "#0A0A0A", fontSize: 32, fontWeight: "800" },
-  username: { color: "#F5F5F5", fontSize: 20, fontWeight: "700" },
-  memberSince: { color: "#888888", fontSize: 13, marginTop: 4 },
+  avatarText: { color: colors.white, fontSize: 32, fontFamily: fonts.extraBold },
+  username: { color: colors.text, fontSize: 20, fontFamily: fonts.bold },
+  memberSince: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.body, marginTop: 4 },
   stats: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: "#141414", borderRadius: 16, marginHorizontal: 16,
-    marginBottom: 24, paddingVertical: 20, borderWidth: 1, borderColor: "#2A2A2A",
+    backgroundColor: colors.card, borderRadius: 16, marginHorizontal: 16,
+    marginBottom: 24, paddingVertical: 20, borderWidth: 1, borderColor: colors.cardBorder,
   },
   stat: { flex: 1, alignItems: "center" },
-  statNumber: { color: "#E8FF47", fontSize: 28, fontWeight: "800" },
-  statLabel: { color: "#888888", fontSize: 12, marginTop: 4, textAlign: "center" },
-  statDivider: { width: 1, height: 40, backgroundColor: "#2A2A2A" },
+  statNumber: { color: colors.coral, fontSize: 28, fontFamily: fonts.extraBold },
+  statLabel: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 4, textAlign: "center" },
+  statDivider: { width: 1, height: 40, backgroundColor: colors.cardBorder },
   section: {
-    backgroundColor: "#141414", borderRadius: 16, marginHorizontal: 16,
-    marginBottom: 40, borderWidth: 1, borderColor: "#2A2A2A", overflow: "hidden",
+    backgroundColor: colors.card, borderRadius: 16, marginHorizontal: 16,
+    marginBottom: 40, borderWidth: 1, borderColor: colors.cardBorder, overflow: "hidden",
   },
   row: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 20, paddingVertical: 16,
-    borderBottomWidth: 1, borderBottomColor: "#2A2A2A",
+    borderBottomWidth: 1, borderBottomColor: colors.cardBorder,
   },
-  rowLabel: { color: "#F5F5F5", fontSize: 15 },
-  rowArrow: { color: "#888888", fontSize: 20 },
+  rowLabel: { color: colors.text, fontSize: 15, fontFamily: fonts.body },
+  rowArrow: { color: colors.textMuted, fontSize: 20 },
   danger: { borderBottomWidth: 0 },
-  dangerText: { color: "#FF4747", fontSize: 15, fontWeight: "600" },
+  dangerText: { color: colors.danger, fontSize: 15, fontFamily: fonts.semiBold },
 });

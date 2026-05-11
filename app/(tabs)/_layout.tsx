@@ -2,12 +2,31 @@ import React from "react";
 import { Tabs } from "expo-router";
 import { View, Text, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
+import { Ionicons } from "@expo/vector-icons";
+import { colors, fonts } from "@/constants/theme";
 
-function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
+type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
+
+interface TabIconProps {
+  icon: IoniconsName;
+  iconFocused: IoniconsName;
+  label: string;
+  focused: boolean;
+}
+
+function TabIcon({ icon, iconFocused, label, focused }: TabIconProps) {
   return (
     <View style={styles.tabItem}>
-      <Text style={styles.emoji}>{emoji}</Text>
-      <Text style={[styles.label, focused && styles.labelActive]}>{label}</Text>
+      <View style={[styles.dot, focused && styles.dotActive]}>
+        <Ionicons
+          name={focused ? iconFocused : icon}
+          size={18}
+          color={focused ? colors.white : colors.textMuted}
+        />
+      </View>
+      <Text style={[styles.label, focused && styles.labelActive]} numberOfLines={1}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -20,8 +39,6 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: "#E8FF47",
-        tabBarInactiveTintColor: "#888888",
         tabBarShowLabel: false,
       }}
     >
@@ -29,7 +46,15 @@ export default function TabsLayout() {
         name="index"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="📷" label={t("tabs.scan")} focused={focused} />
+            <TabIcon icon="home-outline" iconFocused="home" label="Home" focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="scan"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="scan-outline" iconFocused="scan" label={t("tabs.scan")} focused={focused} />
           ),
         }}
       />
@@ -37,7 +62,7 @@ export default function TabsLayout() {
         name="search"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🔍" label={t("tabs.search")} focused={focused} />
+            <TabIcon icon="search-outline" iconFocused="search" label={t("tabs.search")} focused={focused} />
           ),
         }}
       />
@@ -45,7 +70,7 @@ export default function TabsLayout() {
         name="saved"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🔖" label={t("tabs.saved")} focused={focused} />
+            <TabIcon icon="bookmark-outline" iconFocused="bookmark" label={t("tabs.saved")} focused={focused} />
           ),
         }}
       />
@@ -53,7 +78,7 @@ export default function TabsLayout() {
         name="profile"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="👤" label={t("tabs.profile")} focused={focused} />
+            <TabIcon icon="person-outline" iconFocused="person" label={t("tabs.profile")} focused={focused} />
           ),
         }}
       />
@@ -63,15 +88,36 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: "#0A0A0A",
-    borderTopColor: "#2A2A2A",
+    backgroundColor: colors.white,
+    borderTopColor: colors.cardBorder,
     borderTopWidth: 1,
-    height: 70,
-    paddingBottom: 8,
+    height: 76,
+    paddingBottom: 10,
     paddingTop: 8,
+    paddingHorizontal: 4,
   },
-  tabItem: { alignItems: "center", gap: 2 },
-  emoji: { fontSize: 22 },
-  label: { color: "#888888", fontSize: 10, fontWeight: "600" },
-  labelActive: { color: "#E8FF47" },
+  tabItem: {
+    alignItems: "center",
+    gap: 4,
+    minWidth: 0,
+  },
+  dot: {
+    width: 40,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: colors.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dotActive: {
+    backgroundColor: colors.coral,
+  },
+  label: {
+    color: colors.textMuted,
+    fontSize: 9,
+    fontFamily: fonts.semiBold,
+  },
+  labelActive: {
+    color: colors.coral,
+  },
 });

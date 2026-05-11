@@ -12,7 +12,9 @@ import { CameraView as ExpoCameraView, useCameraPermissions } from "expo-camera"
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
+import { Ionicons } from "@expo/vector-icons";
 import LanguageToggle from "@/components/UI/LanguageToggle";
+import { colors, fonts } from "@/constants/theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -70,9 +72,9 @@ export default function CameraViewComponent({ onCapture }: CameraViewComponentPr
   return (
     <View style={styles.container}>
       <ExpoCameraView ref={cameraRef} style={styles.camera} facing="back">
-        {/* Header */}
+        {/* Header — language toggle only; title is in the screen-level greeting header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>{t("camera.title")}</Text>
+          <View />
           <LanguageToggle />
         </View>
 
@@ -89,7 +91,9 @@ export default function CameraViewComponent({ onCapture }: CameraViewComponentPr
         {/* Controls */}
         <View style={styles.controls}>
           <TouchableOpacity onPress={handleUpload} style={styles.uploadButton}>
-            <Text style={styles.uploadIcon}>🖼</Text>
+            <View style={styles.uploadIconWrap}>
+              <Ionicons name="images-outline" size={26} color={colors.white} />
+            </View>
             <Text style={styles.uploadLabel}>{t("camera.upload")}</Text>
           </TouchableOpacity>
 
@@ -120,15 +124,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 32,
   },
-  permissionTitle: { color: "#F5F5F5", fontSize: 22, fontWeight: "700", marginBottom: 12, textAlign: "center" },
-  permissionMessage: { color: "#888888", fontSize: 15, textAlign: "center", marginBottom: 24, lineHeight: 22 },
+  permissionTitle: { color: "#F5F5F5", fontSize: 22, fontFamily: fonts.bold, marginBottom: 12, textAlign: "center" },
+  permissionMessage: { color: "rgba(255,255,255,0.6)", fontSize: 15, fontFamily: fonts.body, textAlign: "center", marginBottom: 24, lineHeight: 22 },
   permissionButton: {
-    backgroundColor: "#E8FF47",
+    backgroundColor: colors.coral,
     borderRadius: 12,
     paddingHorizontal: 28,
     paddingVertical: 14,
   },
-  permissionButtonText: { color: "#0A0A0A", fontSize: 15, fontWeight: "700" },
+  permissionButtonText: { color: colors.white, fontSize: 15, fontFamily: fonts.bold },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -137,25 +141,26 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
   },
-  headerTitle: { color: "#E8FF47", fontSize: 24, fontWeight: "900", letterSpacing: 1 },
+  headerTitle: { color: colors.white, fontSize: 24, fontFamily: fonts.heading, letterSpacing: 1 },
   viewfinder: {
     width: VF_SIZE,
     height: VF_SIZE,
     alignSelf: "center",
-    marginTop: (height - VF_SIZE) * 0.1,
+    // push viewfinder below the floating greeting header (~110px) plus some breathing room
+    marginTop: Math.max((height - VF_SIZE) * 0.1, 110),
     position: "relative",
   },
   corner: {
     position: "absolute",
     width: CORNER_SIZE,
     height: CORNER_SIZE,
-    borderColor: "#E8FF47",
+    borderColor: colors.coral,
   },
   topLeft: { top: 0, left: 0, borderTopWidth: CORNER_THICKNESS, borderLeftWidth: CORNER_THICKNESS },
   topRight: { top: 0, right: 0, borderTopWidth: CORNER_THICKNESS, borderRightWidth: CORNER_THICKNESS },
   bottomLeft: { bottom: 0, left: 0, borderBottomWidth: CORNER_THICKNESS, borderLeftWidth: CORNER_THICKNESS },
   bottomRight: { bottom: 0, right: 0, borderBottomWidth: CORNER_THICKNESS, borderRightWidth: CORNER_THICKNESS },
-  hint: { color: "rgba(255,255,255,0.7)", textAlign: "center", marginTop: 16, fontSize: 13 },
+  hint: { color: "rgba(255,255,255,0.7)", fontFamily: fonts.body, textAlign: "center", marginTop: 16, fontSize: 13 },
   controls: {
     position: "absolute",
     bottom: 40,
@@ -167,15 +172,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   uploadButton: { width: 80, alignItems: "center" },
-  uploadIcon: { fontSize: 24, marginBottom: 4 },
-  uploadLabel: { color: "#F5F5F5", fontSize: 11 },
+  uploadIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+  },
+  uploadLabel: { color: "rgba(255,255,255,0.8)", fontSize: 11, fontFamily: fonts.body },
   captureOuter: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "rgba(232,255,71,0.25)",
+    backgroundColor: colors.coral + "40",
     borderWidth: 3,
-    borderColor: "#E8FF47",
+    borderColor: colors.coral,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -183,6 +198,6 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#E8FF47",
+    backgroundColor: colors.coral,
   },
 });

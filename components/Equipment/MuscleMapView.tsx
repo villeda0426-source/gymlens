@@ -7,11 +7,11 @@ const CARD_WIDTH = (width - 32 - 12) / 3;
 const SVG_W = CARD_WIDTH - 16;
 const SVG_H = SVG_W * 2.2;
 
-const COLOR_PRIMARY = "#E8FF47";
-const COLOR_SECONDARY = "#FFB547";
-const COLOR_INACTIVE = "#2A2A2A";
-const COLOR_BODY = "#1E1E1E";
-const COLOR_OUTLINE = "#3A3A3A";
+const COLOR_PRIMARY = "#e04e4e";
+const COLOR_SECONDARY = "#6aaa00";
+const COLOR_INACTIVE = "#ede8dc";
+const COLOR_BODY = "#f0ece3";
+const COLOR_OUTLINE = "#d4cfc5";
 
 // Maps equipment muscle_groups strings → front/back muscle keys
 const MUSCLE_ALIASES: Record<string, string[]> = {
@@ -370,10 +370,10 @@ const styles = StyleSheet.create({
   },
   card: {
     flex: 1,
-    backgroundColor: "#111111",
+    backgroundColor: "#ffffff",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: "#ede8dc",
     alignItems: "center",
     paddingVertical: 10,
     paddingHorizontal: 4,
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   cardLabel: {
-    color: "#555555",
+    color: "#999999",
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1.2,
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   categoryLabel: {
-    color: "#E8FF47",
+    color: "#e04e4e",
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.8,
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   legendText: {
-    color: "#666666",
+    color: "#999999",
     fontSize: 9,
     fontWeight: "600",
   },

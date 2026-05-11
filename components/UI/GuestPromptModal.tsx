@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
+import { colors, fonts } from "@/constants/theme";
 
 interface GuestPromptModalProps {
   visible: boolean;
@@ -32,29 +33,29 @@ export default function GuestPromptModal({ visible, onClose, onSignUp }: GuestPr
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.85)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
   },
   card: {
-    backgroundColor: "#141414",
+    backgroundColor: colors.card,
     borderRadius: 20,
     padding: 28,
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: colors.cardBorder,
     width: "100%",
   },
-  title: { color: "#E8FF47", fontSize: 22, fontWeight: "800", marginBottom: 12, textAlign: "center" },
-  message: { color: "#888888", fontSize: 14, lineHeight: 22, textAlign: "center", marginBottom: 24 },
+  title: { color: colors.text, fontSize: 22, fontFamily: fonts.heading, marginBottom: 12, textAlign: "center" },
+  message: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body, lineHeight: 22, textAlign: "center", marginBottom: 24 },
   cta: {
-    backgroundColor: "#E8FF47",
+    backgroundColor: colors.coral,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: "center",
     marginBottom: 12,
   },
-  ctaText: { color: "#0A0A0A", fontSize: 16, fontWeight: "800" },
+  ctaText: { color: colors.white, fontSize: 16, fontFamily: fonts.extraBold },
   later: { alignItems: "center", paddingVertical: 8 },
-  laterText: { color: "#888888", fontSize: 14 },
+  laterText: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.body },
 });

@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Image, TouchableOpacity, Text, StyleSheet, Dimensions } from "react-native";
 import { useTranslation } from "react-i18next";
+import { colors, fonts } from "@/constants/theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -90,11 +91,11 @@ const styles = StyleSheet.create({
   },
   retakeText: { color: "#F5F5F5", fontSize: 16, fontWeight: "600" },
   identifyButton: {
-    backgroundColor: "#E8FF47",
+    backgroundColor: colors.coral,
     borderRadius: 14,
     paddingHorizontal: 36,
     paddingVertical: 14,
   },
   identifyButtonDisabled: { opacity: 0.5 },
-  identifyText: { color: "#0A0A0A", fontSize: 16, fontWeight: "800" },
+  identifyText: { color: colors.white, fontSize: 16, fontFamily: fonts.extraBold },
 });
