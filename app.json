@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.coachlift.app",
-      "buildNumber": "13",
+      "buildNumber": "15",
       "icon": "./assets/icon.png",
       "infoPlist": {
         "NSCameraUsageDescription": "CoachLift uses your camera to identify gym equipment.",
@@ -28,7 +28,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0A0A0A"
+        "backgroundColor": "#FFFFFF"
       },
       "package": "com.coachlift.app",
       "permissions": [
