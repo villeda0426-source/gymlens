@@ -4,6 +4,8 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { FeedbackProvider } from "@/context/FeedbackContext";
+import { FeedbackButton } from "@/components/UI/FeedbackButton";
 import {
   useFonts,
   PlayfairDisplay_700Bold,
@@ -53,13 +55,16 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <I18nextProvider i18n={i18n}>
-          <StatusBar style="dark" />
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="equipment/[id]" options={{ presentation: "card" }} />
-            <Stack.Screen name="feedback" options={{ presentation: "modal" }} />
-          </Stack>
+          <FeedbackProvider>
+            <StatusBar style="dark" />
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="equipment/[id]" options={{ presentation: "card" }} />
+              <Stack.Screen name="feedback" options={{ presentation: "modal" }} />
+            </Stack>
+            <FeedbackButton />
+          </FeedbackProvider>
         </I18nextProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

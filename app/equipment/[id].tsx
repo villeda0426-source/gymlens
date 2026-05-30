@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Share,
   Animated,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -22,6 +23,15 @@ import FeedbackBanner from "@/components/UI/FeedbackBanner";
 import { useEquipmentStore } from "@/store/equipmentStore";
 import { useAuthStore } from "@/store/authStore";
 import { colors, fonts } from "@/constants/theme";
+
+// Lazy-load LottieView so the app doesn't crash if lottie-react-native
+// isn't bundled in older builds.
+let LottieView: React.ComponentType<any> | null = null;
+try {
+  LottieView = require("lottie-react-native").default;
+} catch {
+  LottieView = null;
+}
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   beginner: colors.lime,
@@ -206,12 +216,21 @@ export default function EquipmentDetailScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Hero — muscle diagram */}
+        {/* Hero — Lottie animation (if available) or muscle diagram */}
         <View style={styles.heroMuscle}>
-          <MuscleMapView
-            muscleGroups={equipment.muscle_groups || []}
-            category={equipment.category}
-          />
+          {equipment.lottie_animation_url && LottieView ? (
+            <LottieView
+              source={{ uri: equipment.lottie_animation_url }}
+              autoPlay
+              loop
+              style={styles.lottieHero}
+            />
+          ) : (
+            <MuscleMapView
+              muscleGroups={equipment.muscle_groups || []}
+              category={equipment.category}
+            />
+          )}
         </View>
 
         <View style={styles.content}>
@@ -410,6 +429,10 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
+  },
+  lottieHero: {
+    width: "100%",
+    height: 220,
   },
   content: { padding: 20 },
   confidenceBadge: {
