@@ -1,0 +1,67 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "version": "1.0",
+    "release": {
+      "automaticRelease": true
+    },
+    "info": {
+      "en-US": {
+        "title": "Coachlift",
+        "subtitle": "Your gym, finally explained.",
+        "description": "Coachlift — Your Gym, Finally Explained.\n\nNew to the gym? You're not alone. Most people walk in with no idea what half the equipment does — and no one to ask. Coachlift changes that.\n\nJust point your camera at any gym equipment and instantly get: what it's called, which muscles it targets, how to use it safely, and video tutorials for beginners.\n\nWhether it's your first day or your fiftieth — Coachlift is the coach in your pocket.",
+        "keywords": [
+          "gym",
+          "equipment",
+          "fitness",
+          "workout",
+          "beginner",
+          "exercise",
+          "camera",
+          "AI",
+          "identifier",
+          "muscles",
+          "training",
+          "coach",
+          "scanner"
+        ],
+        "supportUrl": "https://magenta-gnome-d08e12.netlify.app",
+        "privacyPolicyUrl": "https://magenta-gnome-d08e12.netlify.app/privacy.html",
+        "marketingUrl": "https://magenta-gnome-d08e12.netlify.app"
+      }
+    },
+    "categories": [
+      "HEALTH_AND_FITNESS",
+      "EDUCATION"
+    ],
+    "advisory": {
+      "ageRatingOverride": "NONE",
+      "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+      "contests": "NONE",
+      "gambling": false,
+      "gamblingSimulated": "NONE",
+      "horrorOrFearThemes": "NONE",
+      "kidsAgeBand": null,
+      "koreaAgeRatingOverride": "NONE",
+      "lootBox": false,
+      "matureOrSuggestiveThemes": "NONE",
+      "medicalOrTreatmentInformation": "NONE",
+      "profanityOrCrudeHumor": "NONE",
+      "sexualContentGraphicAndNudity": "NONE",
+      "sexualContentOrNudity": "NONE",
+      "unrestrictedWebAccess": false,
+      "violenceCartoonOrFantasy": "NONE",
+      "violenceRealistic": "NONE",
+      "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+      "advertising": false,
+      "ageAssurance": false,
+      "ageRatingOverrideV2": "NONE",
+      "developerAgeRatingInfoUrl": null,
+      "gunsOrOtherWeapons": "NONE",
+      "healthOrWellnessTopics": true,
+      "messagingAndChat": false,
+      "parentalControls": false,
+      "userGeneratedContent": false
+    }
+  }
+}
