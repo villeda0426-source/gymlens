@@ -8,11 +8,20 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import * as Device from "expo-device";
-import { captureScreen } from "react-native-view-shot";
 import { usePathname } from "expo-router";
 import { supabase } from "@/lib/supabase";
-import RNShake from "react-native-shake";
+
+// Lazy-load native-only packages so a missing link never crashes the root layout.
+let Device: typeof import("expo-device") | null = null;
+try { Device = require("expo-device"); } catch {}
+
+let captureScreen: ((opts: { format: string; quality: number }) => Promise<string>) | null = null;
+try { captureScreen = require("react-native-view-shot").captureScreen; } catch {}
+
+// react-native-shake uses NativeEventEmitter at module-eval time; guard with try/catch.
+type ShakeModule = { addListener: (cb: () => void) => { remove: () => void } };
+let RNShake: ShakeModule | null = null;
+try { RNShake = require("react-native-shake").default; } catch {}
 
 const MOODS = [
   { emoji: "😡", label: "Broken",     value: "broken" },
@@ -35,10 +44,16 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    const subscription = RNShake.addListener(() => {
-      setVisible(true);
-    });
-    return () => subscription.remove();
+    if (!RNShake) return;
+    let subscription: { remove: () => void } | null = null;
+    try {
+      subscription = RNShake.addListener(() => setVisible(true));
+    } catch (e) {
+      console.warn("[FeedbackContext] shake detection unavailable:", e);
+    }
+    return () => {
+      try { subscription?.remove(); } catch {}
+    };
   }, []);
 
   const openFeedback = () => setVisible(true);
@@ -62,17 +77,21 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     setSubmitting(true);
 
     try {
-      const deviceInfo = {
-        brand: Device.brand,
-        modelName: Device.modelName,
-        osVersion: Device.osVersion,
-        osName: Device.osName,
-        deviceType: Device.deviceType,
-      };
+      const deviceInfo = Device
+        ? {
+            brand: Device.brand,
+            modelName: Device.modelName,
+            osVersion: Device.osVersion,
+            osName: Device.osName,
+            deviceType: Device.deviceType,
+          }
+        : {};
 
       let screenshotUri: string | null = null;
       try {
-        screenshotUri = await captureScreen({ format: "jpg", quality: 0.7 });
+        if (captureScreen) {
+          screenshotUri = await captureScreen({ format: "jpg", quality: 0.7 });
+        }
       } catch {
         // Screenshot is optional — don't block submission
       }
