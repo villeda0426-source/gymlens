@@ -14,25 +14,178 @@ import { Ionicons } from "@expo/vector-icons";
 import EquipmentCard from "@/components/Equipment/EquipmentCard";
 import SafeScreen from "@/components/Layout/SafeScreen";
 import { useEquipmentSearch } from "@/hooks/useEquipmentSearch";
+import { useAuthStore } from "@/store/authStore";
+import { supabase } from "@/lib/supabase";
 import { colors, fonts } from "@/constants/theme";
 
 const CATEGORIES = ["all", "machine", "free_weight", "cable", "cardio", "accessory"] as const;
+const RECENT_FILTER = "recently_scanned";
 
 export default function SearchScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { user } = useAuthStore();
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const { search, results, isLoading, error } = useEquipmentSearch();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [recentItems, setRecentItems] = useState<any[]>([]);
+  const [recentLoading, setRecentLoading] = useState(false);
+  const [recentFetched, setRecentFetched] = useState(false);
+
+  const isRecent = activeCategory === RECENT_FILTER;
+
   useEffect(() => {
+    if (isRecent) {
+      if (!recentFetched) fetchRecentScans();
+      return;
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       search(query, activeCategory);
     }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query, activeCategory]);
+
+  const fetchRecentScans = async () => {
+    if (!user) return;
+    setRecentLoading(true);
+    try {
+      const { data, error: err } = await supabase
+        .from("equipment_identifications")
+        .select("last_scanned_at, equipment:equipment_id(id, name, name_es, category, muscle_groups, difficulty, image_url)")
+        .eq("user_id", user.id)
+        .not("equipment_id", "is", null)
+        .order("last_scanned_at", { ascending: false })
+        .limit(30);
+
+      if (!err && data) {
+        // Deduplicate by equipment id
+        const seen = new Set<string>();
+        const unique: any[] = [];
+        for (const row of data) {
+          const eq = row.equipment as any;
+          if (eq && !seen.has(eq.id)) {
+            seen.add(eq.id);
+            unique.push(eq);
+          }
+        }
+        setRecentItems(unique);
+      }
+    } finally {
+      setRecentLoading(false);
+      setRecentFetched(true);
+    }
+  };
+
+  const handleCategoryChange = (cat: string) => {
+    setActiveCategory(cat);
+    if (cat === RECENT_FILTER) {
+      setRecentFetched(false);
+    }
+  };
+
+  const renderContent = () => {
+    if (isRecent) {
+      if (recentLoading) {
+        return (
+          <View style={styles.center}>
+            <ActivityIndicator color={colors.coral} size="large" />
+          </View>
+        );
+      }
+      if (!user) {
+        return (
+          <View style={styles.empty}>
+            <Text style={styles.emptyEmoji}>🔒</Text>
+            <Text style={styles.emptyTitle}>Sign in to see scans</Text>
+            <Text style={styles.emptySubtitle}>Your scan history appears here after you log in.</Text>
+          </View>
+        );
+      }
+      if (recentItems.length === 0) {
+        return (
+          <View style={styles.empty}>
+            <Text style={styles.emptyEmoji}>📷</Text>
+            <Text style={styles.emptyTitle}>No scans yet</Text>
+            <Text style={styles.emptySubtitle}>
+              No scans yet — point your camera at any equipment to start
+            </Text>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/scan")} style={styles.cameraButton}>
+              <Text style={styles.cameraButtonText}>Open Camera</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      }
+      return (
+        <FlatList
+          data={recentItems}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <EquipmentCard item={item} />}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <Text style={styles.resultCount}>{recentItems.length} recent scan{recentItems.length !== 1 ? "s" : ""}</Text>
+          }
+        />
+      );
+    }
+
+    if (isLoading) {
+      return (
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.coral} size="large" />
+        </View>
+      );
+    }
+    if (error) {
+      return (
+        <View style={styles.empty}>
+          <Text style={styles.emptyEmoji}>⚠️</Text>
+          <Text style={styles.emptyTitle}>Could not reach server</Text>
+          <Text style={styles.emptySubtitle}>
+            Make sure the CoachLift server is running and your device is on the same network.
+          </Text>
+          <TouchableOpacity onPress={() => search(query, activeCategory)} style={styles.cameraButton}>
+            <Text style={styles.cameraButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    if (results.length === 0) {
+      return (
+        <View style={styles.empty}>
+          <Text style={styles.emptyEmoji}>{query ? "🤷" : "🏋️"}</Text>
+          <Text style={styles.emptyTitle}>
+            {query ? t("search.no_results") : "No equipment yet"}
+          </Text>
+          <Text style={styles.emptySubtitle}>
+            {query
+              ? t("search.no_results_subtitle")
+              : "Scan gym equipment with the camera to identify and save it here."}
+          </Text>
+          <TouchableOpacity onPress={() => router.push("/(tabs)")} style={styles.cameraButton}>
+            <Text style={styles.cameraButtonText}>{t("search.try_camera")}</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return (
+      <FlatList
+        data={results}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <EquipmentCard item={item} />}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <Text style={styles.resultCount}>
+            {t("search.results_count", { count: results.length })}
+          </Text>
+        }
+      />
+    );
+  };
 
   return (
     <SafeScreen edges={["top"]}>
@@ -50,8 +203,9 @@ export default function SearchScreen() {
           onChangeText={setQuery}
           autoCorrect={false}
           returnKeyType="search"
+          editable={!isRecent}
         />
-        {query.length > 0 && (
+        {query.length > 0 && !isRecent && (
           <TouchableOpacity onPress={() => setQuery("")}>
             <Text style={styles.clearIcon}>✕</Text>
           </TouchableOpacity>
@@ -59,10 +213,25 @@ export default function SearchScreen() {
       </View>
 
       <View style={styles.filters}>
+        <TouchableOpacity
+          onPress={() => handleCategoryChange(RECENT_FILTER)}
+          style={[styles.chip, activeCategory === RECENT_FILTER && styles.chipRecent]}
+        >
+          <Ionicons
+            name="time-outline"
+            size={12}
+            color={activeCategory === RECENT_FILTER ? colors.white : colors.textSecondary}
+            style={{ marginRight: 4 }}
+          />
+          <Text style={[styles.chipText, activeCategory === RECENT_FILTER && styles.chipTextActive]}>
+            Recent
+          </Text>
+        </TouchableOpacity>
+
         {CATEGORIES.map((cat) => (
           <TouchableOpacity
             key={cat}
-            onPress={() => setActiveCategory(cat)}
+            onPress={() => handleCategoryChange(cat)}
             style={[styles.chip, activeCategory === cat && styles.chipActive]}
           >
             <Text style={[styles.chipText, activeCategory === cat && styles.chipTextActive]}>
@@ -72,52 +241,7 @@ export default function SearchScreen() {
         ))}
       </View>
 
-      {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.coral} size="large" />
-        </View>
-      ) : error ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>⚠️</Text>
-          <Text style={styles.emptyTitle}>Could not reach server</Text>
-          <Text style={styles.emptySubtitle}>
-            Make sure the CoachLift server is running and your device is on the same network.
-          </Text>
-          <TouchableOpacity onPress={() => search(query, activeCategory)} style={styles.cameraButton}>
-            <Text style={styles.cameraButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      ) : results.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>{query ? "🤷" : "🏋️"}</Text>
-          <Text style={styles.emptyTitle}>
-            {query ? t("search.no_results") : "No equipment yet"}
-          </Text>
-          <Text style={styles.emptySubtitle}>
-            {query
-              ? t("search.no_results_subtitle")
-              : "Scan gym equipment with the camera to identify and save it here."}
-          </Text>
-          <TouchableOpacity onPress={() => router.push("/(tabs)")} style={styles.cameraButton}>
-            <Text style={styles.cameraButtonText}>{t("search.try_camera")}</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={results}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <EquipmentCard item={item} />}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            results.length > 0 ? (
-              <Text style={styles.resultCount}>
-                {t("search.results_count", { count: results.length })}
-              </Text>
-            ) : null
-          }
-        />
-      )}
+      {renderContent()}
     </SafeScreen>
   );
 }
@@ -154,8 +278,11 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    flexDirection: "row",
+    alignItems: "center",
   },
   chipActive: { backgroundColor: colors.coral, borderColor: colors.coral },
+  chipRecent: { backgroundColor: colors.text, borderColor: colors.text },
   chipText: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.semiBold },
   chipTextActive: { color: colors.white },
   list: { paddingHorizontal: 16, paddingBottom: 20 },

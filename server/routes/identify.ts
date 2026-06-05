@@ -63,28 +63,33 @@ function findBestMatch(
 async function upsertIdentificationRecord(
   equipmentId: string,
   equipmentName: string,
-  rawAiResponse: object | null
+  rawAiResponse: object | null,
+  userId?: string | null
 ): Promise<string | null> {
-  // Try to fetch existing record for this equipment
+  const now = new Date().toISOString();
+
+  // Global aggregate: one record per equipment (no user)
   const { data: existing } = await supabase
     .from("equipment_identifications")
     .select("id, scan_count")
     .eq("equipment_id", equipmentId)
+    .is("user_id", null)
     .maybeSingle();
+
+  let identificationId: string | null = null;
 
   if (existing) {
     const { data: updated } = await supabase
       .from("equipment_identifications")
       .update({
         scan_count: existing.scan_count + 1,
-        last_scanned_at: new Date().toISOString(),
+        last_scanned_at: now,
       })
       .eq("id", existing.id)
       .select("id")
       .single();
-    return updated?.id ?? null;
+    identificationId = updated?.id ?? null;
   } else {
-    const now = new Date().toISOString();
     const { data: inserted, error } = await supabase
       .from("equipment_identifications")
       .insert({
@@ -98,8 +103,26 @@ async function upsertIdentificationRecord(
       .select("id")
       .single();
     if (error) console.error("[identify] identification insert error:", error.message);
-    return inserted?.id ?? null;
+    identificationId = inserted?.id ?? null;
   }
+
+  // Per-user record: insert a fresh row each scan so the user can see their history
+  if (userId) {
+    const { error: userErr } = await supabase
+      .from("equipment_identifications")
+      .insert({
+        equipment_id: equipmentId,
+        equipment_name: equipmentName,
+        user_id: userId,
+        scan_count: 1,
+        first_scanned_at: now,
+        last_scanned_at: now,
+      });
+    if (userErr) console.error("[identify] user scan insert error:", userErr.message);
+    else console.log(`SAVED TO DB: ${equipmentName}`);
+  }
+
+  return identificationId;
 }
 
 // ─── Route ────────────────────────────────────────────────────────────────────
@@ -148,7 +171,7 @@ router.post("/", async (req: Request, res: Response) => {
           .eq("equipment_id", match.id)
           .limit(10);
 
-        const identificationId = await upsertIdentificationRecord(match.id, match.name, null);
+        const identificationId = await upsertIdentificationRecord(match.id, match.name, null, userId);
 
         return res.json({
           ...cached,
@@ -212,10 +235,12 @@ router.post("/", async (req: Request, res: Response) => {
       identificationId = await upsertIdentificationRecord(
         equipment.id,
         identification.name,
-        identification as unknown as object
+        identification as unknown as object,
+        userId
       );
     }
 
+    console.log(`SAVED TO DB: ${identification?.name}`);
     console.log("[identify] returning new result for:", identification?.name);
     return res.json({
       ...identification,

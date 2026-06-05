@@ -1,6 +1,6 @@
 import "../global.css";
 import React, { useEffect } from "react";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -21,6 +21,24 @@ import i18n, { getStoredLanguage } from "@/lib/i18n";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/constants/theme";
+
+function AuthGate() {
+  const { user, isLoading } = useAuthStore();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+    const inAuth = segments[0] === "(auth)";
+    if (!user && !inAuth) {
+      router.replace("/(auth)/login");
+    } else if (user && inAuth) {
+      router.replace("/(tabs)");
+    }
+  }, [user, isLoading, segments]);
+
+  return null;
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -63,6 +81,7 @@ export default function RootLayout() {
               <Stack.Screen name="equipment/[id]" options={{ presentation: "card" }} />
               <Stack.Screen name="feedback" options={{ presentation: "modal" }} />
             </Stack>
+            <AuthGate />
             <FeedbackButton />
           </FeedbackProvider>
         </I18nextProvider>

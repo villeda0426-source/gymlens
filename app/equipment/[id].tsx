@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Share,
   Animated,
+  TextInput,
+  Switch,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -29,8 +31,22 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   advanced: colors.coral,
 };
 
-const TABS = ["tutorial", "safety", "videos"] as const;
+const TABS = ["tutorial", "safety", "videos", "workout"] as const;
 type TabType = typeof TABS[number];
+
+const LEVEL_MULTIPLIERS = { Beginner: 1.0, Intermediate: 1.4, Advanced: 1.8 };
+const LEVEL_SETS_REPS = {
+  Beginner: "3 sets × 10–12 reps",
+  Intermediate: "4 sets × 8–10 reps",
+  Advanced: "5 sets × 6–8 reps",
+};
+const LEVEL_REST = {
+  Beginner: "90 sec",
+  Intermediate: "75 sec",
+  Advanced: "60 sec",
+};
+
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3001";
 
 export default function EquipmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -40,13 +56,11 @@ export default function EquipmentDetailScreen() {
 
   const { currentResult, toggleSave, loadSavedIds, savedIds } = useEquipmentStore();
   const { user, profile } = useAuthStore();
-  // Only use Supabase when user AND profile both exist (profile = confirmed auth, not anonymous session)
   const authenticatedUserId = user && profile ? user.id : null;
 
   const toastAnim = useRef(new Animated.Value(0)).current;
   const [toastMsg, setToastMsg] = useState("");
 
-  // "result" route = just-scanned item already in store; any UUID = load from Supabase
   const isResultRoute = id === "result";
 
   const [equipment, setEquipment] = useState<any>(isResultRoute ? currentResult : null);
@@ -59,6 +73,13 @@ export default function EquipmentDetailScreen() {
   const [videosLoading, setVideosLoading] = useState(false);
   const [videosFetched, setVideosFetched] = useState(false);
 
+  // Workout calculator state
+  const [bodyWeight, setBodyWeight] = useState("");
+  const [useLbs, setUseLbs] = useState(true);
+  const [level, setLevel] = useState<"Beginner" | "Intermediate" | "Advanced">("Beginner");
+  const [weightFactor, setWeightFactor] = useState<number | null>(null);
+  const [weightFactorLoading, setWeightFactorLoading] = useState(false);
+
   useEffect(() => {
     loadSavedIds(authenticatedUserId);
   }, [authenticatedUserId]);
@@ -69,12 +90,21 @@ export default function EquipmentDetailScreen() {
     }
   }, [id]);
 
-  // Fetch videos lazily when the tab is selected
   useEffect(() => {
     if (activeTab === "videos" && !videosFetched && equipment) {
       fetchVideos(equipment.id, equipment.name);
     }
+    if (activeTab === "workout" && equipment && weightFactor === null && !weightFactorLoading) {
+      loadWeightFactor();
+    }
   }, [activeTab, equipment]);
+
+  // Pre-populate weightFactor from equipment data once loaded
+  useEffect(() => {
+    if (equipment?.weight_factor != null) {
+      setWeightFactor(Number(equipment.weight_factor));
+    }
+  }, [equipment]);
 
   const fetchEquipment = async () => {
     setIsLoading(true);
@@ -97,7 +127,26 @@ export default function EquipmentDetailScreen() {
     }
   };
 
-  const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3001";
+  const loadWeightFactor = async () => {
+    if (!equipment) return;
+    if (equipment.weight_factor != null) {
+      setWeightFactor(Number(equipment.weight_factor));
+      return;
+    }
+    setWeightFactorLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/equipment/${equipment.id}/weight-factor`);
+      if (res.ok) {
+        const data = await res.json();
+        setWeightFactor(data.weight_factor);
+      }
+    } catch {
+      // Server unavailable — use fallback
+      setWeightFactor(0.3);
+    } finally {
+      setWeightFactorLoading(false);
+    }
+  };
 
   const fetchVideos = async (equipmentId?: string, name?: string) => {
     if (!name) return;
@@ -145,6 +194,15 @@ export default function EquipmentDetailScreen() {
     });
   };
 
+  const calcWeight = (): string => {
+    const bw = parseFloat(bodyWeight);
+    if (!bw || !weightFactor) return "—";
+    const multiplier = LEVEL_MULTIPLIERS[level];
+    let result = bw * weightFactor * multiplier;
+    if (!useLbs) result = result * 0.453592; // convert kg bodyweight → kg result
+    return `${Math.round(result)} ${useLbs ? "lbs" : "kg"}`;
+  };
+
   if (isLoading) {
     return (
       <SafeScreen>
@@ -185,6 +243,13 @@ export default function EquipmentDetailScreen() {
   const tutorials = equipment.tutorial_steps || [];
   const safetyTips = (isEs ? equipment.safety_tips_es : equipment.safety_tips) || [];
 
+  const TAB_LABELS: Record<TabType, string> = {
+    tutorial: t("equipment.tutorial"),
+    safety: t("equipment.safety"),
+    videos: t("equipment.videos"),
+    workout: "Workout",
+  };
+
   return (
     <SafeScreen edges={["top"]} style={{ flex: 1 }}>
       {/* Header */}
@@ -215,7 +280,6 @@ export default function EquipmentDetailScreen() {
         </View>
 
         <View style={styles.content}>
-          {/* Confidence badge */}
           {equipment.confidence && (
             <View style={styles.confidenceBadge}>
               <Text style={styles.confidenceText}>
@@ -227,7 +291,6 @@ export default function EquipmentDetailScreen() {
           <Text style={styles.name}>{name}</Text>
           <Text style={styles.description}>{description}</Text>
 
-          {/* Meta row */}
           <View style={styles.metaRow}>
             {equipment.category && (
               <View style={styles.categoryTag}>
@@ -245,7 +308,6 @@ export default function EquipmentDetailScreen() {
             )}
           </View>
 
-          {/* Muscle groups */}
           {equipment.muscle_groups?.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t("equipment.muscle_groups")}</Text>
@@ -254,19 +316,21 @@ export default function EquipmentDetailScreen() {
           )}
 
           {/* Tab bar */}
-          <View style={styles.tabBar}>
-            {TABS.map((tab) => (
-              <TouchableOpacity
-                key={tab}
-                onPress={() => setActiveTab(tab)}
-                style={[styles.tab, activeTab === tab && styles.tabActive]}
-              >
-                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                  {t(`equipment.${tab}`)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBarWrap}>
+            <View style={styles.tabBar}>
+              {TABS.map((tab) => (
+                <TouchableOpacity
+                  key={tab}
+                  onPress={() => setActiveTab(tab)}
+                  style={[styles.tab, activeTab === tab && styles.tabActive]}
+                >
+                  <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+                    {TAB_LABELS[tab]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
 
           {/* Tutorial tab */}
           {activeTab === "tutorial" && (
@@ -359,6 +423,91 @@ export default function EquipmentDetailScreen() {
               )}
             </View>
           )}
+
+          {/* Workout tab */}
+          {activeTab === "workout" && (
+            <View style={styles.tabContent}>
+              {weightFactorLoading ? (
+                <View style={styles.videosLoading}>
+                  <ActivityIndicator color={colors.coral} />
+                  <Text style={styles.videosLoadingText}>Calculating recommendations…</Text>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.calcCard}>
+                    <Text style={styles.calcLabel}>Body Weight</Text>
+                    <View style={styles.calcInputRow}>
+                      <TextInput
+                        style={styles.calcInput}
+                        placeholder="e.g. 160"
+                        placeholderTextColor={colors.textMuted}
+                        keyboardType="numeric"
+                        value={bodyWeight}
+                        onChangeText={setBodyWeight}
+                      />
+                      <View style={styles.unitToggle}>
+                        <Text style={[styles.unitText, useLbs && styles.unitActive]}>lbs</Text>
+                        <Switch
+                          value={!useLbs}
+                          onValueChange={(v) => setUseLbs(!v)}
+                          trackColor={{ false: colors.coral, true: colors.coral }}
+                          thumbColor={colors.white}
+                        />
+                        <Text style={[styles.unitText, !useLbs && styles.unitActive]}>kg</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.calcCard}>
+                    <Text style={styles.calcLabel}>Experience Level</Text>
+                    <View style={styles.levelRow}>
+                      {(["Beginner", "Intermediate", "Advanced"] as const).map((l) => (
+                        <TouchableOpacity
+                          key={l}
+                          style={[styles.levelBtn, level === l && styles.levelBtnActive]}
+                          onPress={() => setLevel(l)}
+                        >
+                          <Text style={[styles.levelBtnText, level === l && styles.levelBtnTextActive]}>
+                            {l}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  {bodyWeight ? (
+                    <View style={styles.resultsCard}>
+                      <Text style={styles.resultsTitle}>Your Starting Weight</Text>
+                      <Text style={styles.resultsWeight}>{calcWeight()}</Text>
+
+                      <View style={styles.resultsDivider} />
+
+                      <View style={styles.resultRow}>
+                        <Text style={styles.resultKey}>Sets & Reps</Text>
+                        <Text style={styles.resultVal}>{LEVEL_SETS_REPS[level]}</Text>
+                      </View>
+                      <View style={styles.resultRow}>
+                        <Text style={styles.resultKey}>Rest Time</Text>
+                        <Text style={styles.resultVal}>{LEVEL_REST[level]}</Text>
+                      </View>
+
+                      <View style={styles.tipBox}>
+                        <Text style={styles.tipBoxText}>
+                          Personalized for {name} based on your body weight
+                        </Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.calcPrompt}>
+                      <Text style={styles.calcPromptText}>
+                        Enter your body weight above to get a personalized starting recommendation
+                      </Text>
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -428,12 +577,18 @@ const styles = StyleSheet.create({
   difficultyText: { fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase" },
   section: { marginBottom: 20 },
   sectionTitle: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 },
+  tabBarWrap: { marginBottom: 20 },
   tabBar: {
-    flexDirection: "row", backgroundColor: colors.input,
-    borderRadius: 12, padding: 4, marginBottom: 20,
-    borderWidth: 1, borderColor: colors.cardBorder,
+    flexDirection: "row",
+    backgroundColor: colors.input,
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignSelf: "flex-start",
+    minWidth: "100%",
   },
-  tab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 10 },
+  tab: { paddingVertical: 10, paddingHorizontal: 14, alignItems: "center", borderRadius: 10 },
   tabActive: { backgroundColor: colors.coral },
   tabText: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.semiBold },
   tabTextActive: { color: colors.white },
@@ -494,4 +649,56 @@ const styles = StyleSheet.create({
   curatedText: { color: colors.lime, fontSize: 10, fontFamily: fonts.bold },
   videoTitle: { color: colors.text, fontSize: 13, fontFamily: fonts.body, lineHeight: 18 },
   videoDuration: { color: colors.textMuted, fontSize: 11, fontFamily: fonts.body, marginTop: 4 },
+
+  // Workout calculator styles
+  calcCard: {
+    backgroundColor: colors.card, borderRadius: 14, padding: 16,
+    borderWidth: 1, borderColor: colors.cardBorder,
+  },
+  calcLabel: {
+    color: colors.textMuted, fontSize: 11, fontFamily: fonts.bold,
+    textTransform: "uppercase", letterSpacing: 1, marginBottom: 10,
+  },
+  calcInputRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  calcInput: {
+    flex: 1, backgroundColor: colors.input, borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 12,
+    color: colors.text, fontSize: 18, fontFamily: fonts.bold,
+    borderWidth: 1, borderColor: colors.cardBorder,
+  },
+  unitToggle: { flexDirection: "row", alignItems: "center", gap: 6 },
+  unitText: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.semiBold },
+  unitActive: { color: colors.coral, fontFamily: fonts.bold },
+  levelRow: { flexDirection: "row", gap: 8 },
+  levelBtn: {
+    flex: 1, paddingVertical: 10, alignItems: "center",
+    backgroundColor: colors.input, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.cardBorder,
+  },
+  levelBtnActive: { backgroundColor: colors.coral, borderColor: colors.coral },
+  levelBtnText: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.semiBold },
+  levelBtnTextActive: { color: colors.white, fontFamily: fonts.bold },
+  resultsCard: {
+    backgroundColor: colors.coral + "0d", borderRadius: 14, padding: 20,
+    borderWidth: 1, borderColor: colors.coral + "30",
+  },
+  resultsTitle: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 },
+  resultsWeight: { color: colors.coral, fontSize: 40, fontFamily: fonts.heading, marginBottom: 16 },
+  resultsDivider: { height: 1, backgroundColor: colors.coral + "30", marginBottom: 16 },
+  resultRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  resultKey: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.body },
+  resultVal: { color: colors.text, fontSize: 13, fontFamily: fonts.bold },
+  tipBox: {
+    marginTop: 12, backgroundColor: colors.lime + "12", borderRadius: 10,
+    padding: 12, borderWidth: 1, borderColor: colors.lime + "30",
+  },
+  tipBoxText: { color: colors.lime, fontSize: 12, fontFamily: fonts.body, lineHeight: 18 },
+  calcPrompt: {
+    backgroundColor: colors.card, borderRadius: 14, padding: 20,
+    alignItems: "center", borderWidth: 1, borderColor: colors.cardBorder,
+  },
+  calcPromptText: {
+    color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body,
+    textAlign: "center", lineHeight: 22,
+  },
 });

@@ -108,9 +108,6 @@ export default function RegisterScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity onPress={() => router.replace("/(tabs)")} style={styles.guestButton}>
-          <Text style={styles.guestText}>{t("auth.continue_guest")}</Text>
-        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
