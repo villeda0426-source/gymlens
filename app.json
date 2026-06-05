@@ -17,12 +17,15 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.coachlift.app",
-      "buildNumber": "15",
+      "buildNumber": "17",
       "icon": "./assets/icon.png",
       "infoPlist": {
         "NSCameraUsageDescription": "CoachLift uses your camera to identify gym equipment.",
         "NSPhotoLibraryUsageDescription": "CoachLift accesses your photo library to identify gym equipment.",
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.developer.applesignin": ["Default"]
       }
     },
     "android": {
@@ -49,7 +52,8 @@
           "photosPermission": "CoachLift accesses your photos to identify gym equipment."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-apple-authentication"
     ],
     "scheme": "coachlift",
     "experiments": {
