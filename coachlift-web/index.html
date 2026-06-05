@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Coachlift — Your gym, finally explained.</title>
-  <meta name="description" content="Point your phone at any gym machine and instantly learn how to use it safely. Coachlift uses AI to identify equipment, show tutorials, and keep you injury-free." />
-  <meta property="og:title" content="Coachlift — Your gym, finally explained." />
-  <meta property="og:description" content="AI-powered gym equipment identifier for iOS. Point. Scan. Learn." />
+  <title>Coachlift — Your AI gym coach</title>
+  <meta name="description" content="Point your phone at any gym machine and instantly learn how to use it safely. Coachlift uses AI to identify 77+ pieces of equipment, show muscle diagrams, step-by-step tutorials, and keep you injury-free." />
+  <meta property="og:title" content="Coachlift — Your AI gym coach" />
+  <meta property="og:description" content="AI-powered gym equipment identifier. Now available on the App Store." />
   <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://coachlift.app/og-image.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
@@ -45,7 +46,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Utilities ──────────────────────────────────────────── */
     .container {
       max-width: 1120px;
       margin: 0 auto;
@@ -93,6 +93,48 @@
       letter-spacing: -0.3px;
     }
     .logo-text span { color: var(--coral); }
+
+    /* ── App Store Badge ─────────────────────────────────────────── */
+    .appstore-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #000;
+      color: #fff;
+      border-radius: 12px;
+      padding: 10px 20px;
+      text-decoration: none;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+    .appstore-badge:hover {
+      background: #1a1a1a;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(0,0,0,0.32);
+    }
+    .appstore-badge:active { transform: translateY(0); }
+    .appstore-badge-text { display: flex; flex-direction: column; line-height: 1.15; }
+    .appstore-badge-sub {
+      font-size: 10px;
+      font-weight: 600;
+      font-family: var(--font-body);
+      letter-spacing: 0.3px;
+      color: rgba(255,255,255,0.8);
+    }
+    .appstore-badge-main {
+      font-size: 18px;
+      font-weight: 800;
+      font-family: var(--font-body);
+      color: #fff;
+      letter-spacing: -0.2px;
+    }
+
+    /* Small variant for nav */
+    .appstore-badge-sm {
+      padding: 8px 16px;
+    }
+    .appstore-badge-sm .appstore-badge-sub { font-size: 9px; }
+    .appstore-badge-sm .appstore-badge-main { font-size: 14px; }
 
     /* ── Nav ──────────────────────────────────────────────────── */
     nav {
@@ -146,9 +188,8 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: var(--lime-light);
-      color: var(--lime);
-      border: 1px solid rgba(106,170,0,0.3);
+      background: #000;
+      color: #fff;
       border-radius: 100px;
       padding: 6px 14px;
       font-size: 12px;
@@ -157,13 +198,7 @@
       text-transform: uppercase;
       margin-bottom: 20px;
     }
-    .hero-eyebrow::before {
-      content: '';
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--lime);
-    }
+    .hero-eyebrow svg { flex-shrink: 0; }
 
     .hero-headline {
       font-family: var(--font-heading);
@@ -192,42 +227,29 @@
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
+      margin-bottom: 32px;
     }
 
-    .btn-apple {
-      background: var(--text);
-      color: #fff;
-      box-shadow: var(--shadow);
-    }
-    .btn-apple:hover { background: #333; }
-
-    .hero-social-proof {
-      margin-top: 32px;
+    .hero-meta {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .hero-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       color: var(--text-muted);
       font-size: 13px;
+      font-weight: 600;
     }
-    .avatars {
-      display: flex;
-    }
-    .avatar {
-      width: 32px;
-      height: 32px;
+    .hero-meta-dot {
+      width: 6px; height: 6px;
       border-radius: 50%;
-      border: 2px solid var(--bg);
-      background: var(--coral-light);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--coral);
-      margin-right: -8px;
+      background: var(--lime);
     }
-    .avatar:nth-child(2) { background: #d5e8f5; color: #2e7ab6; }
-    .avatar:nth-child(3) { background: var(--lime-light); color: var(--lime); }
 
     /* ── Phone Mockup ──────────────────────────────────────────── */
     .hero-visual {
@@ -281,7 +303,6 @@
       position: relative;
     }
 
-    /* Simulated app UI inside the phone */
     .app-header {
       background: var(--bg);
       padding: 36px 16px 12px;
@@ -337,11 +358,8 @@
       color: var(--lime);
       border: 1px solid rgba(106,170,0,0.25);
       border-radius: 4px;
-      font-size: 7px;
-      font-weight: 700;
-      font-family: var(--font-body);
-      padding: 1px 5px;
-      margin-right: 3px;
+      font-size: 7px; font-weight: 700; font-family: var(--font-body);
+      padding: 1px 5px; margin-right: 3px;
     }
 
     .app-tip {
@@ -362,7 +380,6 @@
     }
     .app-tip-text { font-size: 8px; font-family: var(--font-body); color: var(--text-secondary); line-height: 1.5; }
 
-    /* Floating glow blobs */
     .blob {
       position: absolute;
       border-radius: 50%;
@@ -370,20 +387,71 @@
       opacity: 0.5;
       pointer-events: none;
     }
-    .blob-coral {
-      width: 300px; height: 300px;
-      background: var(--coral);
-      right: -80px; top: -60px;
-      opacity: 0.12;
-    }
-    .blob-lime {
-      width: 220px; height: 220px;
-      background: var(--lime);
-      right: 80px; bottom: -40px;
-      opacity: 0.1;
+    .blob-coral { width: 300px; height: 300px; background: var(--coral); right: -80px; top: -60px; opacity: 0.12; }
+    .blob-lime  { width: 220px; height: 220px; background: var(--lime);  right: 80px; bottom: -40px; opacity: 0.1; }
+
+    /* ── Features ─────────────────────────────────────────────── */
+    .features {
+      padding: 80px 0;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      scroll-margin-top: 80px;
     }
 
-    /* ── Features / How it works ──────────────────────────────── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-top: 48px;
+    }
+
+    .feature-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px 22px;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .feature-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-4px); }
+
+    .feature-icon {
+      font-size: 30px;
+      margin-bottom: 14px;
+      display: block;
+    }
+    .feature-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .feature-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .feature-badge {
+      display: inline-block;
+      background: rgba(106,170,0,0.1);
+      color: var(--lime);
+      border: 1px solid rgba(106,170,0,0.25);
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      margin-top: 8px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    .feature-badge.soon {
+      background: rgba(224,78,78,0.08);
+      color: var(--coral);
+      border-color: rgba(224,78,78,0.2);
+    }
+
+    /* ── How it works ──────────────────────────────────────────── */
     .how {
       padding: 80px 0;
       scroll-margin-top: 80px;
@@ -451,9 +519,7 @@
       background: var(--coral);
       color: #fff;
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-      font-weight: 800;
-      font-family: var(--font-body);
+      font-size: 18px; font-weight: 800; font-family: var(--font-body);
       margin-bottom: 20px;
     }
 
@@ -462,36 +528,31 @@
     .step-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
 
     .step-connector {
-      position: absolute;
-      top: 50px;
-      right: -13px;
-      width: 26px;
-      height: 2px;
-      background: var(--border);
-      z-index: 1;
+      position: absolute; top: 50px; right: -13px;
+      width: 26px; height: 2px;
+      background: var(--border); z-index: 1;
     }
     .step-card:last-child .step-connector { display: none; }
 
-    /* ── Waitlist ──────────────────────────────────────────────── */
-    .waitlist {
+    /* ── Download CTA ──────────────────────────────────────────── */
+    .download-cta {
       padding: 80px 0 100px;
       scroll-margin-top: 80px;
     }
 
-    .waitlist-card {
-      background: var(--card);
-      border: 1px solid var(--border);
+    .download-card {
+      background: var(--text);
       border-radius: 24px;
       padding: 64px 48px;
       text-align: center;
-      max-width: 600px;
+      max-width: 640px;
       margin: 0 auto;
       box-shadow: var(--shadow-lg);
       position: relative;
       overflow: hidden;
     }
 
-    .waitlist-card::before {
+    .download-card::before {
       content: '';
       position: absolute;
       top: 0; left: 0; right: 0;
@@ -499,100 +560,117 @@
       background: linear-gradient(90deg, var(--coral), var(--lime));
     }
 
-    .waitlist-title {
-      font-family: var(--font-heading);
-      font-size: clamp(26px, 4vw, 36px);
-      font-weight: 900;
-      color: var(--text);
-      margin-bottom: 12px;
-      letter-spacing: -0.5px;
+    .download-card-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.7);
+      border-radius: 100px;
+      padding: 5px 13px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .download-card-eyebrow-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--lime);
     }
 
-    .waitlist-sub {
+    .download-card-title {
+      font-family: var(--font-heading);
+      font-size: clamp(26px, 4vw, 40px);
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 14px;
+      letter-spacing: -0.5px;
+    }
+    .download-card-title em { font-style: normal; color: var(--coral); }
+
+    .download-card-sub {
       font-size: 16px;
-      color: var(--text-secondary);
-      margin-bottom: 36px;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 40px;
       line-height: 1.65;
     }
 
-    .waitlist-form {
+    .download-card-buttons {
       display: flex;
-      gap: 10px;
-      max-width: 440px;
-      margin: 0 auto 16px;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
     }
 
-    .waitlist-input {
-      flex: 1;
-      padding: 14px 18px;
-      border-radius: var(--radius);
-      border: 1.5px solid var(--border);
-      background: var(--input-bg);
-      font-family: var(--font-body);
-      font-size: 15px;
-      color: var(--text);
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .waitlist-input::placeholder { color: var(--text-muted); }
-    .waitlist-input:focus {
-      border-color: var(--coral);
-      box-shadow: 0 0 0 3px rgba(224,78,78,0.12);
-    }
-
-    .waitlist-note {
+    .download-card-note {
       font-size: 12px;
+      color: rgba(255,255,255,0.35);
+      margin-top: 20px;
+    }
+
+    /* ── Social strip ─────────────────────────────────────────── */
+    .social-strip {
+      padding: 36px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .social-strip-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .social-strip-label {
+      font-size: 13px;
+      font-weight: 600;
       color: var(--text-muted);
     }
 
-    /* Form states */
-    .form-msg {
-      display: none;
+    .social-link {
+      display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 14px 20px;
-      border-radius: var(--radius);
-      font-size: 14px;
-      font-weight: 600;
-      max-width: 440px;
-      margin: 0 auto;
+      gap: 7px;
+      padding: 9px 16px;
+      border-radius: 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      text-decoration: none;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 700;
+      transition: border-color 0.15s, color 0.15s, transform 0.15s;
     }
-    .form-msg.success {
-      display: flex;
-      background: var(--lime-light);
-      color: var(--lime);
-      border: 1px solid rgba(106,170,0,0.3);
-    }
-    .form-msg.error {
-      display: flex;
-      background: var(--coral-light);
-      color: var(--coral);
-      border: 1px solid rgba(224,78,78,0.3);
-    }
+    .social-link:hover { border-color: var(--text); color: var(--text); transform: translateY(-2px); }
 
     /* ── Footer ──────────────────────────────────────────────── */
     footer {
       border-top: 1px solid var(--border);
-      padding: 32px 0;
+      padding: 40px 0;
     }
 
     .footer-inner {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
+      gap: 24px;
       flex-wrap: wrap;
     }
 
-    .footer-copy {
-      font-size: 13px;
-      color: var(--text-muted);
+    .footer-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
     }
 
     .footer-links {
       display: flex;
       gap: 24px;
+      flex-wrap: wrap;
     }
     .footer-links a {
       font-size: 13px;
@@ -602,7 +680,33 @@
     }
     .footer-links a:hover { color: var(--text); }
 
+    .footer-social {
+      display: flex;
+      gap: 12px;
+    }
+    .footer-social-link {
+      width: 36px; height: 36px;
+      border-radius: 9px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .footer-social-link:hover { border-color: var(--text); color: var(--text); }
+
+    .footer-copy {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
     /* ── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 1000px) {
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
     @media (max-width: 900px) {
       .hero-inner {
         grid-template-columns: 1fr;
@@ -611,23 +715,23 @@
       }
       .hero-sub { margin: 0 auto 36px; }
       .hero-buttons { justify-content: center; }
-      .hero-social-proof { justify-content: center; }
+      .hero-meta { justify-content: center; }
       .hero-visual { order: -1; }
       .phone-frame { width: 220px; height: 460px; }
 
       .steps { grid-template-columns: 1fr; }
       .step-connector { display: none; }
       .nav-links { display: none; }
+      .footer-right { align-items: flex-start; }
     }
 
     @media (max-width: 560px) {
       .hero { padding: 48px 0 64px; }
-      .waitlist-card { padding: 40px 24px; }
-      .waitlist-form { flex-direction: column; }
-      .waitlist-input, .waitlist-form .btn { width: 100%; justify-content: center; }
+      .download-card { padding: 40px 24px; }
       .hero-buttons { flex-direction: column; align-items: center; }
-      .hero-buttons .btn { width: 100%; justify-content: center; }
+      .hero-buttons .appstore-badge { width: 100%; justify-content: center; }
       .footer-inner { flex-direction: column; align-items: flex-start; }
+      .features-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -643,13 +747,19 @@
       </a>
 
       <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
         <li><a href="#how">How it works</a></li>
-        <li><a href="#waitlist">Get early access</a></li>
       </ul>
 
       <div class="nav-actions">
-        <a href="#waitlist" class="btn btn-coral" style="padding: 10px 22px; font-size: 14px;">
-          Join Waitlist
+        <a href="https://apps.apple.com/us/app/coachlift/id6768139635" class="appstore-badge appstore-badge-sm" target="_blank" rel="noopener">
+          <svg width="18" height="22" viewBox="0 0 814 1000" fill="currentColor" aria-hidden="true">
+            <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.3-151.1-93.2c-152.7-189.9-273.3-525-79.4-830.1 55.5-90.5 151.5-149.2 254.8-150.5 84.5-1.9 162 57.4 213.1 57.4 51.1 0 146.6-71.9 244.8-71.9zM581 76.9c37.5-44.8 64.5-108.2 64.5-171.7 0-8.9-.6-17.9-2.2-25.5-61.5 2.2-134.9 41.6-178.6 90.5-33.9 38.4-66.7 101.2-66.7 165.9 0 9.6 1.9 19.2 2.6 22.4 3.9.6 10.3 1.3 16.6 1.3 55.8 0 122.4-37.5 163.8-82.9z"/>
+          </svg>
+          <div class="appstore-badge-text">
+            <span class="appstore-badge-sub">Download on the</span>
+            <span class="appstore-badge-main">App Store</span>
+          </div>
         </a>
       </div>
     </div>
@@ -664,24 +774,33 @@
 
       <!-- Left: copy -->
       <div class="hero-copy">
-        <div class="hero-eyebrow">Coming soon to iOS</div>
+        <div class="hero-eyebrow">
+          <svg width="14" height="17" viewBox="0 0 814 1000" fill="white" aria-hidden="true">
+            <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.3-151.1-93.2c-152.7-189.9-273.3-525-79.4-830.1 55.5-90.5 151.5-149.2 254.8-150.5 84.5-1.9 162 57.4 213.1 57.4 51.1 0 146.6-71.9 244.8-71.9zM581 76.9c37.5-44.8 64.5-108.2 64.5-171.7 0-8.9-.6-17.9-2.2-25.5-61.5 2.2-134.9 41.6-178.6 90.5-33.9 38.4-66.7 101.2-66.7 165.9 0 9.6 1.9 19.2 2.6 22.4 3.9.6 10.3 1.3 16.6 1.3 55.8 0 122.4-37.5 163.8-82.9z"/>
+          </svg>
+          Now Available on the App Store
+        </div>
 
         <h1 class="hero-headline">
           Your gym,<br />finally <em>explained.</em>
         </h1>
 
         <p class="hero-sub">
-          Point your phone at any machine and instantly see what it works,
+          Point your phone at any machine and instantly see what muscles it works,
           how to use it safely, and step-by-step tutorials — powered by AI.
         </p>
 
         <div class="hero-buttons">
-          <a href="#waitlist" class="btn btn-apple">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+          <a href="https://apps.apple.com/us/app/coachlift/id6768139635" class="appstore-badge" target="_blank" rel="noopener">
+            <svg width="22" height="27" viewBox="0 0 814 1000" fill="currentColor" aria-hidden="true">
+              <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.3-151.1-93.2c-152.7-189.9-273.3-525-79.4-830.1 55.5-90.5 151.5-149.2 254.8-150.5 84.5-1.9 162 57.4 213.1 57.4 51.1 0 146.6-71.9 244.8-71.9zM581 76.9c37.5-44.8 64.5-108.2 64.5-171.7 0-8.9-.6-17.9-2.2-25.5-61.5 2.2-134.9 41.6-178.6 90.5-33.9 38.4-66.7 101.2-66.7 165.9 0 9.6 1.9 19.2 2.6 22.4 3.9.6 10.3 1.3 16.6 1.3 55.8 0 122.4-37.5 163.8-82.9z"/>
             </svg>
-            Download on iOS
+            <div class="appstore-badge-text">
+              <span class="appstore-badge-sub">Download on the</span>
+              <span class="appstore-badge-main">App Store</span>
+            </div>
           </a>
+
           <a href="#how" class="btn btn-outline">
             See how it works
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -690,13 +809,19 @@
           </a>
         </div>
 
-        <div class="hero-social-proof">
-          <div class="avatars">
-            <div class="avatar">A</div>
-            <div class="avatar">M</div>
-            <div class="avatar">J</div>
+        <div class="hero-meta">
+          <div class="hero-meta-item">
+            <div class="hero-meta-dot"></div>
+            Free to download
           </div>
-          <span>Join <strong>500+</strong> gym-goers on the waitlist</span>
+          <div class="hero-meta-item">
+            <div class="hero-meta-dot"></div>
+            77+ machines & exercises
+          </div>
+          <div class="hero-meta-item">
+            <div class="hero-meta-dot"></div>
+            iOS 16+
+          </div>
         </div>
       </div>
 
@@ -756,6 +881,73 @@
 </section>
 
 
+<!-- ── Features ──────────────────────────────────────────────────── -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="section-header">
+      <div style="display:flex; justify-content:center; margin-bottom:16px;">
+        <span class="section-eyebrow">What's inside</span>
+      </div>
+      <h2 class="section-title">Everything you need to train smarter</h2>
+      <p class="section-sub">
+        From your first machine to your hundredth workout — Coachlift has the tools to keep you safe and progressing.
+      </p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">📷</span>
+        <div class="feature-title">AI Camera Scanner</div>
+        <p class="feature-desc">Point your camera at any machine and get identified in seconds. No QR codes, no searching.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">🏋️</span>
+        <div class="feature-title">77+ Machines & Exercises</div>
+        <p class="feature-desc">A growing catalog of gym equipment — from cable machines to free weights and cardio gear.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">🫁</span>
+        <div class="feature-title">Muscle Diagrams</div>
+        <p class="feature-desc">Interactive front and back body diagrams show exactly which muscles each machine targets.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">📋</span>
+        <div class="feature-title">Step-by-Step Tutorials</div>
+        <p class="feature-desc">Detailed, beginner-friendly instructions for every exercise so you nail your form every time.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">⚠️</span>
+        <div class="feature-title">Safety Tips</div>
+        <p class="feature-desc">Machine-specific safety guidance helps you avoid the most common gym injuries before they happen.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">▶️</span>
+        <div class="feature-title">YouTube Video Tutorials</div>
+        <p class="feature-desc">Curated video walkthroughs from top trainers, surfaced automatically for each piece of equipment.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">⚖️</span>
+        <div class="feature-title">Workout Calculator</div>
+        <p class="feature-desc">Enter your body weight and experience level to get a personalized starting weight, sets, and reps.</p>
+        <span class="feature-badge soon">New</span>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">🔖</span>
+        <div class="feature-title">Save & Browse</div>
+        <p class="feature-desc">Save your favorite equipment, browse your scan history, and filter by muscle group or category.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
 <!-- ── How it works ──────────────────────────────────────────────── -->
 <section class="how" id="how">
   <div class="container">
@@ -809,105 +1001,116 @@
 </section>
 
 
-<!-- ── Waitlist ──────────────────────────────────────────────────── -->
-<section class="waitlist" id="waitlist">
+<!-- ── Download CTA ───────────────────────────────────────────────── -->
+<section class="download-cta" id="download">
   <div class="container">
-    <div class="waitlist-card">
+    <div class="download-card">
 
-      <h2 class="waitlist-title">Get early access</h2>
-      <p class="waitlist-sub">
-        Coachlift is launching soon on iOS. Join the waitlist and be first in line
-        — no spam, just a heads-up when it's ready.
+      <div class="download-card-eyebrow">
+        <div class="download-card-eyebrow-dot"></div>
+        Free on the App Store
+      </div>
+
+      <h2 class="download-card-title">
+        Start training<br /><em>smarter</em> today
+      </h2>
+      <p class="download-card-sub">
+        Download Coachlift free and never feel lost in the gym again.
+        AI-powered, always in your pocket.
       </p>
 
-      <form
-        id="waitlist-form"
-        action="https://formspree.io/f/xzdoybbv"
-        method="POST"
-      >
-        <div class="waitlist-form">
-          <input
-            type="email"
-            name="email"
-            class="waitlist-input"
-            placeholder="your@email.com"
-            required
-            autocomplete="email"
-          />
-          <button type="submit" class="btn btn-coral">Join Waitlist</button>
-        </div>
-      </form>
-
-      <div class="form-msg" id="form-success">
-        ✓ You're on the list! We'll be in touch soon.
-      </div>
-      <div class="form-msg" id="form-error">
-        ✕ Something went wrong. Please try again.
+      <div class="download-card-buttons">
+        <a href="https://apps.apple.com/us/app/coachlift/id6768139635" class="appstore-badge" target="_blank" rel="noopener" style="background:#fff; color:#000; box-shadow:0 4px 24px rgba(0,0,0,0.3);">
+          <svg width="22" height="27" viewBox="0 0 814 1000" fill="black" aria-hidden="true">
+            <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.3-151.1-93.2c-152.7-189.9-273.3-525-79.4-830.1 55.5-90.5 151.5-149.2 254.8-150.5 84.5-1.9 162 57.4 213.1 57.4 51.1 0 146.6-71.9 244.8-71.9zM581 76.9c37.5-44.8 64.5-108.2 64.5-171.7 0-8.9-.6-17.9-2.2-25.5-61.5 2.2-134.9 41.6-178.6 90.5-33.9 38.4-66.7 101.2-66.7 165.9 0 9.6 1.9 19.2 2.6 22.4 3.9.6 10.3 1.3 16.6 1.3 55.8 0 122.4-37.5 163.8-82.9z"/>
+          </svg>
+          <div class="appstore-badge-text">
+            <span class="appstore-badge-sub" style="color:#666;">Download on the</span>
+            <span class="appstore-badge-main" style="color:#000;">App Store</span>
+          </div>
+        </a>
       </div>
 
-      <p class="waitlist-note">No spam. Unsubscribe anytime.</p>
+      <p class="download-card-note">Free · iOS 16+ · No account required to browse</p>
     </div>
   </div>
 </section>
+
+
+<!-- ── Social strip ──────────────────────────────────────────────── -->
+<div class="social-strip">
+  <div class="container">
+    <div class="social-strip-inner">
+      <span class="social-strip-label">Follow along</span>
+
+      <!-- Twitter / X -->
+      <a href="https://x.com/coachliftapp" class="social-link" target="_blank" rel="noopener" aria-label="Follow on X (Twitter)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.254 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+        X (Twitter)
+      </a>
+
+      <!-- Instagram -->
+      <a href="https://instagram.com/coachliftapp" class="social-link" target="_blank" rel="noopener" aria-label="Follow on Instagram">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+        </svg>
+        Instagram
+      </a>
+
+      <!-- TikTok -->
+      <a href="https://tiktok.com/@coachliftapp" class="social-link" target="_blank" rel="noopener" aria-label="Follow on TikTok">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/>
+        </svg>
+        TikTok
+      </a>
+    </div>
+  </div>
+</div>
 
 
 <!-- ── Footer ────────────────────────────────────────────────────── -->
 <footer>
   <div class="container">
     <div class="footer-inner">
-      <a href="#" class="logo-text" style="font-size:20px;display:flex;align-items:center;gap:8px;">
-        <img src="logo.png" alt="Coachlift" style="height:36px;width:auto;display:block;" />
-        Coach<span>lift</span>
-      </a>
-      <div class="footer-links">
-        <a href="#how">How it works</a>
-        <a href="#waitlist">Waitlist</a>
+      <div>
+        <a href="#" class="logo-text" style="font-size:20px;display:flex;align-items:center;gap:8px;">
+          <img src="logo.png" alt="Coachlift" style="height:36px;width:auto;display:block;" />
+          Coach<span>lift</span>
+        </a>
+        <p class="footer-copy" style="margin-top:10px;">© 2025 Coachlift. All rights reserved.</p>
       </div>
-      <p class="footer-copy">© 2025 Coachlift. All rights reserved.</p>
+
+      <div class="footer-right">
+        <div class="footer-links">
+          <a href="#features">Features</a>
+          <a href="#how">How it works</a>
+          <a href="/privacy">Privacy Policy</a>
+          <a href="mailto:support@coachlift.app">Support</a>
+        </div>
+        <div class="footer-social">
+          <a href="https://x.com/coachliftapp" class="footer-social-link" target="_blank" rel="noopener" aria-label="X (Twitter)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.254 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+          </a>
+          <a href="https://instagram.com/coachliftapp" class="footer-social-link" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+            </svg>
+          </a>
+          <a href="https://tiktok.com/@coachliftapp" class="footer-social-link" target="_blank" rel="noopener" aria-label="TikTok">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/>
+            </svg>
+          </a>
+        </div>
+      </div>
     </div>
   </div>
 </footer>
-
-
-<script>
-  const form = document.getElementById('waitlist-form');
-  const successMsg = document.getElementById('form-success');
-  const errorMsg = document.getElementById('form-error');
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const btn = form.querySelector('button[type="submit"]');
-    const originalText = btn.textContent;
-    btn.textContent = 'Joining…';
-    btn.disabled = true;
-    successMsg.style.display = 'none';
-    errorMsg.style.display = 'none';
-
-    try {
-      const res = await fetch(form.action, {
-        method: 'POST',
-        body: new FormData(form),
-        headers: { Accept: 'application/json' },
-      });
-
-      if (res.ok) {
-        form.style.display = 'none';
-        successMsg.classList.add('success');
-        successMsg.style.display = 'flex';
-        form.reset();
-      } else {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Submission failed');
-      }
-    } catch {
-      errorMsg.classList.add('error');
-      errorMsg.style.display = 'flex';
-      btn.textContent = originalText;
-      btn.disabled = false;
-    }
-  });
-</script>
 
 </body>
 </html>
