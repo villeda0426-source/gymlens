@@ -1,5 +1,6 @@
 import "./polyfills"; // must be first — sets up WebSocket before any Supabase client initializes
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ override: true });
 import express from "express";
 import cors from "cors";
 import identifyRouter from "./routes/identify";
