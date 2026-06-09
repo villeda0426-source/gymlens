@@ -15,6 +15,7 @@
     "and": "y"
   },
   "tabs": {
+    "home": "Inicio",
     "scan": "Escanear",
     "search": "Buscar",
     "saved": "Guardado",
@@ -33,10 +34,33 @@
     "permission_button": "Conceder Acceso",
     "no_camera": "Cámara no disponible"
   },
+  "home": {
+    "good_morning": "Buenos días",
+    "good_afternoon": "Buenas tardes",
+    "good_evening": "Buenas noches",
+    "identify_equipment": "Identificar equipo",
+    "identify_subtitle": "Apunta la cámara a cualquier máquina",
+    "spotlight": "Equipo destacado",
+    "todays_tip": "Consejo de hoy",
+    "browse_equipment": "Explorar\nequipo",
+    "saved_items": "Guardados",
+    "my_profile": "Mi\nperfil",
+    "tips": {
+      "0": "Calienta de 5 a 10 minutos antes de levantar para reducir el riesgo de lesión.",
+      "1": "Prioriza la técnica sobre el peso: las repeticiones limpias desarrollan músculo con más seguridad.",
+      "2": "Descansa 48 horas antes de entrenar el mismo grupo muscular.",
+      "3": "Mantente hidratado antes, durante y después del entrenamiento.",
+      "4": "Sobrecarga progresiva: aumenta poco a poco el peso o las repeticiones cada semana.",
+      "5": "El sueño es cuando tus músculos se recuperan. Apunta a 7–9 horas por noche.",
+      "6": "Los movimientos compuestos como sentadillas y peso muerto dan mucho rendimiento."
+    }
+  },
   "equipment": {
     "tutorial": "Tutorial",
     "safety": "Consejos de Seguridad",
+    "safety_short": "Seguridad",
     "videos": "Videos",
+    "workout": "Rutina",
     "difficulty": "Dificultad",
     "muscle_groups": "Grupos Musculares",
     "step": "Paso",
@@ -51,7 +75,8 @@
       "free_weight": "Pesas Libres",
       "cable": "Cables",
       "cardio": "Cardio",
-      "accessory": "Accesorios"
+      "accessory": "Accesorios",
+      "bodyweight": "Peso Corporal"
     },
     "confidence": "Confianza",
     "identified_as": "Identificado como"
@@ -76,6 +101,7 @@
     "email": "Correo",
     "password": "Contraseña",
     "username": "Nombre de usuario",
+    "name": "Nombre",
     "email_placeholder": "tu@ejemplo.com",
     "password_placeholder": "Contraseña",
     "username_placeholder": "Tu nombre",
@@ -88,7 +114,13 @@
     "signup_prompt_title": "Acceso Completo",
     "signup_prompt_message": "Crea una cuenta gratis para guardar tu historial, marcar equipos y sincronizar entre dispositivos.",
     "signup_prompt_cta": "Crear Cuenta Gratis",
-    "maybe_later": "Quizás después"
+    "maybe_later": "Quizás después",
+    "tagline": "Tu coach de gimnasio con IA",
+    "create_account": "Crear cuenta",
+    "check_email_title": "Revisa tu correo",
+    "check_email_message": "Te enviamos un enlace de confirmación. Ábrelo en este teléfono para terminar de crear tu cuenta.",
+    "apple_failed": "Falló el inicio de sesión con Apple",
+    "confirming_email": "Confirmando tu correo..."
   },
   "profile": {
     "title": "Perfil",

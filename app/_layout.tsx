@@ -1,6 +1,8 @@
 import "../global.css";
 import React, { useEffect } from "react";
+import { Alert } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
+import * as Linking from "expo-linking";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -20,6 +22,7 @@ import { I18nextProvider } from "react-i18next";
 import i18n, { getStoredLanguage } from "@/lib/i18n";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
+import { handleAuthRedirectUrl } from "@/lib/authRedirect";
 import { colors } from "@/constants/theme";
 
 function AuthGate() {
@@ -64,7 +67,28 @@ export default function RootLayout() {
       loadProfile();
     });
 
-    return () => subscription.unsubscribe();
+    const handleUrl = async (url: string) => {
+      try {
+        const handled = await handleAuthRedirectUrl(url);
+        if (handled) {
+          const { data: { session } } = await supabase.auth.getSession();
+          setUser(session?.user ?? null);
+          await loadProfile();
+        }
+      } catch (err: any) {
+        Alert.alert("Sign-in link failed", err.message || "Please request a new confirmation email.");
+      }
+    };
+
+    Linking.getInitialURL().then((url) => {
+      if (url) handleUrl(url);
+    });
+    const urlSubscription = Linking.addEventListener("url", ({ url }) => handleUrl(url));
+
+    return () => {
+      subscription.unsubscribe();
+      urlSubscription.remove();
+    };
   }, []);
 
   if (!fontsLoaded) return null;
@@ -77,7 +101,9 @@ export default function RootLayout() {
             <StatusBar style="dark" />
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
               <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(auth)/login" />
+              <Stack.Screen name="(auth)/register" />
+              <Stack.Screen name="auth/callback" />
               <Stack.Screen name="equipment/[id]" options={{ presentation: "card" }} />
               <Stack.Screen name="feedback" options={{ presentation: "modal" }} />
             </Stack>

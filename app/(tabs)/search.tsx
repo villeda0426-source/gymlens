@@ -18,7 +18,7 @@ import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts } from "@/constants/theme";
 
-const CATEGORIES = ["all", "machine", "free_weight", "cable", "cardio", "accessory"] as const;
+const CATEGORIES = ["all", "machine", "free_weight", "cable", "cardio", "accessory", "bodyweight"] as const;
 const RECENT_FILTER = "recently_scanned";
 
 export default function SearchScreen() {

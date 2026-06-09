@@ -12,33 +12,44 @@ import {
   ScrollView,
 } from "react-native";
 import * as AppleAuthentication from "expo-apple-authentication";
+import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { getAuthRedirectUrl } from "@/lib/authRedirect";
 import { colors, fonts } from "@/constants/theme";
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
 
   const handleEmailAuth = async () => {
-    if (!email.trim() || !password) return;
+    if (!email.trim() || !password || (mode === "signup" && !name.trim())) return;
     setLoading(true);
     let error: any;
     if (mode === "signin") {
       ({ error } = await supabase.auth.signInWithPassword({ email: email.trim(), password }));
     } else {
-      ({ error } = await supabase.auth.signUp({ email: email.trim(), password }));
+      ({ error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { username: name.trim(), full_name: name.trim() },
+          emailRedirectTo: getAuthRedirectUrl(),
+        },
+      }));
       if (!error) {
-        Alert.alert("Check your email", "We sent you a confirmation link.");
+        Alert.alert(t("auth.check_email_title"), t("auth.check_email_message"));
         setLoading(false);
         return;
       }
     }
     setLoading(false);
-    if (error) Alert.alert("Error", error.message);
+    if (error) Alert.alert(t("common.error"), error.message);
   };
 
   const handleAppleSignIn = async () => {
@@ -50,17 +61,17 @@ export default function LoginScreen() {
         ],
       });
       if (!credential.identityToken) {
-        Alert.alert("Error", "Apple Sign In failed — no identity token");
+        Alert.alert(t("common.error"), t("auth.apple_failed"));
         return;
       }
       const { error } = await supabase.auth.signInWithIdToken({
         provider: "apple",
         token: credential.identityToken,
       });
-      if (error) Alert.alert("Error", error.message);
+      if (error) Alert.alert(t("common.error"), error.message);
     } catch (e: any) {
       if (e.code !== "ERR_REQUEST_CANCELED") {
-        Alert.alert("Error", e.message || "Apple Sign In failed");
+        Alert.alert(t("common.error"), e.message || t("auth.apple_failed"));
       }
     }
   };
@@ -75,7 +86,7 @@ export default function LoginScreen() {
           <Text style={styles.logoCoach}>Coach</Text>
           <Text style={styles.logoLift}>lift</Text>
         </View>
-        <Text style={styles.tagline}>Your AI gym coach</Text>
+        <Text style={styles.tagline}>{t("auth.tagline")}</Text>
 
         <View style={styles.modeToggle}>
           <TouchableOpacity
@@ -83,7 +94,7 @@ export default function LoginScreen() {
             onPress={() => setMode("signin")}
           >
             <Text style={[styles.modeBtnText, mode === "signin" && styles.modeBtnTextActive]}>
-              Sign In
+              {t("auth.sign_in")}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -91,17 +102,31 @@ export default function LoginScreen() {
             onPress={() => setMode("signup")}
           >
             <Text style={[styles.modeBtnText, mode === "signup" && styles.modeBtnTextActive]}>
-              Create Account
+              {t("auth.create_account")}
             </Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.form}>
+          {mode === "signup" && (
+            <View style={styles.field}>
+              <Text style={styles.label}>{t("auth.name")}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={t("auth.username_placeholder")}
+                placeholderTextColor={colors.textMuted}
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+              />
+            </View>
+          )}
+
           <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>{t("auth.email")}</Text>
             <TextInput
               style={styles.input}
-              placeholder="you@example.com"
+              placeholder={t("auth.email_placeholder")}
               placeholderTextColor={colors.textMuted}
               value={email}
               onChangeText={setEmail}
@@ -112,7 +137,7 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>{t("auth.password")}</Text>
             <TextInput
               style={styles.input}
               placeholder="••••••••"
@@ -132,7 +157,7 @@ export default function LoginScreen() {
               <ActivityIndicator color={colors.white} />
             ) : (
               <Text style={styles.buttonText}>
-                {mode === "signin" ? "Sign In" : "Create Account"}
+                {mode === "signin" ? t("auth.sign_in") : t("auth.create_account")}
               </Text>
             )}
           </TouchableOpacity>
@@ -140,7 +165,7 @@ export default function LoginScreen() {
 
         <View style={styles.dividerRow}>
           <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
+          <Text style={styles.dividerText}>{t("common.or")}</Text>
           <View style={styles.dividerLine} />
         </View>
 

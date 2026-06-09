@@ -14,6 +14,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { getAuthRedirectUrl } from "@/lib/authRedirect";
 import { colors, fonts } from "@/constants/theme";
 
 export default function RegisterScreen() {
@@ -30,13 +31,17 @@ export default function RegisterScreen() {
     const { error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { username: username.trim() } },
+      options: {
+        data: { username: username.trim(), full_name: username.trim() },
+        emailRedirectTo: getAuthRedirectUrl(),
+      },
     });
     setLoading(false);
     if (error) {
       Alert.alert(t("errors.auth_failed"), error.message);
     } else {
-      router.replace("/(tabs)");
+      Alert.alert(t("auth.check_email_title"), t("auth.check_email_message"));
+      router.replace("/(auth)/login");
     }
   };
 
@@ -51,7 +56,7 @@ export default function RegisterScreen() {
 
         <View style={styles.form}>
           <View style={styles.field}>
-            <Text style={styles.label}>{t("auth.username")}</Text>
+            <Text style={styles.label}>{t("auth.name")}</Text>
             <TextInput
               style={styles.input}
               placeholder={t("auth.username_placeholder")}

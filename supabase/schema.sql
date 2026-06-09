@@ -29,7 +29,7 @@ create table equipment (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
   name_es text,
-  category text check (category in ('machine', 'free_weight', 'cable', 'accessory', 'cardio')),
+  category text check (category in ('machine', 'free_weight', 'cable', 'accessory', 'cardio', 'bodyweight')),
   description text,
   description_es text,
   muscle_groups text[],
@@ -87,12 +87,15 @@ create table feedback (
 
 -- Row Level Security
 alter table profiles enable row level security;
+alter table equipment enable row level security;
 alter table equipment_identifications enable row level security;
 alter table saved_equipment enable row level security;
+alter table equipment_videos enable row level security;
 alter table feedback enable row level security;
 
 -- Profiles: users can only read/update their own
 create policy "Users can view own profile" on profiles for select using (auth.uid() = id);
+create policy "Users can insert own profile" on profiles for insert with check (auth.uid() = id);
 create policy "Users can update own profile" on profiles for update using (auth.uid() = id);
 
 -- Equipment: public read

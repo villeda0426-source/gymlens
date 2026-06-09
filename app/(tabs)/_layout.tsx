@@ -46,7 +46,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="home-outline" iconFocused="home" label="Home" focused={focused} />
+            <TabIcon icon="home-outline" iconFocused="home" label={t("tabs.home")} focused={focused} />
           ),
         }}
       />

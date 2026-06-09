@@ -15,6 +15,7 @@
     "and": "and"
   },
   "tabs": {
+    "home": "Home",
     "scan": "Scan",
     "search": "Search",
     "saved": "Saved",
@@ -33,10 +34,33 @@
     "permission_button": "Grant Access",
     "no_camera": "No camera available"
   },
+  "home": {
+    "good_morning": "Good morning",
+    "good_afternoon": "Good afternoon",
+    "good_evening": "Good evening",
+    "identify_equipment": "Identify Equipment",
+    "identify_subtitle": "Point camera at any gym machine",
+    "spotlight": "Equipment Spotlight",
+    "todays_tip": "Today's Tip",
+    "browse_equipment": "Browse\nEquipment",
+    "saved_items": "Saved\nItems",
+    "my_profile": "My\nProfile",
+    "tips": {
+      "0": "Warm up for 5–10 minutes before lifting to reduce injury risk.",
+      "1": "Focus on form over weight — quality reps build more muscle safely.",
+      "2": "Rest 48 hours between training the same muscle group.",
+      "3": "Stay hydrated: drink water before, during, and after your workout.",
+      "4": "Progressive overload — gradually increase weight or reps each week.",
+      "5": "Sleep is when your muscles grow. Aim for 7–9 hours per night.",
+      "6": "Compound movements like squats and deadlifts give the best ROI."
+    }
+  },
   "equipment": {
     "tutorial": "Tutorial",
     "safety": "Safety Tips",
+    "safety_short": "Safety",
     "videos": "Videos",
+    "workout": "Workout",
     "difficulty": "Difficulty",
     "muscle_groups": "Muscle Groups",
     "step": "Step",
@@ -51,7 +75,8 @@
       "free_weight": "Free Weights",
       "cable": "Cables",
       "cardio": "Cardio",
-      "accessory": "Accessories"
+      "accessory": "Accessories",
+      "bodyweight": "Bodyweight"
     },
     "confidence": "Confidence",
     "identified_as": "Identified as"
@@ -76,6 +101,7 @@
     "email": "Email",
     "password": "Password",
     "username": "Username",
+    "name": "Name",
     "email_placeholder": "you@example.com",
     "password_placeholder": "Password",
     "username_placeholder": "Your name",
@@ -88,7 +114,13 @@
     "signup_prompt_title": "Get Full Access",
     "signup_prompt_message": "Create a free account to save your identification history, bookmark equipment, and sync across devices.",
     "signup_prompt_cta": "Create Free Account",
-    "maybe_later": "Maybe Later"
+    "maybe_later": "Maybe Later",
+    "tagline": "Your AI gym coach",
+    "create_account": "Create Account",
+    "check_email_title": "Check your email",
+    "check_email_message": "We sent you a confirmation link. Open it on this phone to finish creating your account.",
+    "apple_failed": "Apple Sign In failed",
+    "confirming_email": "Confirming your email..."
   },
   "profile": {
     "title": "Profile",

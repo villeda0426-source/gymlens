@@ -12,35 +12,27 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import EquipmentCard from "@/components/Equipment/EquipmentCard";
 import { colors, fonts } from "@/constants/theme";
 
-const TIPS = [
-  "Warm up for 5–10 minutes before lifting to reduce injury risk.",
-  "Focus on form over weight — quality reps build more muscle safely.",
-  "Rest 48 hours between training the same muscle group.",
-  "Stay hydrated: drink water before, during, and after your workout.",
-  "Progressive overload — gradually increase weight or reps each week.",
-  "Sleep is when your muscles grow. Aim for 7–9 hours per night.",
-  "Compound movements like squats and deadlifts give the best ROI.",
-];
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3001";
 
-function getGreeting(name?: string): string {
+function getGreeting(t: (key: string) => string, name?: string): string {
   const hour = new Date().getHours();
-  const base = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const baseKey = hour < 12 ? "home.good_morning" : hour < 17 ? "home.good_afternoon" : "home.good_evening";
+  const base = t(baseKey);
   return name ? `${base}, ${name.split(" ")[0]} 👋` : `${base} 👋`;
 }
 
-function getTodaysTip(): string {
-  return TIPS[new Date().getDay() % TIPS.length];
+function getTodaysTip(t: (key: string) => string): string {
+  return t(`home.tips.${new Date().getDay()}`);
 }
 
 export default function HomeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { user, profile } = useAuthStore();
+  const { profile } = useAuthStore();
   const [featuredItem, setFeaturedItem] = useState<any>(null);
   const [loadingFeatured, setLoadingFeatured] = useState(true);
 
@@ -51,11 +43,8 @@ export default function HomeScreen() {
   const fetchFeatured = async () => {
     setLoadingFeatured(true);
     try {
-      // Fetch a small batch and pick one randomly client-side
-      const { data } = await supabase
-        .from("equipment")
-        .select("id, name, name_es, category, muscle_groups, difficulty, image_url")
-        .limit(30);
+      const res = await fetch(`${API_BASE}/api/search`);
+      const data = await res.json();
       if (data && data.length > 0) {
         const idx = Math.floor(Math.random() * data.length);
         setFeaturedItem(data[idx]);
@@ -65,7 +54,7 @@ export default function HomeScreen() {
     }
   };
 
-  const displayName = profile?.username || (user?.email ? user.email.split("@")[0] : undefined);
+  const displayName = profile?.username || undefined;
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -76,7 +65,7 @@ export default function HomeScreen() {
       >
         {/* Greeting header */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>{getGreeting(displayName)}</Text>
+          <Text style={styles.greeting}>{getGreeting(t, displayName)}</Text>
           <View style={styles.logoRow}>
             <Image
               source={require("@/assets/images/coachlift-logo.png")}
@@ -99,8 +88,8 @@ export default function HomeScreen() {
             <Ionicons name="scan" size={28} color={colors.white} />
           </View>
           <View style={styles.ctaText}>
-            <Text style={styles.ctaTitle}>Identify Equipment</Text>
-            <Text style={styles.ctaSubtitle}>Point camera at any gym machine</Text>
+            <Text style={styles.ctaTitle}>{t("home.identify_equipment")}</Text>
+            <Text style={styles.ctaSubtitle}>{t("home.identify_subtitle")}</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.white} style={{ opacity: 0.7 }} />
         </TouchableOpacity>
@@ -108,7 +97,7 @@ export default function HomeScreen() {
         {/* Featured equipment */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Equipment Spotlight</Text>
+            <Text style={styles.sectionTitle}>{t("home.spotlight")}</Text>
             <TouchableOpacity onPress={fetchFeatured}>
               <Ionicons name="refresh-outline" size={18} color={colors.textMuted} />
             </TouchableOpacity>
@@ -122,7 +111,7 @@ export default function HomeScreen() {
             <EquipmentCard item={featuredItem} />
           ) : (
             <View style={styles.cardLoading}>
-              <Text style={styles.noData}>No equipment found</Text>
+              <Text style={styles.noData}>{t("search.no_results")}</Text>
             </View>
           )}
         </View>
@@ -131,11 +120,11 @@ export default function HomeScreen() {
         <View style={styles.tipCard}>
           <View style={styles.tipHeader}>
             <View style={styles.tipBadge}>
-              <Text style={styles.tipBadgeText}>Today's Tip</Text>
+              <Text style={styles.tipBadgeText}>{t("home.todays_tip")}</Text>
             </View>
             <Ionicons name="bulb-outline" size={20} color={colors.lime} />
           </View>
-          <Text style={styles.tipText}>{getTodaysTip()}</Text>
+          <Text style={styles.tipText}>{getTodaysTip(t)}</Text>
         </View>
 
         {/* Quick links */}
@@ -146,7 +135,7 @@ export default function HomeScreen() {
             activeOpacity={0.85}
           >
             <Ionicons name="search" size={22} color={colors.coral} />
-            <Text style={styles.quickLabel}>Browse{"\n"}Equipment</Text>
+            <Text style={styles.quickLabel}>{t("home.browse_equipment")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickCard}
@@ -154,7 +143,7 @@ export default function HomeScreen() {
             activeOpacity={0.85}
           >
             <Ionicons name="bookmark" size={22} color={colors.coral} />
-            <Text style={styles.quickLabel}>Saved{"\n"}Items</Text>
+            <Text style={styles.quickLabel}>{t("home.saved_items")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickCard}
@@ -162,7 +151,7 @@ export default function HomeScreen() {
             activeOpacity={0.85}
           >
             <Ionicons name="person" size={22} color={colors.coral} />
-            <Text style={styles.quickLabel}>My{"\n"}Profile</Text>
+            <Text style={styles.quickLabel}>{t("home.my_profile")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

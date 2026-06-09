@@ -7,6 +7,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import { usePathname } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -29,6 +33,14 @@ const MOODS = [
   { emoji: "😐", label: "Meh",        value: "meh" },
   { emoji: "💡", label: "Suggestion", value: "suggestion" },
 ];
+
+const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
+  Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error("Request timed out")), ms)
+    ),
+  ]);
 
 interface FeedbackContextType {
   openFeedback: () => void;
@@ -65,6 +77,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   };
 
   const handleSubmit = async () => {
+    Keyboard.dismiss();
     if (!selectedMood) {
       Alert.alert("Pick a mood", "Please select an emoji before submitting.");
       return;
@@ -90,7 +103,10 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
       let screenshotUri: string | null = null;
       try {
         if (captureScreen) {
-          screenshotUri = await captureScreen({ format: "jpg", quality: 0.7 });
+          screenshotUri = await withTimeout(
+            captureScreen({ format: "jpg", quality: 0.55 }),
+            2000
+          );
         }
       } catch {
         // Screenshot is optional — don't block submission
@@ -112,18 +128,25 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
         console.warn("Supabase feedback insert error:", dbError.message);
       }
 
-      await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/api/feedback/email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mood: moodLabel,
-          moodEmoji: MOODS.find((m) => m.value === selectedMood)?.emoji,
-          description: text.trim(),
-          screen: pathname,
-          deviceInfo,
-          screenshotUri,
-        }),
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      try {
+        await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/api/feedback/email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mood: moodLabel,
+            moodEmoji: MOODS.find((m) => m.value === selectedMood)?.emoji,
+            description: text.trim(),
+            screen: pathname,
+            deviceInfo,
+            screenshotUri,
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
 
       Alert.alert("Thanks! 🙌", "Your feedback was submitted. It helps make GymLens better.");
       handleClose();
@@ -145,67 +168,79 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
         animationType="slide"
         onRequestClose={handleClose}
       >
-        <View style={styles.overlay}>
+        <KeyboardAvoidingView
+          style={styles.overlay}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
           <View style={styles.sheet}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Beta Feedback</Text>
-              <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
-                <Text style={styles.closeText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.subtitle}>
-              Screen: <Text style={styles.screenName}>{pathname}</Text>
-            </Text>
-
-            <Text style={styles.label}>How would you describe this?</Text>
-            <View style={styles.moodRow}>
-              {MOODS.map((mood) => (
-                <TouchableOpacity
-                  key={mood.value}
-                  style={[
-                    styles.moodBtn,
-                    selectedMood === mood.value && styles.moodBtnSelected,
-                  ]}
-                  onPress={() => setSelectedMood(mood.value)}
-                >
-                  <Text style={styles.moodEmoji}>{mood.emoji}</Text>
-                  <Text
-                    style={[
-                      styles.moodLabel,
-                      selectedMood === mood.value && styles.moodLabelSelected,
-                    ]}
-                  >
-                    {mood.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={styles.label}>Tell us more</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="What happened? What were you trying to do?"
-              placeholderTextColor="#aaa"
-              multiline
-              numberOfLines={4}
-              value={text}
-              onChangeText={setText}
-              maxLength={500}
-            />
-            <Text style={styles.charCount}>{text.length}/500</Text>
-
-            <TouchableOpacity
-              style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
-              onPress={handleSubmit}
-              disabled={submitting}
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.sheetContent}
             >
-              <Text style={styles.submitText}>
-                {submitting ? "Sending..." : "Send Feedback"}
+              <View style={styles.header}>
+                <Text style={styles.title}>Beta Feedback</Text>
+                <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
+                  <Text style={styles.closeText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.subtitle}>
+                Screen: <Text style={styles.screenName}>{pathname}</Text>
               </Text>
-            </TouchableOpacity>
+
+              <Text style={styles.label}>How would you describe this?</Text>
+              <View style={styles.moodRow}>
+                {MOODS.map((mood) => (
+                  <TouchableOpacity
+                    key={mood.value}
+                    style={[
+                      styles.moodBtn,
+                      selectedMood === mood.value && styles.moodBtnSelected,
+                    ]}
+                    onPress={() => setSelectedMood(mood.value)}
+                  >
+                    <Text style={styles.moodEmoji}>{mood.emoji}</Text>
+                    <Text
+                      style={[
+                        styles.moodLabel,
+                        selectedMood === mood.value && styles.moodLabelSelected,
+                      ]}
+                    >
+                      {mood.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.label}>Tell us more</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="What happened? What were you trying to do?"
+                placeholderTextColor="#aaa"
+                multiline
+                numberOfLines={4}
+                value={text}
+                onChangeText={setText}
+                maxLength={500}
+                returnKeyType="done"
+                blurOnSubmit
+                onSubmitEditing={Keyboard.dismiss}
+              />
+              <Text style={styles.charCount}>{text.length}/500</Text>
+
+              <TouchableOpacity
+                style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
+                onPress={handleSubmit}
+                disabled={submitting}
+              >
+                <Text style={styles.submitText}>
+                  {submitting ? "Sending..." : "Send Feedback"}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </FeedbackContext.Provider>
   );
@@ -224,7 +259,11 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
-    paddingBottom: 40,
+    paddingBottom: 18,
+    maxHeight: "86%",
+  },
+  sheetContent: {
+    paddingBottom: 22,
   },
   header: {
     flexDirection: "row",
@@ -262,30 +301,35 @@ const styles = StyleSheet.create({
   },
   moodRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 10,
     marginBottom: 20,
   },
   moodBtn: {
     alignItems: "center",
-    padding: 10,
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: "#e0e0e0",
     backgroundColor: "#fff",
-    width: "23%",
+    width: "48%",
+    minHeight: 82,
   },
   moodBtnSelected: {
     borderColor: "#6AAA00",
     backgroundColor: "#f0fde0",
   },
   moodEmoji: {
-    fontSize: 26,
-    marginBottom: 4,
+    fontSize: 24,
+    marginBottom: 6,
   },
   moodLabel: {
-    fontSize: 10,
+    fontSize: 13,
     color: "#888",
-    fontWeight: "500",
+    fontWeight: "600",
+    textAlign: "center",
   },
   moodLabelSelected: {
     color: "#6AAA00",

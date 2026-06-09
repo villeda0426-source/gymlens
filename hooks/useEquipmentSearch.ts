@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3001";
 
 export function useEquipmentSearch() {
   const [results, setResults] = useState<any[]>([]);
@@ -11,20 +12,14 @@ export function useEquipmentSearch() {
     setError(null);
 
     try {
-      let q = supabase.from("equipment").select("*");
+      const params = new URLSearchParams();
+      const cleanQuery = query.trim();
+      if (cleanQuery) params.set("q", cleanQuery);
+      if (category && category !== "all") params.set("category", category);
 
-      if (query.trim()) {
-        q = q.ilike("name", `%${query.trim()}%`);
-      }
-
-      if (category && category !== "all") {
-        q = q.eq("category", category);
-      }
-
-      q = q.order("name").limit(100);
-
-      const { data, error: sbError } = await q;
-      if (sbError) throw sbError;
+      const res = await fetch(`${API_BASE}/api/search?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Search failed");
       setResults(data || []);
     } catch (err: any) {
       setError(err.message || "Search failed");

@@ -11,21 +11,30 @@ const supabase = createClient(
 router.get("/", async (req: Request, res: Response) => {
   try {
     const { q, category } = req.query as { q?: string; category?: string };
+    const searchTerm = q?.trim();
 
     let query = supabase
       .from("equipment")
-      .select("id, name, name_es, category, description, description_es, muscle_groups, difficulty, image_url")
+      .select("id, name, name_es, category, description, description_es, muscle_groups, difficulty")
       .order("name");
 
-    if (q) {
-      query = query.or(`name.ilike.%${q}%,name_es.ilike.%${q}%,description.ilike.%${q}%`);
+    if (searchTerm) {
+      const safeTerm = searchTerm.replace(/[%_,]/g, "\\$&");
+      query = query.or(
+        [
+          `name.ilike.%${safeTerm}%`,
+          `name_es.ilike.%${safeTerm}%`,
+          `description.ilike.%${safeTerm}%`,
+          `description_es.ilike.%${safeTerm}%`,
+        ].join(",")
+      );
     }
 
     if (category && category !== "all") {
       query = query.eq("category", category);
     }
 
-    const { data, error } = await query.limit(50);
+    const { data, error } = await query.limit(500);
 
     if (error) throw error;
 

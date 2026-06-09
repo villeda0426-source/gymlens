@@ -93,9 +93,12 @@ export const useEquipmentStore = create<EquipmentStore>((set, get) => ({
       } else {
         const { error } = await supabase
           .from("saved_equipment")
-          .insert({ user_id: userId, equipment_id: equipmentId });
+          .upsert(
+            { user_id: userId, equipment_id: equipmentId },
+            { onConflict: "user_id,equipment_id", ignoreDuplicates: true }
+          );
         if (error) {
-          console.error("[toggleSave] insert error:", error.message, error.details, error.hint);
+          console.error("[toggleSave] save error:", error.message, error.details, error.hint);
           return "error";
         }
         set({ savedIds: [...savedIds, equipmentId] });

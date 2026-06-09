@@ -14,6 +14,7 @@ interface AuthState {
   setUser: (user: any | null) => void;
   setProfile: (profile: any | null) => void;
   loadProfile: () => Promise<void>;
+  updateProfileName: (name: string) => Promise<{ error?: string }>;
   incrementGuestUses: () => Promise<void>;
   canUseAsGuest: () => boolean;
   signOut: () => Promise<void>;
@@ -34,15 +35,58 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get();
     if (!user) {
       const stored = await AsyncStorage.getItem(GUEST_USES_KEY);
-      set({ guestUses: stored ? parseInt(stored) : 0, isLoading: false });
+      set({ profile: null, guestUses: stored ? parseInt(stored) : 0, isLoading: false });
       return;
     }
-    const { data } = await supabase
+    const fallbackName =
+      user.user_metadata?.username ||
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      "";
+    const { data, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", user.id)
-      .single();
-    set({ profile: data, isLoading: false });
+      .maybeSingle();
+
+    if (data) {
+      set({ profile: data, isLoading: false });
+      return;
+    }
+
+    if (error) {
+      console.warn("[loadProfile] profile fetch error:", error.message);
+    }
+
+    set({ profile: { id: user.id, username: fallbackName || null }, isLoading: false });
+  },
+
+  updateProfileName: async (name) => {
+    const { user, profile } = get();
+    const cleanName = name.trim();
+    if (!user) return { error: "You need to be signed in." };
+    if (!cleanName) return { error: "Name cannot be empty." };
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ username: cleanName, language: profile?.language || "en" })
+      .eq("id", user.id)
+      .select("*")
+      .maybeSingle();
+
+    if (error) {
+      console.warn("[updateProfileName] profile update error:", error.message);
+    }
+
+    const { error: authError } = await supabase.auth.updateUser({
+      data: { username: cleanName, full_name: cleanName },
+    });
+    if (authError) {
+      console.warn("[updateProfileName] auth metadata update error:", authError.message);
+    }
+
+    set({ profile: { ...(profile || { id: user.id }), username: cleanName } });
+    return {};
   },
 
   incrementGuestUses: async () => {

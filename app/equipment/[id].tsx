@@ -12,15 +12,17 @@ import {
   Animated,
   TextInput,
   Switch,
+  Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import * as Haptics from "expo-haptics";
+import * as Sharing from "expo-sharing";
+import { captureScreen } from "react-native-view-shot";
 import SafeScreen from "@/components/Layout/SafeScreen";
-import { supabase } from "@/lib/supabase";
 import MuscleGroupTags from "@/components/Equipment/MuscleGroupTags";
 import MuscleMapView from "@/components/Equipment/MuscleMapView";
-import FeedbackBanner from "@/components/UI/FeedbackBanner";
 import { useEquipmentStore } from "@/store/equipmentStore";
 import { useAuthStore } from "@/store/authStore";
 import { colors, fonts } from "@/constants/theme";
@@ -55,8 +57,8 @@ export default function EquipmentDetailScreen() {
   const isEs = i18n.language === "es";
 
   const { currentResult, toggleSave, loadSavedIds, savedIds } = useEquipmentStore();
-  const { user, profile } = useAuthStore();
-  const authenticatedUserId = user && profile ? user.id : null;
+  const { user } = useAuthStore();
+  const authenticatedUserId = user?.id ?? null;
 
   const toastAnim = useRef(new Animated.Value(0)).current;
   const [toastMsg, setToastMsg] = useState("");
@@ -110,14 +112,11 @@ export default function EquipmentDetailScreen() {
     setIsLoading(true);
     setFetchError(null);
     try {
-      const { data, error } = await supabase
-        .from("equipment")
-        .select("*")
-        .eq("id", id as string)
-        .single();
-      if (error) {
-        setFetchError(error.message);
-      } else if (data) {
+      const res = await fetch(`${API_BASE}/api/equipment/${id}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setFetchError(data?.error || "Failed to load equipment");
+      } else {
         setEquipment(data);
       }
     } catch (err: any) {
@@ -138,10 +137,11 @@ export default function EquipmentDetailScreen() {
       const res = await fetch(`${API_BASE}/api/equipment/${equipment.id}/weight-factor`);
       if (res.ok) {
         const data = await res.json();
-        setWeightFactor(data.weight_factor);
+        setWeightFactor(Number(data.weight_factor) || 0.3);
+      } else {
+        setWeightFactor(0.3);
       }
     } catch {
-      // Server unavailable — use fallback
       setWeightFactor(0.3);
     } finally {
       setWeightFactorLoading(false);
@@ -188,18 +188,36 @@ export default function EquipmentDetailScreen() {
 
   const handleShare = async () => {
     if (!equipment) return;
-    await Share.share({
-      title: equipment.name,
-      message: `Check out ${equipment.name} on CoachLift!\n\n${equipment.description}`,
-    });
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const message = `Check out ${equipment.name} on CoachLift.\n${equipment.description || ""}`;
+
+    try {
+      const uri = await captureScreen({ format: "jpg", quality: 0.92 });
+      const canShareFile = await Sharing.isAvailableAsync();
+      if (canShareFile) {
+        await Sharing.shareAsync(uri, {
+          mimeType: "image/jpeg",
+          dialogTitle: `Share ${equipment.name}`,
+          UTI: "public.jpeg",
+        });
+        return;
+      }
+    } catch (err) {
+      console.warn("[share] preview capture failed:", err);
+    }
+
+    try {
+      await Share.share({ title: equipment.name, message });
+    } catch {
+      Alert.alert("Could not share", "Try again in a moment.");
+    }
   };
 
   const calcWeight = (): string => {
     const bw = parseFloat(bodyWeight);
     if (!bw || !weightFactor) return "—";
     const multiplier = LEVEL_MULTIPLIERS[level];
-    let result = bw * weightFactor * multiplier;
-    if (!useLbs) result = result * 0.453592; // convert kg bodyweight → kg result
+    const result = bw * weightFactor * multiplier;
     return `${Math.round(result)} ${useLbs ? "lbs" : "kg"}`;
   };
 
@@ -245,9 +263,9 @@ export default function EquipmentDetailScreen() {
 
   const TAB_LABELS: Record<TabType, string> = {
     tutorial: t("equipment.tutorial"),
-    safety: t("equipment.safety"),
+    safety: t("equipment.safety_short"),
     videos: t("equipment.videos"),
-    workout: "Workout",
+    workout: t("equipment.workout"),
   };
 
   return (
@@ -259,13 +277,17 @@ export default function EquipmentDetailScreen() {
         </TouchableOpacity>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={handleSave} style={[styles.actionBtn, saved && styles.actionBtnSaved]}>
-            <Text style={styles.actionIcon}>{saved ? "🔖" : "🏷"}</Text>
+            <Ionicons
+              name={saved ? "bookmark" : "bookmark-outline"}
+              size={21}
+              color={saved ? colors.coral : colors.textMuted}
+            />
             <Text style={[styles.actionLabel, saved && styles.actionLabelSaved]}>
               {saved ? "Saved" : "Save"}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleShare} style={styles.actionBtn}>
-            <Text style={styles.actionIcon}>⤴</Text>
+            <Ionicons name="share-outline" size={22} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
       </View>
@@ -316,21 +338,24 @@ export default function EquipmentDetailScreen() {
           )}
 
           {/* Tab bar */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBarWrap}>
-            <View style={styles.tabBar}>
-              {TABS.map((tab) => (
-                <TouchableOpacity
-                  key={tab}
-                  onPress={() => setActiveTab(tab)}
-                  style={[styles.tab, activeTab === tab && styles.tabActive]}
+          <View style={styles.tabBarWrap}>
+            {TABS.map((tab) => (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                style={[styles.tab, activeTab === tab && styles.tabActive]}
+              >
+                <Text
+                  style={[styles.tabText, activeTab === tab && styles.tabTextActive]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.82}
                 >
-                  <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                    {TAB_LABELS[tab]}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
+                  {TAB_LABELS[tab]}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
           {/* Tutorial tab */}
           {activeTab === "tutorial" && (
@@ -475,43 +500,35 @@ export default function EquipmentDetailScreen() {
                     </View>
                   </View>
 
-                  {bodyWeight ? (
-                    <View style={styles.resultsCard}>
-                      <Text style={styles.resultsTitle}>Your Starting Weight</Text>
-                      <Text style={styles.resultsWeight}>{calcWeight()}</Text>
+                  <View style={styles.resultsCard}>
+                    <Text style={styles.resultsTitle}>Your Starting Weight</Text>
+                    <Text style={styles.resultsWeight}>{bodyWeight ? calcWeight() : "Enter weight"}</Text>
 
-                      <View style={styles.resultsDivider} />
+                    <View style={styles.resultsDivider} />
 
-                      <View style={styles.resultRow}>
-                        <Text style={styles.resultKey}>Sets & Reps</Text>
-                        <Text style={styles.resultVal}>{LEVEL_SETS_REPS[level]}</Text>
-                      </View>
-                      <View style={styles.resultRow}>
-                        <Text style={styles.resultKey}>Rest Time</Text>
-                        <Text style={styles.resultVal}>{LEVEL_REST[level]}</Text>
-                      </View>
-
-                      <View style={styles.tipBox}>
-                        <Text style={styles.tipBoxText}>
-                          Personalized for {name} based on your body weight
-                        </Text>
-                      </View>
+                    <View style={styles.resultRow}>
+                      <Text style={styles.resultKey}>Sets & Reps</Text>
+                      <Text style={styles.resultVal}>{LEVEL_SETS_REPS[level]}</Text>
                     </View>
-                  ) : (
-                    <View style={styles.calcPrompt}>
-                      <Text style={styles.calcPromptText}>
-                        Enter your body weight above to get a personalized starting recommendation
+                    <View style={styles.resultRow}>
+                      <Text style={styles.resultKey}>Rest Time</Text>
+                      <Text style={styles.resultVal}>{LEVEL_REST[level]}</Text>
+                    </View>
+
+                    <View style={styles.tipBox}>
+                      <Text style={styles.tipBoxText}>
+                        {bodyWeight
+                          ? `Personalized for ${name} based on your body weight`
+                          : "Add your body weight above and this updates instantly."}
                       </Text>
                     </View>
-                  )}
+                  </View>
                 </>
               )}
             </View>
           )}
         </View>
       </ScrollView>
-
-      <FeedbackBanner identificationId={equipment.identification_id} />
 
       {/* Toast */}
       <Animated.View
@@ -551,7 +568,6 @@ const styles = StyleSheet.create({
     padding: 8, borderRadius: 10, flexDirection: "row", alignItems: "center", gap: 4,
   },
   actionBtnSaved: { backgroundColor: colors.coral + "18", borderWidth: 1, borderColor: colors.coral + "40" },
-  actionIcon: { fontSize: 20 },
   actionLabel: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.semiBold },
   actionLabelSaved: { color: colors.coral },
   heroMuscle: {
@@ -577,20 +593,33 @@ const styles = StyleSheet.create({
   difficultyText: { fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase" },
   section: { marginBottom: 20 },
   sectionTitle: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 },
-  tabBarWrap: { marginBottom: 20 },
-  tabBar: {
+  tabBarWrap: {
     flexDirection: "row",
     backgroundColor: colors.input,
     borderRadius: 12,
     padding: 4,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    alignSelf: "flex-start",
-    minWidth: "100%",
+    marginBottom: 20,
+    gap: 3,
   },
-  tab: { paddingVertical: 10, paddingHorizontal: 14, alignItems: "center", borderRadius: 10 },
-  tabActive: { backgroundColor: colors.coral },
-  tabText: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.semiBold },
+  tab: {
+    flex: 1,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 9,
+    paddingHorizontal: 4,
+  },
+  tabActive: {
+    backgroundColor: colors.coral,
+    shadowColor: colors.coral,
+    shadowOpacity: 0.18,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  tabText: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.semiBold, textAlign: "center" },
   tabTextActive: { color: colors.white },
   tabContent: { gap: 12 },
   stepCard: {
@@ -693,12 +722,4 @@ const styles = StyleSheet.create({
     padding: 12, borderWidth: 1, borderColor: colors.lime + "30",
   },
   tipBoxText: { color: colors.lime, fontSize: 12, fontFamily: fonts.body, lineHeight: 18 },
-  calcPrompt: {
-    backgroundColor: colors.card, borderRadius: 14, padding: 20,
-    alignItems: "center", borderWidth: 1, borderColor: colors.cardBorder,
-  },
-  calcPromptText: {
-    color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body,
-    textAlign: "center", lineHeight: 22,
-  },
 });
