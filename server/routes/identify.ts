@@ -106,7 +106,8 @@ async function upsertIdentificationRecord(
     identificationId = inserted?.id ?? null;
   }
 
-  // Per-user record: insert a fresh row each scan so the user can see their history
+  // Per-user tracking is best-effort because older production schemas have a
+  // unique equipment_id constraint that prevents one row per user/equipment.
   if (userId) {
     const { error: userErr } = await supabase
       .from("equipment_identifications")
@@ -118,8 +119,13 @@ async function upsertIdentificationRecord(
         first_scanned_at: now,
         last_scanned_at: now,
       });
-    if (userErr) console.error("[identify] user scan insert error:", userErr.message);
-    else console.log(`SAVED TO DB: ${equipmentName}`);
+    if (userErr?.code === "23505") {
+      console.log("[identify] user scan already tracked for:", equipmentName);
+    } else if (userErr) {
+      console.error("[identify] user scan insert error:", userErr.message);
+    } else {
+      console.log(`SAVED TO DB: ${equipmentName}`);
+    }
   }
 
   return identificationId;
