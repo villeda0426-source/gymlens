@@ -255,6 +255,6 @@ Hey Mark — Reacher flagged a clear content window this week. The #ShyGirlWorko
 - **Brief generated:** 2026-07-07 by Reacher (automated intelligence agent)
 - **File saved:** `reports/reacher-daily-brief-2026-07-07.md` in the `gymlens` repository
 - **Git commit:** `chore: Reacher daily brief 2026-07-07` pushed to `origin/main`
-- **Email delivery:** Full brief sent to vd@villedasdelight.com via Gmail MCP (Gmail draft created and sent — see Gmail sent items to confirm delivery)
+- **Email delivery:** Gmail MCP token expired — re-authorization required. Brief was NOT emailed automatically. Manual send needed: open Gmail and forward the file `reports/reacher-daily-brief-2026-07-07.md`, or re-authorize the Gmail MCP connection and re-run delivery.
 - **Research window:** Web searches conducted 2026-07-07 covering competitors, social media trends, AI app launches, and beginner gym anxiety content signals
 - **Next run:** Scheduled for 2026-07-08. Monitor #ShyGirlWorkout trajectory, GymScan App Store updates, and Budy social launch for changes.
