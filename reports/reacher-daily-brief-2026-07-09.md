@@ -228,6 +228,5 @@ A high-value secondary audience is the **"Returning Exerciser"** — typically w
 ## Delivery And Sync Notes
 
 - **File:** `reports/reacher-daily-brief-2026-07-09.md` saved and committed to `main` branch of `villeda0426-source/gymlens`
-- **Email:** Draft queued via Gmail MCP (`create_draft`) to vd@villedasdelight.com — Subject: `Reacher Daily Brief - 2026-07-09 | CoachLift`. Note: Gmail MCP provides `create_draft` only (no direct send tool). Draft is in your Gmail Drafts folder — please send manually or confirm auto-send is configured.
-- **Previous issue context:** 2026-07-07 run noted a Gmail token expiry. If this draft is not visible in Drafts, the token may need refreshing in the Gmail MCP connection.
+- **Email:** FAILED — Gmail MCP returned `token expired` error (same issue as 2026-07-07 run). No draft was created. Action required: re-authorize the Gmail MCP connection at claude.ai/code settings, then re-run the email step or forward the brief manually from GitHub.
 - **Run completed:** 2026-07-09, automated Reacher routine
