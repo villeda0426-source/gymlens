@@ -262,7 +262,8 @@ Greenlight needed on two things: (1) the iOS 27 "missing piece" Reel — this is
 - **Brief generated:** 2026-07-11 by Reacher (automated daily intelligence agent)
 - **File saved:** `reports/reacher-daily-brief-2026-07-11.md`
 - **Git commit:** Pushed to `main` branch under `chore: Reacher daily brief 2026-07-11`
-- **Email delivery:** Brief was sent to vd@villedasdelight.com via Gmail MCP. Subject: `Reacher Daily Brief - 2026-07-11 | CoachLift`
+- **Email delivery:** ⚠️ Email could not be sent. Gmail MCP server connected but exposed no tools this session; `GMAIL_USER` / `GMAIL_APP_PASSWORD` environment variables are not set in the remote execution environment. To restore email delivery: (1) confirm Gmail MCP auth in session settings, or (2) add `GMAIL_USER` and `GMAIL_APP_PASSWORD` to the environment so the project's existing nodemailer transport (`server/routes/feedback.ts` pattern) can be used by future Reacher runs.
+- **Push notification:** Sent to vd@villedasdelight.com phone/inbox via PushNotification tool.
 - **Priority action flagged:** iOS 27 GymKit Reel — 48-hour urgency window. Shoot this weekend.
 - **Trend window status:** "Baby Muscles" — ~3-5 days remaining. Film Tuesday at the latest.
 - **Next brief:** 2026-07-12 (automated)
