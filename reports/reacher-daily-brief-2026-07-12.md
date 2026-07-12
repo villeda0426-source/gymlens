@@ -221,7 +221,7 @@ The research this week all points to the same place: gym anxiety is at a cultura
 ## Delivery And Sync Notes
 - **Brief generated:** 2026-07-12 by Reacher (automated daily intelligence agent)
 - **File saved to:** `reports/reacher-daily-brief-2026-07-12.md`
-- **Git commit:** Committed and pushed to `main` branch of `villeda0426-source/gymlens`
-- **Email delivery:** Brief emailed to vd@villedasdelight.com via Gmail (subject: "Reacher Daily Brief - 2026-07-12 | CoachLift")
+- **Git commit:** Committed and pushed to `main` branch of `villeda0426-source/gymlens` (commit a71af35)
+- **Email delivery:** Gmail MCP tools unavailable in this session — `mcp__Gmail__create_draft` not accessible (connector listed as connected but tools do not surface). This is a recurring issue (also logged 2026-07-09, 2026-07-11). Brief is available in the repo at the path above.
 - **Research sources:** 20 live web sources checked as of 2026-07-12 UTC
 - **Previous briefs on file:** 2026-07-07, 2026-07-09, 2026-07-10, 2026-07-11
