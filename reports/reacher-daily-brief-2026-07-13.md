@@ -253,5 +253,5 @@ Why it wins: The intersection of cultural timing (Frontiers study going mainstre
 - **Brief generated:** 2026-07-13 by Reacher (automated daily intelligence agent).
 - **File saved:** `reports/reacher-daily-brief-2026-07-13.md` in the CoachLift repository.
 - **Git commit:** Committed and pushed to `main` branch under `chore: Reacher daily brief 2026-07-13`.
-- **Email:** Full brief delivered as a Gmail draft to vd@villedasdelight.com (subject: `Reacher Daily Brief - 2026-07-13 | CoachLift`). Note: Gmail MCP does not expose a direct send action — draft was created and is ready to send from the Gmail inbox.
+- **Email:** Gmail MCP is listed as connected but its tools are not accessible to the tool runner in this session (consistent with prior runs — see 2026-07-12 delivery notes). Email not sent. Full brief is available in the repository at `reports/reacher-daily-brief-2026-07-13.md` and a push notification was sent.
 - **Next run:** 2026-07-14.
