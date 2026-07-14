@@ -247,6 +247,6 @@ Gym anxiety and beginner overwhelm is *live and trending right now* across TikTo
 - **Brief date:** 2026-07-14
 - **File saved:** `reports/reacher-daily-brief-2026-07-14.md`
 - **Committed and pushed:** Yes — `git commit -m "chore: Reacher daily brief 2026-07-14"` → `origin/main`
-- **Email delivery:** Gmail MCP draft created to vd@villedasdelight.com (subject: `Reacher Daily Brief - 2026-07-14 | CoachLift`). Gmail MCP connected with `create_draft` capability; `send` requires manual dispatch from Gmail inbox.
+- **Email delivery:** Gmail MCP is connected per registry but `mcp__Gmail__create_draft` tool was not callable in this session (tool not exposed to agent runtime). Brief is committed to `origin/main` — accessible via GitHub repo at `reports/reacher-daily-brief-2026-07-14.md`.
 - **Research methodology:** 8 parallel web searches covering all 6 primary competitors + 2 new entrant signals + beginner anxiety content trends + platform format trends + AI gym market sizing. All sources linked above.
 - **Previous briefs on file:** 2026-07-07, 07-09, 07-10, 07-11, 07-12, 07-13.
