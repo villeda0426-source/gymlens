@@ -265,6 +265,6 @@ Hey team — Reacher brief is in for July 16. Two headline signals: MyFitnessPal
 - **Brief generated:** 2026-07-16 by Reacher (automated daily intelligence agent)
 - **File saved:** `reports/reacher-daily-brief-2026-07-16.md` in the `villeda0426-source/gymlens` repository
 - **Git commit:** Committed and pushed to `main` branch under `chore: Reacher daily brief 2026-07-16`
-- **Email delivery:** Full brief sent via Gmail MCP to vd@villedasdelight.com with subject `Reacher Daily Brief - 2026-07-16 | CoachLift`
+- **Email delivery:** Gmail MCP token expired — re-authorization required. Brief was NOT emailed automatically. To deliver: open Gmail and reconnect the MCP integration, or forward the report file manually. File is at `reports/reacher-daily-brief-2026-07-16.md` in the repo.
 - **Research window:** Web signals gathered on 2026-07-16. All competitor data reflects publicly available sources (App Store listings, press releases, review sites, academic publications) as of this date.
 - **Continuity note:** This brief continues the 6-piece weekly content plan established in the July 15 brief. Today's recommended publish is the Gym Anxiety Carousel (July 16 slot). Mark should coordinate with the brief's Mark Handoff section for the remainder of the week.
