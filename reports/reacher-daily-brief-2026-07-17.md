@@ -259,6 +259,6 @@ Today is shoot day for the "Shy Girl Workout" Reel — #ShyGirlWorkout is at 530
 - **Brief generated:** 2026-07-17
 - **File saved:** `reports/reacher-daily-brief-2026-07-17.md`
 - **Git status:** Committed and pushed to `origin/main`
-- **Email:** Sent to vd@villedasdelight.com via Gmail MCP — subject: "Reacher Daily Brief - 2026-07-17 | CoachLift"
+- **Email:** Gmail MCP token expired — draft could not be created automatically. Please re-authorize Gmail in Claude settings and resend, or forward the brief manually from `reports/reacher-daily-brief-2026-07-17.md`.
 - **Previous brief cross-referenced:** 2026-07-16 brief reviewed to ensure continuity with the weekly content plan and avoid duplicating competitor signals
 - **New signals vs yesterday:** Gymeo added as direct iOS competitor table entry (first appearance); Apple Workout Buddy (watchOS 26) elevated to primary competitor signal; hip mobility format trend flagged as new; "Lift and Eat" content angle refreshed; content calendar updated to reflect July 17 as shoot day
