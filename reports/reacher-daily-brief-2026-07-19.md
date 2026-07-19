@@ -253,7 +253,6 @@ Secondary audience: **lapsed gym members returning after a gap** (common in July
 
 - **Report generated:** 2026-07-19 by Reacher (automated daily intelligence agent)
 - **File saved to:** `reports/reacher-daily-brief-2026-07-19.md` in the `villeda0426-source/gymlens` repository
-- **Git:** Committed and pushed to `main` branch
-- **Email delivery:** Full brief sent as draft via Gmail MCP to `vd@villedasdelight.com` — subject: `Reacher Daily Brief - 2026-07-19 | CoachLift`
-- **Note:** Gmail MCP delivers as a draft (no direct-send tool available). Draft is ready to send from the Gmail inbox.
+- **Git:** Committed and pushed to `main` branch successfully
+- **Email delivery:** BLOCKED — Gmail MCP token expired (re-authorization required in an interactive session via claude.ai connector settings or `/mcp`). Nodemailer fallback also unavailable (GMAIL_USER / GMAIL_APP_PASSWORD env vars not set in this environment). Action needed: re-authorize Gmail connector and re-run, or forward the brief manually from the repo.
 - **Research sources:** 4 parallel web search passes covering 6 competitors, 2 new entrants (GymVision AI, Gymeo), TikTok/Instagram trend signals, beginner gym anxiety content patterns, and AI fitness app market landscape.
