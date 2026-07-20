@@ -322,5 +322,5 @@ Reacher's pick for this week: **"Day 1 Explained" — the Beginner Identity Seri
 - **New entrant flagged:** GymVision AI — highest competitive priority this week
 - **File saved to:** `reports/reacher-daily-brief-2026-07-20.md`
 - **Committed and pushed:** Yes (git push origin main)
-- **Email delivery:** Sent to vd@villedasdelight.com via Gmail MCP — Subject: "Reacher Daily Brief - 2026-07-20 | CoachLift"
+- **Email delivery:** Gmail MCP token expired — re-authorization required. Brief is committed to the repo at `reports/reacher-daily-brief-2026-07-20.md`. To send manually: forward the file contents to vd@villedasdelight.com with subject "Reacher Daily Brief - 2026-07-20 | CoachLift", or re-authorize Gmail and re-run delivery.
 - **Mark handoff included:** Yes — 6-piece weekly plan, production guidance, Slack-ready approval summary
