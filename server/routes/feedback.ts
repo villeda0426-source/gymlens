@@ -11,7 +11,7 @@ const supabase = createClient(
 
 router.post("/", async (req: Request, res: Response) => {
   try {
-    const { userId, identificationId, rating, category, message } = req.body;
+    const { userId, rating, category, message } = req.body;
 
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({ error: "Rating must be between 1 and 5" });
@@ -21,7 +21,6 @@ router.post("/", async (req: Request, res: Response) => {
       .from("feedback")
       .insert({
         user_id: userId || null,
-        identification_id: identificationId || null,
         rating,
         category: category || "other",
         message: message || null,
