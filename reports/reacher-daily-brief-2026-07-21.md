@@ -320,6 +320,6 @@ The Shy Girl Workout trend is a structural fit, not a passing moment — 200M+ T
 
 - **File saved:** `reports/reacher-daily-brief-2026-07-21.md` ✅
 - **Git commit:** Committed and pushed to `main` branch ✅
-- **Email:** Draft created in Gmail for vd@villedasdelight.com — Subject: `Reacher Daily Brief - 2026-07-21 | CoachLift` ✅ *(Note: Gmail MCP does not expose a send action; draft has been queued in Drafts. Manual send or automation required to deliver.)*
+- **Email:** ❌ Gmail MCP token expired — re-authorization required. Brief was NOT emailed. Action needed: reconnect Gmail in Claude Code settings to restore automated email delivery.
 - **Research sources:** 20 URLs cited; all research from live web searches conducted 2026-07-21.
 - **Run time:** Full brief generated in single automated session.
