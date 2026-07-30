@@ -269,6 +269,15 @@ export default function TrainerScreen() {
     throw new Error(t("trainer.coach_connect_error"));
   };
 
+  const runCoachJob = async (
+    payload: Parameters<typeof startCoachTrainerJob>[0],
+    authToken: string,
+    signal: AbortSignal
+  ) => {
+    const job = await startCoachTrainerJob(payload, { authToken, signal });
+    return waitForCoachJob(job.jobId, authToken, signal);
+  };
+
   const submitMessage = async (messageText?: string) => {
     const text = (messageText ?? draft).trim();
     if (!text || loading) return;
@@ -302,32 +311,33 @@ export default function TrainerScreen() {
             : [...intakeHistory, { role: "user" as const, content: text }];
 
         setNotice(t("trainer.coach_building_plan"));
-        const job = await startCoachTrainerJob({
+        const response = await runCoachJob({
           mode: "intake",
           units,
           history: intakeHistory,
           userMessage: text,
-        }, { authToken: session.access_token, signal: controller.signal });
-        const response = await waitForCoachJob(job.jobId, session.access_token, controller.signal);
+        }, session.access_token, controller.signal);
         setIntakeHistory(nextHistory);
         handleResponse(response, nextHistory);
         setFailedPrompt(null);
       } else if (/goal|constraint|injur|days|equipment|schedule/i.test(text)) {
-        const response = await callCoachTrainer({
+        setNotice(t("trainer.coach_building_plan"));
+        const response = await runCoachJob({
           mode: "update_goals",
           units,
           currentPlan: plan,
           newGoal: text,
-        }, { authToken: session.access_token, signal: controller.signal });
+        }, session.access_token, controller.signal);
         handleResponse(response);
         setFailedPrompt(null);
       } else if (/shorter|sore|swap|adjust|missed|skipped|rpe|too hard|too easy|workout/i.test(text)) {
-        const response = await callCoachTrainer({
+        setNotice(t("trainer.coach_building_plan"));
+        const response = await runCoachJob({
           mode: "adapt",
           units,
           currentPlan: plan,
           logs: makeFreeformWorkoutLog(text),
-        }, { authToken: session.access_token, signal: controller.signal });
+        }, session.access_token, controller.signal);
         handleResponse(response);
         setFailedPrompt(null);
       } else {

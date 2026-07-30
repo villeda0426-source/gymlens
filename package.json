@@ -13,6 +13,7 @@
     "typecheck:server": "tsc -p server/tsconfig.json --noEmit",
     "smoke:api": "ts-node --project server/tsconfig.json scripts/release-smoke-test.ts",
     "smoke:api:local": "RELEASE_SMOKE_ALLOW_LOCAL=1 ts-node --project server/tsconfig.json scripts/release-smoke-test.ts",
+    "test:coach-update": "ts-node --project server/tsconfig.json scripts/coach-update-regression-test.ts",
     "check:release": "npm run typecheck && npm run typecheck:server && npm run smoke:api",
     "start:server": "node dist-server/server/index.js",
     "server": "ts-node --project server/tsconfig.json server/index.ts",

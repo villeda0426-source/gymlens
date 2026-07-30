@@ -5,6 +5,7 @@ import {
   chatWithCoach,
   CoachMessage,
   CoachMode,
+  getCoachTimeoutsForBuild,
   intakeTurn,
   isPlan,
   Plan,
@@ -53,13 +54,7 @@ function getBuildNumber(req: Request): number {
 }
 
 function getCoachTimeouts(req: Request) {
-  const buildNumber = getBuildNumber(req);
-
-  if (buildNumber > 38) {
-    return { primaryTimeoutMs: 85000, fallbackTimeoutMs: 20000 };
-  }
-
-  return { primaryTimeoutMs: 30000, fallbackTimeoutMs: 12000 };
+  return getCoachTimeoutsForBuild(getBuildNumber(req));
 }
 
 async function getAuthenticatedUserId(req: Request): Promise<string | null> {
