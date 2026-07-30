@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, Dimensions } from "react-native";
+import { useTranslation } from "react-i18next";
 import Svg, { Path, Circle, Ellipse, G } from "react-native-svg";
 
 const { width } = Dimensions.get("window");
@@ -14,47 +15,101 @@ const COLOR_BODY = "#f0ece3";
 const COLOR_OUTLINE = "#d4cfc5";
 
 // Maps equipment muscle_groups strings → front/back muscle keys
+// Includes both short category names (from Supabase equipment rows) and
+// longer anatomical names (as returned by the Gemini workout-search guide).
 const MUSCLE_ALIASES: Record<string, string[]> = {
   chest: ["chest"],
   pectorals: ["chest"],
+  pectoral: ["chest"],
   pecs: ["chest"],
   shoulders: ["front_deltoid", "side_deltoid"],
+  shoulder: ["front_deltoid", "side_deltoid"],
   deltoids: ["front_deltoid", "side_deltoid"],
+  deltoid: ["front_deltoid", "side_deltoid"],
   front_deltoid: ["front_deltoid"],
+  front_deltoids: ["front_deltoid"],
+  anterior_deltoid: ["front_deltoid"],
+  anterior_deltoids: ["front_deltoid"],
   side_deltoid: ["side_deltoid"],
+  side_deltoids: ["side_deltoid"],
+  lateral_deltoid: ["side_deltoid"],
+  lateral_deltoids: ["side_deltoid"],
   rear_deltoid: ["rear_deltoid"],
+  rear_deltoids: ["rear_deltoid"],
+  posterior_deltoid: ["rear_deltoid"],
+  posterior_deltoids: ["rear_deltoid"],
   biceps: ["biceps"],
+  bicep: ["biceps"],
+  biceps_brachii: ["biceps"],
   triceps: ["triceps"],
+  tricep: ["triceps"],
+  triceps_brachii: ["triceps"],
   forearms: ["forearms"],
+  forearm: ["forearms"],
   abs: ["abs"],
+  ab: ["abs"],
+  abdominals: ["abs"],
+  abdominal: ["abs"],
+  rectus_abdominis: ["abs"],
   obliques: ["obliques"],
+  oblique: ["obliques"],
   core: ["abs", "obliques"],
   quadriceps: ["quadriceps"],
   quads: ["quadriceps"],
+  quad: ["quadriceps"],
   hamstrings: ["hamstrings"],
+  hamstring: ["hamstrings"],
   glutes: ["glutes"],
+  glute: ["glutes"],
+  gluteus_maximus: ["glutes"],
   calves: ["calves"],
+  calf: ["calves"],
+  gastrocnemius: ["calves"],
+  soleus: ["calves"],
   back: ["upper_back", "lats"],
   upper_back: ["upper_back"],
+  rhomboids: ["upper_back"],
+  rhomboid: ["upper_back"],
   lats: ["lats"],
+  lat: ["lats"],
+  latissimus_dorsi: ["lats"],
   lower_back: ["lower_back"],
+  erector_spinae: ["lower_back"],
   traps: ["traps"],
+  trap: ["traps"],
   trapezius: ["traps"],
   hip_flexors: ["hip_flexors"],
+  hip_flexor: ["hip_flexors"],
   hip_abductors: ["outer_thigh"],
+  hip_abductor: ["outer_thigh"],
+  abductors: ["outer_thigh"],
   hip_adductors: ["inner_thigh"],
+  hip_adductor: ["inner_thigh"],
+  adductors: ["inner_thigh"],
   inner_thigh: ["inner_thigh"],
+  inner_thighs: ["inner_thigh"],
   outer_thigh: ["outer_thigh"],
+  outer_thighs: ["outer_thigh"],
   full_body: [
     "chest", "front_deltoid", "abs", "quadriceps", "upper_back", "lats", "glutes", "hamstrings",
   ],
   cardiovascular: [],
 };
 
+// Normalizes free-text muscle names (e.g. "Latissimus Dorsi (Lats)" from the
+// Gemini workout-search guide) into alias-dictionary keys.
+function normalizeMuscleKey(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
 function resolveHighlighted(muscleGroups: string[]): Set<string> {
   const out = new Set<string>();
   for (const m of muscleGroups) {
-    const key = m.toLowerCase().replace(/ /g, "_");
+    const key = normalizeMuscleKey(m);
     const mapped = MUSCLE_ALIASES[key];
     if (mapped) mapped.forEach((k) => out.add(k));
     else out.add(key);
@@ -292,18 +347,19 @@ interface MuscleMapViewProps {
 }
 
 export default function MuscleMapView({ muscleGroups, category }: MuscleMapViewProps) {
+  const { t } = useTranslation();
   const highlighted = resolveHighlighted(muscleGroups || []);
   const emoji = CATEGORY_EMOJI[category || ""] || "🏋️";
 
   // Determine which muscles are front vs back for label display
   const activeFront = (muscleGroups || []).filter((m) => {
-    const keys = MUSCLE_ALIASES[m.toLowerCase().replace(/ /g, "_")] || [];
+    const keys = MUSCLE_ALIASES[normalizeMuscleKey(m)] || [];
     return keys.some((k) =>
       ["chest", "front_deltoid", "side_deltoid", "biceps", "abs", "obliques", "quadriceps", "hip_flexors", "inner_thigh", "outer_thigh", "forearms", "calves", "traps"].includes(k)
     );
   });
   const activeBack = (muscleGroups || []).filter((m) => {
-    const keys = MUSCLE_ALIASES[m.toLowerCase().replace(/ /g, "_")] || [];
+    const keys = MUSCLE_ALIASES[normalizeMuscleKey(m)] || [];
     return keys.some((k) =>
       ["upper_back", "lats", "lower_back", "traps", "rear_deltoid", "triceps", "hamstrings", "glutes", "calves", "outer_thigh"].includes(k)
     );
@@ -313,7 +369,7 @@ export default function MuscleMapView({ muscleGroups, category }: MuscleMapViewP
     <View style={styles.container}>
       {/* Front card */}
       <View style={styles.card}>
-        <Text style={styles.cardLabel}>FRONT</Text>
+        <Text style={styles.cardLabel}>{t("equipment.front").toUpperCase()}</Text>
         <View style={styles.svgWrap}>
           <FrontBody highlighted={highlighted} w={SVG_W} h={SVG_H} />
         </View>
@@ -326,7 +382,7 @@ export default function MuscleMapView({ muscleGroups, category }: MuscleMapViewP
 
       {/* Back card */}
       <View style={styles.card}>
-        <Text style={styles.cardLabel}>BACK</Text>
+        <Text style={styles.cardLabel}>{t("equipment.back").toUpperCase()}</Text>
         <View style={styles.svgWrap}>
           <BackBody highlighted={highlighted} w={SVG_W} h={SVG_H} />
         </View>
@@ -339,7 +395,7 @@ export default function MuscleMapView({ muscleGroups, category }: MuscleMapViewP
 
       {/* Equipment icon card */}
       <View style={[styles.card, styles.iconCard]}>
-        <Text style={styles.cardLabel}>TYPE</Text>
+        <Text style={styles.cardLabel}>{t("equipment.type").toUpperCase()}</Text>
         <Text style={styles.equipIcon}>{emoji}</Text>
         <Text style={styles.categoryLabel}>
           {(category || "").replace("_", " ").toUpperCase()}
@@ -349,11 +405,11 @@ export default function MuscleMapView({ muscleGroups, category }: MuscleMapViewP
         <View style={styles.legend}>
           <View style={styles.legendRow}>
             <View style={[styles.legendDot, { backgroundColor: COLOR_PRIMARY }]} />
-            <Text style={styles.legendText}>Primary</Text>
+            <Text style={styles.legendText}>{t("equipment.primary")}</Text>
           </View>
           <View style={styles.legendRow}>
             <View style={[styles.legendDot, { backgroundColor: COLOR_SECONDARY }]} />
-            <Text style={styles.legendText}>Secondary</Text>
+            <Text style={styles.legendText}>{t("equipment.secondary")}</Text>
           </View>
         </View>
       </View>

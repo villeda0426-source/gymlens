@@ -1,5 +1,5 @@
 /**
- * Creates the CoachLift database schema in Supabase.
+ * Creates the SpotLift database schema in Supabase.
  * Requires SUPABASE_DB_PASSWORD in .env (find it at:
  *   Supabase Dashboard → Project Settings → Database → Database password)
  *
@@ -40,14 +40,29 @@ async function main() {
   const schemaPath = path.join(__dirname, "../supabase/schema.sql");
   const sql = fs.readFileSync(schemaPath, "utf8");
 
-  // Split on statement boundaries and run each separately so partial errors are visible
-  const statements = sql
-    .split(/;\s*\n/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+  // Split on statement boundaries and run each separately so partial errors are
+  // visible. Naively splitting on ";\n" breaks plpgsql function bodies (they
+  // contain their own semicolons inside $$...$$ dollar-quoting), so track
+  // dollar-quote state and only treat ";\n" as a boundary outside of it.
+  const statements: string[] = [];
+  let current = "";
+  let inDollarQuote = false;
+  for (const line of sql.split("\n")) {
+    current += (current ? "\n" : "") + line;
+    const dollarMatches = line.match(/\$\$/g);
+    if (dollarMatches) {
+      for (let i = 0; i < dollarMatches.length; i++) inDollarQuote = !inDollarQuote;
+    }
+    if (!inDollarQuote && /;\s*$/.test(line)) {
+      statements.push(current.trim());
+      current = "";
+    }
+  }
+  if (current.trim()) statements.push(current.trim());
+  const filteredStatements = statements.filter((s) => s.length > 0);
 
   let ok = 0;
-  for (const stmt of statements) {
+  for (const stmt of filteredStatements) {
     try {
       await client.query(stmt);
       ok++;
@@ -61,7 +76,7 @@ async function main() {
     }
   }
 
-  console.log(`✓ Schema applied (${ok}/${statements.length} statements executed)`);
+  console.log(`✓ Schema applied (${ok}/${filteredStatements.length} statements executed)`);
   await client.end();
 }
 

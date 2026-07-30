@@ -83,7 +83,7 @@ export default function LoginScreen() {
     >
       <ScrollView contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
         <View style={styles.logoRow}>
-          <Text style={styles.logoCoach}>Coach</Text>
+          <Text style={styles.logoCoach}>Spot</Text>
           <Text style={styles.logoLift}>lift</Text>
         </View>
         <Text style={styles.tagline}>{t("auth.tagline")}</Text>

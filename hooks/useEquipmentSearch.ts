@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
-
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3001";
+import { apiFetch } from "@/lib/api";
 
 export function useEquipmentSearch() {
   const [results, setResults] = useState<any[]>([]);
@@ -17,9 +16,7 @@ export function useEquipmentSearch() {
       if (cleanQuery) params.set("q", cleanQuery);
       if (category && category !== "all") params.set("category", category);
 
-      const res = await fetch(`${API_BASE}/api/search?${params.toString()}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Search failed");
+      const data = await apiFetch<any[]>(`/api/search?${params.toString()}`, {}, 12000);
       setResults(data || []);
     } catch (err: any) {
       setError(err.message || "Search failed");

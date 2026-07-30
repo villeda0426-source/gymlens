@@ -46,14 +46,14 @@ export default function ProfileScreen() {
     const result = await updateProfileName(name);
     setSavingName(false);
     if (result.error) {
-      Alert.alert("Could not save name", result.error);
+      Alert.alert(t("profile.save_name_error"), result.error);
       return;
     }
     setEditingName(false);
   };
 
   const handleSignOut = () => {
-    Alert.alert(t("auth.logout"), "Are you sure?", [
+    Alert.alert(t("auth.logout"), t("profile.sign_out_confirm"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("auth.logout"), style: "destructive", onPress: signOut },
     ]);
@@ -80,7 +80,7 @@ export default function ProfileScreen() {
   const memberSince = profile?.created_at
     ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
     : "";
-  const displayName = profile?.username || "Add your name";
+  const displayName = profile?.username || t("profile.add_name");
 
   return (
     <SafeScreen edges={["top"]}>
@@ -116,8 +116,8 @@ export default function ProfileScreen() {
           <View style={styles.profileRow}>
             <View style={styles.profileRowHeader}>
               <View>
-                <Text style={styles.rowOverline}>Display name</Text>
-                <Text style={styles.rowHint}>Used for greetings and your profile.</Text>
+                <Text style={styles.rowOverline}>{t("profile.display_name")}</Text>
+                <Text style={styles.rowHint}>{t("profile.display_name_hint")}</Text>
               </View>
               {!editingName && (
                 <TouchableOpacity onPress={() => setEditingName(true)} style={styles.iconBtn}>
@@ -131,7 +131,7 @@ export default function ProfileScreen() {
                   style={styles.nameInput}
                   value={name}
                   onChangeText={setName}
-                  placeholder="Your name"
+                  placeholder={t("profile.your_name")}
                   placeholderTextColor={colors.textMuted}
                   autoCapitalize="words"
                   returnKeyType="done"
@@ -145,7 +145,7 @@ export default function ProfileScreen() {
                   {savingName ? (
                     <ActivityIndicator color={colors.white} />
                   ) : (
-                    <Text style={styles.saveNameText}>Save</Text>
+                    <Text style={styles.saveNameText}>{t("common.save")}</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -155,10 +155,8 @@ export default function ProfileScreen() {
           <View style={styles.accountCard}>
             <Ionicons name="folder-open-outline" size={21} color={colors.coral} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.accountTitle}>Account folder</Text>
-              <Text style={styles.accountText}>
-                Scans and saved equipment are stored under your signed-in account.
-              </Text>
+              <Text style={styles.accountTitle}>{t("profile.account_folder")}</Text>
+              <Text style={styles.accountText}>{t("profile.account_folder_text")}</Text>
             </View>
           </View>
 

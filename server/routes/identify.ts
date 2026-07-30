@@ -10,6 +10,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+async function getAuthenticatedUserId(req: Request): Promise<string | null> {
+  const header = req.header("authorization");
+  const match = header?.match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+
+  const { data, error } = await supabase.auth.getUser(match[1]);
+  if (error || !data.user) return null;
+  return data.user.id;
+}
+
 // ─── String-similarity helpers ────────────────────────────────────────────────
 
 function normalizeStr(s: string): string {
@@ -135,7 +145,8 @@ async function upsertIdentificationRecord(
 
 router.post("/", async (req: Request, res: Response) => {
   try {
-    const { image, userId } = req.body;
+    const { image } = req.body;
+    const userId = await getAuthenticatedUserId(req);
     console.log("[identify] POST received — userId:", userId, "| image length:", image?.length ?? 0);
 
     if (!image) {

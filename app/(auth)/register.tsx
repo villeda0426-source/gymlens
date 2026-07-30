@@ -17,6 +17,18 @@ import { supabase } from "@/lib/supabase";
 import { getAuthRedirectUrl } from "@/lib/authRedirect";
 import { colors, fonts } from "@/constants/theme";
 
+function getRegisterErrorAlert(message: string, t: (key: string) => string) {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("email rate limit")) {
+    return {
+      title: t("auth.email_busy_title"),
+      message: t("auth.email_busy_message"),
+    };
+  }
+
+  return { title: t("common.error"), message };
+}
+
 export default function RegisterScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -38,7 +50,8 @@ export default function RegisterScreen() {
     });
     setLoading(false);
     if (error) {
-      Alert.alert(t("errors.auth_failed"), error.message);
+      const alert = getRegisterErrorAlert(error.message, t);
+      Alert.alert(alert.title, alert.message);
     } else {
       Alert.alert(t("auth.check_email_title"), t("auth.check_email_message"));
       router.replace("/(auth)/login");
@@ -51,7 +64,7 @@ export default function RegisterScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
-        <Text style={styles.logoCoach}>Coach<Text style={styles.logoLift}>lift</Text></Text>
+        <Text style={styles.logoCoach}>Spot<Text style={styles.logoLift}>lift</Text></Text>
         <Text style={styles.title}>{t("auth.register")}</Text>
 
         <View style={styles.form}>

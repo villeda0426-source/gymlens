@@ -51,26 +51,27 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="trainer"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="barbell-outline" iconFocused="barbell" label={t("tabs.trainer")} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="plan"
+        options={{
+          tabBarStyle: [styles.tabBar, styles.planTabBar],
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="calendar-outline" iconFocused="calendar" label={t("tabs.plan")} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="scan"
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="scan-outline" iconFocused="scan" label={t("tabs.scan")} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="search"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon icon="search-outline" iconFocused="search" label={t("tabs.search")} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="saved"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon icon="bookmark-outline" iconFocused="bookmark" label={t("tabs.saved")} focused={focused} />
           ),
         }}
       />
@@ -80,6 +81,24 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => (
             <TabIcon icon="person-outline" iconFocused="person" label={t("tabs.profile")} focused={focused} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="search"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="saved"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="avatar"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
@@ -95,6 +114,10 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingTop: 8,
     paddingHorizontal: 4,
+  },
+  planTabBar: {
+    backgroundColor: "#111112",
+    borderTopColor: "rgba(255,255,255,0.1)",
   },
   tabItem: {
     alignItems: "center",

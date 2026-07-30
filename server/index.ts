@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 dotenv.config({ override: true });
 import express from "express";
 import cors from "cors";
+import { createClient } from "@supabase/supabase-js";
 import identifyRouter from "./routes/identify";
 import searchRouter from "./routes/search";
 import equipmentRouter from "./routes/equipment";
@@ -14,6 +15,38 @@ import coachTrainerRouter from "./routes/coach-trainer";
 const app = express();
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
+
+const healthSupabase =
+  process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    : null;
+
+app.get("/api/dependency-health", async (_req, res) => {
+  const checks = {
+    api: true,
+    supabaseConfigured: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
+    anthropicConfigured: Boolean(process.env.ANTHROPIC_API_KEY),
+    geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
+    youtubeConfigured: Boolean(process.env.YOUTUBE_API_KEY),
+    supabaseReachable: false,
+  };
+
+  if (healthSupabase) {
+    const { error } = await healthSupabase.from("equipment").select("id").limit(1);
+    checks.supabaseReachable = !error;
+  }
+
+  const ok =
+    checks.supabaseConfigured &&
+    checks.supabaseReachable &&
+    checks.anthropicConfigured &&
+    checks.geminiConfigured;
+
+  res.status(ok ? 200 : 503).json({
+    status: ok ? "ok" : "degraded",
+    checks,
+  });
+});
 
 const toInt = (value: string | undefined, fallback = 0) => {
   const parsed = Number.parseInt(value ?? "", 10);
@@ -48,7 +81,7 @@ const RATE_MAX_REQUESTS = 120;
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 
 app.use((req, res, next) => {
-  if (req.path === "/health" || req.path === "/api/app-version") {
+  if (req.path === "/health" || req.path === "/api/app-version" || req.path === "/api/dependency-health") {
     next();
     return;
   }

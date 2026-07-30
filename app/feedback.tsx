@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import SafeScreen from "@/components/Layout/SafeScreen";
-import { supabase } from "@/lib/supabase";
+import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { colors, fonts } from "@/constants/theme";
 
@@ -41,19 +41,23 @@ export default function FeedbackScreen() {
     if (rating === 0) return;
     setLoading(true);
     try {
-      await supabase.from("feedback").insert({
-        user_id: user?.id || null,
-        identification_id: identificationId || null,
-        rating,
-        category,
-        message: message.trim() || null,
+      await apiFetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user?.id || null,
+          identificationId: identificationId || null,
+          rating,
+          category,
+          message: message.trim() || null,
+        }),
       });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSubmitted(true);
       animateSuccess();
-    } catch {
-      setSubmitted(true);
-      animateSuccess();
+    } catch (error) {
+      console.error("[feedback] submit failed:", error);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setLoading(false);
     }

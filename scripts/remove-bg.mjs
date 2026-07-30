@@ -2,7 +2,8 @@ import { Jimp, intToRGBA, rgbaToInt } from "jimp";
 
 const FILES = [
   "coachlift-web/logo.png",
-  "assets/images/coachlift-logo.png",
+  "assets/images/spotlift-logo.png",
+  "assets/images/spotlift-mark.png",
 ];
 
 // Euclidean distance in RGB space from pure white

@@ -1,15 +1,15 @@
 {
   "configVersion": 0,
   "apple": {
-    "version": "1.0",
+    "version": "1.0.6",
     "release": {
       "automaticRelease": true
     },
     "info": {
       "en-US": {
-        "title": "Coachlift",
+        "title": "SpotLift",
         "subtitle": "Your gym, finally explained.",
-        "description": "Coachlift — Your Gym, Finally Explained.\n\nNew to the gym? You're not alone. Most people walk in with no idea what half the equipment does — and no one to ask. Coachlift changes that.\n\nJust point your camera at any gym equipment and instantly get: what it's called, which muscles it targets, how to use it safely, and video tutorials for beginners.\n\nWhether it's your first day or your fiftieth — Coachlift is the coach in your pocket.",
+        "description": "SpotLift — Your Gym, Finally Explained.\n\nNew to the gym? You're not alone. Most people walk in with no idea what half the equipment does — and no one to ask. SpotLift changes that.\n\nJust point your camera at any gym equipment and instantly get: what it's called, which muscles it targets, how to use it safely, and video tutorials for beginners.\n\nWhether it's your first day or your fiftieth — SpotLift is the coach in your pocket.",
         "keywords": [
           "gym",
           "equipment",

@@ -99,8 +99,8 @@ export default function SearchScreen() {
         return (
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>🔒</Text>
-            <Text style={styles.emptyTitle}>Sign in to see scans</Text>
-            <Text style={styles.emptySubtitle}>Your scan history appears here after you log in.</Text>
+            <Text style={styles.emptyTitle}>{t("search_history.signin_title")}</Text>
+            <Text style={styles.emptySubtitle}>{t("search_history.signin_subtitle")}</Text>
           </View>
         );
       }
@@ -108,12 +108,10 @@ export default function SearchScreen() {
         return (
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>📷</Text>
-            <Text style={styles.emptyTitle}>No scans yet</Text>
-            <Text style={styles.emptySubtitle}>
-              No scans yet — point your camera at any equipment to start
-            </Text>
+            <Text style={styles.emptyTitle}>{t("search_history.empty_title")}</Text>
+            <Text style={styles.emptySubtitle}>{t("search_history.empty_subtitle")}</Text>
             <TouchableOpacity onPress={() => router.push("/(tabs)/scan")} style={styles.cameraButton}>
-              <Text style={styles.cameraButtonText}>Open Camera</Text>
+              <Text style={styles.cameraButtonText}>{t("search_history.open_camera")}</Text>
             </TouchableOpacity>
           </View>
         );
@@ -126,7 +124,11 @@ export default function SearchScreen() {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            <Text style={styles.resultCount}>{recentItems.length} recent scan{recentItems.length !== 1 ? "s" : ""}</Text>
+            <Text style={styles.resultCount}>
+              {t(recentItems.length === 1 ? "search_history.recent_count" : "search_history.recent_count_plural", {
+                count: recentItems.length,
+              })}
+            </Text>
           }
         />
       );
@@ -143,12 +145,10 @@ export default function SearchScreen() {
       return (
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>⚠️</Text>
-          <Text style={styles.emptyTitle}>Could not reach server</Text>
-          <Text style={styles.emptySubtitle}>
-            Make sure the CoachLift server is running and your device is on the same network.
-          </Text>
+          <Text style={styles.emptyTitle}>{t("search_history.server_title")}</Text>
+          <Text style={styles.emptySubtitle}>{t("search_history.server_subtitle")}</Text>
           <TouchableOpacity onPress={() => search(query, activeCategory)} style={styles.cameraButton}>
-            <Text style={styles.cameraButtonText}>Retry</Text>
+            <Text style={styles.cameraButtonText}>{t("common.retry")}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -158,12 +158,12 @@ export default function SearchScreen() {
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>{query ? "🤷" : "🏋️"}</Text>
           <Text style={styles.emptyTitle}>
-            {query ? t("search.no_results") : "No equipment yet"}
+            {query ? t("search.no_results") : t("search_history.no_equipment")}
           </Text>
           <Text style={styles.emptySubtitle}>
             {query
               ? t("search.no_results_subtitle")
-              : "Scan gym equipment with the camera to identify and save it here."}
+              : t("search_history.no_equipment_subtitle")}
           </Text>
           <TouchableOpacity onPress={() => router.push("/(tabs)")} style={styles.cameraButton}>
             <Text style={styles.cameraButtonText}>{t("search.try_camera")}</Text>
@@ -224,7 +224,7 @@ export default function SearchScreen() {
             style={{ marginRight: 4 }}
           />
           <Text style={[styles.chipText, activeCategory === RECENT_FILTER && styles.chipTextActive]}>
-            Recent
+            {t("search_history.recent")}
           </Text>
         </TouchableOpacity>
 
