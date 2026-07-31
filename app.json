@@ -25,7 +25,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.coachlift.app",
-      "buildNumber": "39",
+      "buildNumber": "40",
       "icon": "./assets/icon.png",
       "infoPlist": {
         "NSCameraUsageDescription": "SpotLift uses your camera to identify gym equipment.",
