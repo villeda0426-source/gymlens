@@ -7,18 +7,20 @@ const HEALTH_CHECK_INTERVAL_MS = 60000;
 export function useApiHealth() {
   const [isApiHealthy, setIsApiHealthy] = useState<boolean | null>(null);
   const checkingRef = useRef(false);
+  const healthRef = useRef<boolean | null>(null);
 
   const checkNow = useCallback(async () => {
-    if (checkingRef.current) return isApiHealthy;
+    if (checkingRef.current) return healthRef.current;
     checkingRef.current = true;
     try {
       const healthy = await apiHealthCheck();
+      healthRef.current = healthy;
       setIsApiHealthy(healthy);
       return healthy;
     } finally {
       checkingRef.current = false;
     }
-  }, [isApiHealthy]);
+  }, []);
 
   useEffect(() => {
     checkNow();

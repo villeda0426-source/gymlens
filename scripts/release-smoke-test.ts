@@ -64,6 +64,25 @@ const checks: Check[] = [
     },
   },
   {
+    name: "Readiness endpoint",
+    run: async () => {
+      const { response, data } = await request("/health/ready");
+      assert(response.ok, `Readiness failed with ${response.status}: ${JSON.stringify(data)}`);
+      assert(data?.status === "ok" && data?.ready === true, "Readiness did not return a ready service.");
+    },
+  },
+  {
+    name: "API capabilities",
+    run: async () => {
+      const { response, data } = await request("/api/capabilities");
+      assert(response.ok, `Capabilities failed with ${response.status}`);
+      assert(data?.contractVersion === 1, "Unexpected API contract version.");
+      assert(data?.requestTracing === true, "Request tracing capability is not enabled.");
+      assert(data?.trainer?.idempotentJobs === true, "Trainer job idempotency is not enabled.");
+      assert(data?.trainer?.ownedJobs === true, "Trainer job ownership is not enabled.");
+    },
+  },
+  {
     name: "Equipment search",
     run: async () => {
       const { response, data } = await request("/api/search?q=treadmill");

@@ -124,6 +124,10 @@ create index idx_videos_equipment on equipment_videos(equipment_id);
 create table coach_trainer_jobs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references profiles(id) on delete set null,
+  idempotency_key text check (
+    idempotency_key is null
+    or char_length(idempotency_key) between 16 and 200
+  ),
   status text not null default 'queued' check (status in ('queued', 'running', 'completed', 'failed')),
   payload jsonb,
   result jsonb,
@@ -137,6 +141,20 @@ alter table coach_trainer_jobs enable row level security;
 
 create index idx_coach_trainer_jobs_user_created
   on coach_trainer_jobs(user_id, created_at desc);
+
+create unique index coach_trainer_jobs_user_idempotency_key
+  on coach_trainer_jobs(user_id, idempotency_key)
+  where idempotency_key is not null;
+
+create policy "Users view own coach trainer jobs"
+  on coach_trainer_jobs
+  for select
+  to authenticated
+  using ((select auth.uid()) = user_id);
+
+revoke all on table coach_trainer_jobs from anon;
+grant select on table coach_trainer_jobs to authenticated;
+grant select, insert, update, delete on table coach_trainer_jobs to service_role;
 
 -- ============================================================
 -- Dynamic Muscle Avatar

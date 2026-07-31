@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import SafeScreen from "@/components/Layout/SafeScreen";
 import { colors, fonts } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
+import { createIdempotencyKey } from "@/lib/api";
 import {
   callCoachTrainer,
   CoachMessage,
@@ -129,6 +130,7 @@ export default function TrainerScreen() {
     units,
     plan,
     setPlan,
+    updatePlan,
     hasEnteredCoachChat,
     failedPrompt,
     enterCoachChat,
@@ -233,8 +235,11 @@ export default function TrainerScreen() {
       setIntakeHistory([...nextIntakeHistory, { role: "assistant", content: assistantJson }]);
     }
 
-    if (response.status === "plan_ready" || response.status === "plan_updated") {
+    if (response.status === "plan_ready") {
       setPlan(response.plan);
+      setNotice(t("trainer.plan_ready_notice"));
+    } else if (response.status === "plan_updated") {
+      updatePlan(response.plan);
       setNotice(t("trainer.plan_ready_notice"));
     } else {
       setNotice("");
@@ -272,9 +277,14 @@ export default function TrainerScreen() {
   const runCoachJob = async (
     payload: Parameters<typeof startCoachTrainerJob>[0],
     authToken: string,
+    idempotencyKey: string,
     signal: AbortSignal
   ) => {
-    const job = await startCoachTrainerJob(payload, { authToken, signal });
+    const job = await startCoachTrainerJob(payload, {
+      authToken,
+      idempotencyKey,
+      signal,
+    });
     return waitForCoachJob(job.jobId, authToken, signal);
   };
 
@@ -297,6 +307,7 @@ export default function TrainerScreen() {
     const controller = new AbortController();
     abortRef.current?.abort();
     abortRef.current = controller;
+    const idempotencyKey = createIdempotencyKey("coach-job");
     setLoading(true);
     setNotice("");
     setFailedPrompt(text);
@@ -316,7 +327,7 @@ export default function TrainerScreen() {
           units,
           history: intakeHistory,
           userMessage: text,
-        }, session.access_token, controller.signal);
+        }, session.access_token, idempotencyKey, controller.signal);
         setIntakeHistory(nextHistory);
         handleResponse(response, nextHistory);
         setFailedPrompt(null);
@@ -327,7 +338,7 @@ export default function TrainerScreen() {
           units,
           currentPlan: plan,
           newGoal: text,
-        }, session.access_token, controller.signal);
+        }, session.access_token, idempotencyKey, controller.signal);
         handleResponse(response);
         setFailedPrompt(null);
       } else if (/shorter|sore|swap|adjust|missed|skipped|rpe|too hard|too easy|workout/i.test(text)) {
@@ -337,7 +348,7 @@ export default function TrainerScreen() {
           units,
           currentPlan: plan,
           logs: makeFreeformWorkoutLog(text),
-        }, session.access_token, controller.signal);
+        }, session.access_token, idempotencyKey, controller.signal);
         handleResponse(response);
         setFailedPrompt(null);
       } else {
@@ -351,7 +362,7 @@ export default function TrainerScreen() {
         setFailedPrompt(null);
       }
     } catch (error: any) {
-      if (error?.name === "AbortError") {
+      if (error?.name === "AbortError" || error?.isCanceled) {
         setDraft(text);
         setNotice(t("trainer.chat_interrupted"));
       } else {

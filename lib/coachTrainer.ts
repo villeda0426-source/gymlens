@@ -59,6 +59,7 @@ type TrainerRequest =
 
 type CoachTrainerRequestOptions = {
   authToken?: string;
+  idempotencyKey?: string;
   signal?: AbortSignal;
 };
 
@@ -88,6 +89,7 @@ export async function callCoachTrainer(
     headers: {
       "Content-Type": "application/json",
       ...(options.authToken ? { Authorization: `Bearer ${options.authToken}` } : {}),
+      ...(options.idempotencyKey ? { "x-idempotency-key": options.idempotencyKey } : {}),
     },
     body: JSON.stringify(payload),
     signal: options.signal,
@@ -103,6 +105,7 @@ export async function startCoachTrainerJob(
     headers: {
       "Content-Type": "application/json",
       ...(options.authToken ? { Authorization: `Bearer ${options.authToken}` } : {}),
+      ...(options.idempotencyKey ? { "x-idempotency-key": options.idempotencyKey } : {}),
     },
     body: JSON.stringify(payload),
     signal: options.signal,

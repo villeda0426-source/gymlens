@@ -2,7 +2,15 @@
   "expo": {
     "name": "SpotLift",
     "slug": "coachlift",
-    "version": "1.0.6",
+    "version": "1.0.7",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/31aab18c-fd83-42a8-b2de-cc29cc5f7055",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -17,7 +25,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.coachlift.app",
-      "buildNumber": "38",
+      "buildNumber": "39",
       "icon": "./assets/icon.png",
       "infoPlist": {
         "NSCameraUsageDescription": "SpotLift uses your camera to identify gym equipment.",
@@ -71,7 +79,7 @@
         "backgroundColor": "#FFFFFF"
       },
       "package": "com.coachlift.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE"
