@@ -168,6 +168,16 @@ async function processCoachJob(jobId: string, payload: unknown) {
 
 router.post("/jobs", async (req: Request, res: Response) => {
   try {
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) {
+      return sendApiError(
+        res,
+        401,
+        "AUTH_REQUIRED",
+        "Sign in again before asking Coach to update your plan."
+      );
+    }
+
     const mode = req.body?.mode;
     if (!isMode(mode)) {
       return sendApiError(
@@ -180,16 +190,6 @@ router.post("/jobs", async (req: Request, res: Response) => {
 
     if (!isUnits(req.body?.units)) {
       return sendApiError(res, 400, "INVALID_UNITS", "units must be kg or lbs.");
-    }
-
-    const userId = await getAuthenticatedUserId(req);
-    if (!userId) {
-      return sendApiError(
-        res,
-        401,
-        "AUTH_REQUIRED",
-        "Sign in again before asking Coach to update your plan."
-      );
     }
 
     const suppliedKey = String(req.header("x-idempotency-key") || "").trim();
