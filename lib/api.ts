@@ -269,8 +269,12 @@ export async function apiFetch<T = any>(
 
 export async function apiHealthCheck(): Promise<boolean> {
   try {
-    const result = await apiFetch<{ status: string }>("/health/ready", {}, 6000);
-    return result?.status === "ready";
+    const result = await apiFetch<{ status: string; ready?: boolean }>(
+      "/health/ready",
+      {},
+      6000
+    );
+    return result?.status === "ok" && result?.ready === true;
   } catch {
     return false;
   }
