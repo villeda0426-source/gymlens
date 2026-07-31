@@ -134,6 +134,24 @@ const checks: Check[] = [
       assert(typeof data?.message === "string" || typeof data?.summary === "string", "Trainer returned an invalid payload.");
     },
   },
+  {
+    name: "Trainer jobs require authentication",
+    run: async () => {
+      const requestId = "spotlift-release-smoke-auth";
+      const { response, data } = await request("/api/coach-trainer/jobs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-request-id": requestId,
+        },
+        body: JSON.stringify({}),
+      });
+      assert(response.status === 401, `Unauthenticated Trainer job returned ${response.status}.`);
+      assert(data?.code === "AUTH_REQUIRED", "Trainer job did not return AUTH_REQUIRED.");
+      assert(data?.requestId === requestId, "Trainer job did not preserve the request ID.");
+      assert(data?.retryable === false, "Authentication error must not be marked retryable.");
+    },
+  },
 ];
 
 async function main() {
