@@ -9,6 +9,8 @@ export const colors = {
   // Accents
   coral: "#e04e4e",
   lime: "#6aaa00",
+  ndNavy: "#0c2340",
+  ndGold: "#c99700",
 
   // Text
   text: "#1a1a1a",

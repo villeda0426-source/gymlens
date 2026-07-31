@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 
 const GUEST_USES_KEY = "coachlift_guest_uses";
 const MAX_GUEST_USES = 3;
@@ -101,6 +102,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
+    useCoachTrainerStore.getState().resetChatSession();
     await supabase.auth.signOut();
     set({ user: null, profile: null, isGuest: true });
   },

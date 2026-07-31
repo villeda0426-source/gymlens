@@ -21,7 +21,12 @@ async function request(path: string, init: RequestInit = {}) {
   try {
     const response = await fetch(`${API_BASE}${path}`, { ...init, signal: controller.signal });
     const text = await response.text();
-    const data = text ? JSON.parse(text) : null;
+    let data: any = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = text;
+    }
     return { response, data };
   } finally {
     clearTimeout(timeout);
@@ -45,6 +50,36 @@ const checks: Check[] = [
       const { response, data } = await request("/health");
       assert(response.ok, `Health failed with ${response.status}`);
       assert(data?.status === "ok", "Health did not return { status: 'ok' }.");
+    },
+  },
+  {
+    name: "Dependency health",
+    run: async () => {
+      const { response, data } = await request("/api/dependency-health");
+      assert(response.ok, `Dependency health failed with ${response.status}: ${JSON.stringify(data)}`);
+      assert(data?.status === "ok", "Dependency health did not return { status: 'ok' }.");
+      assert(data?.checks?.supabaseReachable === true, "Supabase dependency is not reachable.");
+      assert(data?.checks?.anthropicConfigured === true, "Anthropic dependency is not configured.");
+      assert(data?.checks?.geminiConfigured === true, "Gemini dependency is not configured.");
+    },
+  },
+  {
+    name: "Readiness endpoint",
+    run: async () => {
+      const { response, data } = await request("/health/ready");
+      assert(response.ok, `Readiness failed with ${response.status}: ${JSON.stringify(data)}`);
+      assert(data?.status === "ok" && data?.ready === true, "Readiness did not return a ready service.");
+    },
+  },
+  {
+    name: "API capabilities",
+    run: async () => {
+      const { response, data } = await request("/api/capabilities");
+      assert(response.ok, `Capabilities failed with ${response.status}`);
+      assert(data?.contractVersion === 1, "Unexpected API contract version.");
+      assert(data?.requestTracing === true, "Request tracing capability is not enabled.");
+      assert(data?.trainer?.idempotentJobs === true, "Trainer job idempotency is not enabled.");
+      assert(data?.trainer?.ownedJobs === true, "Trainer job ownership is not enabled.");
     },
   },
   {
@@ -73,6 +108,18 @@ const checks: Check[] = [
       });
       assert(response.ok, `Workout guide failed with ${response.status}`);
       assert(data?.found === true && Array.isArray(data.steps), "Workout guide returned an invalid payload.");
+    },
+  },
+  {
+    name: "Legacy workout guide route",
+    run: async () => {
+      const { response, data } = await request("/workout-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: "bench press" }),
+      });
+      assert(response.ok, `Legacy workout route failed with ${response.status}`);
+      assert(data?.found === true && Array.isArray(data.steps), "Legacy workout route returned an invalid payload.");
     },
   },
   {

@@ -26,6 +26,7 @@ import MuscleMapView from "@/components/Equipment/MuscleMapView";
 import { useEquipmentStore } from "@/store/equipmentStore";
 import { useAuthStore } from "@/store/authStore";
 import { colors, fonts } from "@/constants/theme";
+import { apiFetch } from "@/lib/api";
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   beginner: colors.lime,
@@ -47,8 +48,6 @@ const LEVEL_REST = {
   Intermediate: "75 sec",
   Advanced: "60 sec",
 };
-
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3001";
 
 export default function EquipmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -112,13 +111,8 @@ export default function EquipmentDetailScreen() {
     setIsLoading(true);
     setFetchError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/equipment/${id}`);
-      const data = await res.json();
-      if (!res.ok) {
-        setFetchError(data?.error || "Failed to load equipment");
-      } else {
-        setEquipment(data);
-      }
+      const data = await apiFetch(`/api/equipment/${id}`, {}, 12000);
+      setEquipment(data);
     } catch (err: any) {
       setFetchError(err.message || "Failed to load equipment");
     } finally {
@@ -134,13 +128,8 @@ export default function EquipmentDetailScreen() {
     }
     setWeightFactorLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/equipment/${equipment.id}/weight-factor`);
-      if (res.ok) {
-        const data = await res.json();
-        setWeightFactor(Number(data.weight_factor) || 0.3);
-      } else {
-        setWeightFactor(0.3);
-      }
+      const data = await apiFetch<{ weight_factor: number }>(`/api/equipment/${equipment.id}/weight-factor`, {}, 15000);
+      setWeightFactor(Number(data.weight_factor) || 0.3);
     } catch {
       setWeightFactor(0.3);
     } finally {
@@ -154,11 +143,8 @@ export default function EquipmentDetailScreen() {
     try {
       const params = new URLSearchParams({ name });
       if (equipmentId) params.set("equipment_id", equipmentId);
-      const res = await fetch(`${API_BASE}/api/videos?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setVideos(data);
-      }
+      const data = await apiFetch<any[]>(`/api/videos?${params.toString()}`, {}, 15000);
+      setVideos(data);
     } catch {
       // Server unavailable — leave videos empty
     } finally {
@@ -189,7 +175,7 @@ export default function EquipmentDetailScreen() {
   const handleShare = async () => {
     if (!equipment) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const message = `Check out ${equipment.name} on CoachLift.\n${equipment.description || ""}`;
+    const message = `Check out ${equipment.name} on SpotLift.\n${equipment.description || ""}`;
 
     try {
       const uri = await captureScreen({ format: "jpg", quality: 0.92 });

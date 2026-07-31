@@ -55,6 +55,8 @@ EXPO_PUBLIC_SUPABASE_URL=...
 EXPO_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
+For App Store / production builds, `API_BASE_URL` and `EXPO_PUBLIC_API_BASE_URL` must point to the deployed backend URL, not `localhost` or a LAN IP.
+
 ### 3. Set up Supabase
 
 1. Create a project at [supabase.com](https://supabase.com)
@@ -86,6 +88,28 @@ npm run server:dev
 The server runs on `http://localhost:3001`.
 
 > On a physical device, replace `localhost` with your machine's local IP in `.env`.
+
+### Release safety check
+
+Before submitting an App Store build, point `EXPO_PUBLIC_API_BASE_URL` at the deployed API and run:
+
+```bash
+npm run check:release
+```
+
+Production EAS builds should also have Sentry configured so source maps upload with the build:
+
+```bash
+eas secret:create --scope project --name SENTRY_AUTH_TOKEN --value your_sentry_auth_token
+```
+
+Set `EXPO_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, and `SENTRY_PROJECT` in the build environment for symbolicated crash reports.
+
+For local development only, you can run:
+
+```bash
+npm run smoke:api:local
+```
 
 ### Start the Expo app
 

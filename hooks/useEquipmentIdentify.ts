@@ -1,11 +1,11 @@
 import { useState } from "react";
 import * as FileSystem from "expo-file-system/legacy";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
-import axios from "axios";
 import { useEquipmentStore } from "@/store/equipmentStore";
 import { useAuthStore } from "@/store/authStore";
+import { supabase } from "@/lib/supabase";
+import { apiFetch, getApiBase, getApiUnavailableMessage } from "@/lib/api";
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3001";
 const MAX_DIMENSION = 1024;
 const COMPRESS_QUALITY = 0.7;
 
@@ -17,7 +17,7 @@ export function useEquipmentIdentify() {
 
   const identify = async (imageUri: string) => {
     console.log("[identify] called with URI:", imageUri);
-    console.log("[identify] API_BASE:", API_BASE);
+    console.log("[identify] API_BASE:", getApiBase() ?? "not configured");
 
     if (!canUseAsGuest()) {
       console.log("[identify] guest limit reached — requiresAuth");
@@ -42,14 +42,22 @@ export function useEquipmentIdentify() {
       });
       console.log("[identify] base64 length:", base64.length);
 
-      console.log("[identify] posting to", `${API_BASE}/api/identify`);
-      const response = await axios.post(
-        `${API_BASE}/api/identify`,
-        { image: base64, userId: user?.id || null },
-        { timeout: 60000 }
-      );
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
 
-      const result = response.data;
+      console.log("[identify] posting to /api/identify");
+      const result = await apiFetch<any>(
+        "/api/identify",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          body: JSON.stringify({ image: base64 }),
+        },
+        60000
+      );
       console.log("[identify] success:", result?.name);
       setCurrentResult(result);
       addToRecentlyViewed(result);
@@ -60,14 +68,9 @@ export function useEquipmentIdentify() {
 
       return { result, requiresAuth: false };
     } catch (err: any) {
-      const serverMsg = err.response?.data?.error;
-      const isNetworkError = !err.response && (err.message === "Network Error" || err.code === "ECONNABORTED");
-      const message = serverMsg
-        ?? (isNetworkError
-          ? `Cannot reach server at ${API_BASE}. Make sure it is running and your phone is on the same WiFi.`
-          : err.message || "Identification failed");
+      const message = err?.message || getApiUnavailableMessage();
 
-      console.error("[identify] error:", err.message, "| status:", err.response?.status, "| msg:", message);
+      console.error("[identify] error:", err.message, "| status:", err.status, "| msg:", message);
       setError(message);
       return { error: message };
     } finally {

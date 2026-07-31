@@ -121,6 +121,40 @@ export type Database = {
           message?: string | null;
         };
       };
+      completed_exercises: {
+        Row: {
+          id: string;
+          user_id: string;
+          exercise_slug: string;
+          exercise_name: string;
+          primary_muscles: string[];
+          secondary_muscles: string[];
+          client_log_id: string;
+          completed_at: string;
+        };
+      };
+      muscle_progress: {
+        Row: {
+          id: string;
+          user_id: string;
+          muscle_group: string;
+          score: number;
+          level: number;
+          last_updated: string;
+        };
+      };
+      muscle_progress_history: {
+        Row: {
+          id: string;
+          user_id: string;
+          muscle_group: string;
+          delta: number;
+          score_after: number;
+          level_after: number;
+          reason: "exercise" | "consistency_bonus";
+          recorded_at: string;
+        };
+      };
     };
   };
 };

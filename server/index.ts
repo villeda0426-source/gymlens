@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 dotenv.config({ override: true });
 import express from "express";
 import cors from "cors";
+import { createClient } from "@supabase/supabase-js";
 import identifyRouter from "./routes/identify";
 import searchRouter from "./routes/search";
 import equipmentRouter from "./routes/equipment";
@@ -10,10 +11,105 @@ import feedbackRouter from "./routes/feedback";
 import videosRouter from "./routes/videos";
 import workoutSearchRouter from "./routes/workout-search";
 import coachTrainerRouter from "./routes/coach-trainer";
+import {
+  getRequestId,
+  makeApiErrorBody,
+  requestObservability,
+  sendApiError,
+  structuredErrorResponses,
+} from "./lib/apiContract";
 
 const app = express();
+const release =
+  process.env.RAILWAY_GIT_COMMIT_SHA ||
+  process.env.SOURCE_COMMIT ||
+  "unknown";
 
-app.get("/health", (_req, res) => res.json({ status: "ok" }));
+app.use(requestObservability);
+app.use(structuredErrorResponses);
+
+const liveHealth = {
+  status: "ok",
+  service: "spotlift-api",
+  release,
+};
+
+app.get("/health", (_req, res) => res.json(liveHealth));
+app.get("/health/live", (_req, res) => res.json(liveHealth));
+
+const healthSupabase =
+  process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    : null;
+
+app.get("/api/dependency-health", async (_req, res) => {
+  const checks = {
+    api: true,
+    supabaseConfigured: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
+    anthropicConfigured: Boolean(process.env.ANTHROPIC_API_KEY),
+    geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
+    youtubeConfigured: Boolean(process.env.YOUTUBE_API_KEY),
+    supabaseReachable: false,
+  };
+
+  if (healthSupabase) {
+    try {
+      const result = await Promise.race([
+        healthSupabase.from("equipment").select("id").limit(1),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error("Supabase readiness check timed out.")), 4000);
+        }),
+      ]);
+      checks.supabaseReachable = !result.error;
+    } catch {
+      checks.supabaseReachable = false;
+    }
+  }
+
+  const ok =
+    checks.supabaseConfigured &&
+    checks.supabaseReachable &&
+    checks.anthropicConfigured &&
+    checks.geminiConfigured;
+
+  res.status(ok ? 200 : 503).json({
+    status: ok ? "ok" : "degraded",
+    release,
+    checks,
+  });
+});
+
+app.get("/health/ready", async (req, res) => {
+  if (!healthSupabase) {
+    return sendApiError(
+      res,
+      503,
+      "DATABASE_NOT_CONFIGURED",
+      "SpotLift database connectivity is not configured.",
+      true
+    );
+  }
+
+  try {
+    const result = await Promise.race([
+      healthSupabase.from("equipment").select("id").limit(1),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Supabase readiness check timed out.")), 4000);
+      }),
+    ]);
+
+    if (result.error) throw result.error;
+    return res.json({ ...liveHealth, ready: true });
+  } catch {
+    return sendApiError(
+      res,
+      503,
+      "DATABASE_UNAVAILABLE",
+      "SpotLift database connectivity is temporarily unavailable.",
+      true
+    );
+  }
+});
 
 const toInt = (value: string | undefined, fallback = 0) => {
   const parsed = Number.parseInt(value ?? "", 10);
@@ -39,6 +135,21 @@ app.get("/api/app-version", (_req, res) => {
   res.json(appVersionPolicy);
 });
 
+app.get("/api/capabilities", (_req, res) => {
+  res.json({
+    contractVersion: 1,
+    release,
+    requestTracing: true,
+    structuredErrors: true,
+    trainer: {
+      synchronousCompatibility: true,
+      asynchronousJobs: true,
+      idempotentJobs: true,
+      ownedJobs: true,
+    },
+  });
+});
+
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -48,7 +159,14 @@ const RATE_MAX_REQUESTS = 120;
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 
 app.use((req, res, next) => {
-  if (req.path === "/health" || req.path === "/api/app-version") {
+  if (
+    req.path === "/health" ||
+    req.path === "/health/live" ||
+    req.path === "/health/ready" ||
+    req.path === "/api/app-version" ||
+    req.path === "/api/capabilities" ||
+    req.path === "/api/dependency-health"
+  ) {
     next();
     return;
   }
@@ -65,7 +183,13 @@ app.use((req, res, next) => {
 
   bucket.count += 1;
   if (bucket.count > RATE_MAX_REQUESTS) {
-    res.status(429).json({ error: "Too many requests. Please try again in a few minutes." });
+    sendApiError(
+      res,
+      429,
+      "RATE_LIMITED",
+      "Too many requests. Please try again in a few minutes.",
+      true
+    );
     return;
   }
 
@@ -80,8 +204,12 @@ app.use((req, res, next) => {
   if (!platform || !buildValue) {
     if (appVersionPolicy.forceLegacyClients) {
       res.status(426).json({
+        ...makeApiErrorBody(
+          getRequestId(res),
+          "APP_UPDATE_REQUIRED",
+          "A SpotLift update is required. Please install the latest version from the app store."
+        ),
         updateRequired: true,
-        error: "A SpotLift update is required. Please install the latest version from the app store.",
         iosStoreUrl: appVersionPolicy.ios.storeUrl,
         androidStoreUrl: appVersionPolicy.android.storeUrl,
         androidWebStoreUrl: appVersionPolicy.android.webStoreUrl,
@@ -101,9 +229,13 @@ app.use((req, res, next) => {
 
   if (minimumBuild > 0 && buildNumber > 0 && buildNumber < minimumBuild) {
     res.status(426).json({
+      ...makeApiErrorBody(
+        getRequestId(res),
+        "APP_UPDATE_REQUIRED",
+        "A SpotLift update is required. Please install the latest version from the app store."
+      ),
       updateRequired: true,
       minimumBuild,
-      error: "A SpotLift update is required. Please install the latest version from the app store.",
       iosStoreUrl: appVersionPolicy.ios.storeUrl,
       androidStoreUrl: appVersionPolicy.android.storeUrl,
       androidWebStoreUrl: appVersionPolicy.android.webStoreUrl,
