@@ -163,9 +163,14 @@ export type CoachResponse =
 export type CoachCallOptions = {
   primaryTimeoutMs?: number;
   fallbackTimeoutMs?: number;
+  primaryModel?: string;
+  maxTokens?: number;
+  temperature?: number;
 };
 
-export function getCoachTimeoutsForBuild(buildNumber: number): Required<CoachCallOptions> {
+export function getCoachTimeoutsForBuild(
+  buildNumber: number
+): Pick<Required<CoachCallOptions>, "primaryTimeoutMs" | "fallbackTimeoutMs"> {
   if (buildNumber >= 38) {
     return { primaryTimeoutMs: 85000, fallbackTimeoutMs: 20000 };
   }
@@ -452,13 +457,16 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
   const allowStaticFallback = canUseStaticFallback(messages);
   const primaryTimeoutMs = options.primaryTimeoutMs ?? COACH_TRAINER_PRIMARY_TIMEOUT_MS;
   const fallbackTimeoutMs = options.fallbackTimeoutMs ?? COACH_TRAINER_FALLBACK_TIMEOUT_MS;
+  const primaryModel = options.primaryModel ?? COACH_TRAINER_MODEL;
+  const maxTokens = options.maxTokens ?? COACH_TRAINER_MAX_TOKENS;
+  const temperature = options.temperature ?? 0.5;
 
   async function run(nextMessages: CoachMessage[], model: string, timeoutMs: number): Promise<CoachResponse> {
     const response = await Promise.race([
       client.messages.create({
         model,
-        max_tokens: Number.isFinite(COACH_TRAINER_MAX_TOKENS) ? COACH_TRAINER_MAX_TOKENS : 5000,
-        temperature: 0.5,
+        max_tokens: Number.isFinite(maxTokens) ? maxTokens : 5000,
+        temperature,
         system: COACH_TRAINER_SYSTEM_PROMPT,
         messages: nextMessages,
       }),
@@ -479,7 +487,7 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
         error.message.toLowerCase().includes("array element")));
 
   try {
-    return await run(messages, COACH_TRAINER_MODEL, primaryTimeoutMs);
+    return await run(messages, primaryModel, primaryTimeoutMs);
   } catch (error) {
     if (!isRecoverableFormatError(error)) {
       throw error;
@@ -506,7 +514,7 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
         content:
             "Your previous response was not valid JSON for the schema. Reply again with ONE valid JSON object only. Keep the plan concise: 3 weeks, no more than 4 exercises per session, no markdown, no comments.",
       },
-      ], COACH_TRAINER_MODEL, primaryTimeoutMs);
+      ], primaryModel, primaryTimeoutMs);
     } catch (retryError) {
       if (isRecoverableFormatError(retryError)) {
         console.error("[coach-trainer] primary JSON formatting failed after retry:", retryError);

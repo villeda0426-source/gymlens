@@ -53,8 +53,24 @@ function getBuildNumber(req: Request): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function getCoachTimeouts(req: Request) {
-  return getCoachTimeoutsForBuild(getBuildNumber(req));
+function getCoachOptions(req: Request) {
+  const buildNumber = getBuildNumber(req);
+  const mode = req.body?.mode;
+  const timeouts = getCoachTimeoutsForBuild(buildNumber);
+
+  // App Store build 38 waits synchronously and can abandon Trainer requests
+  // before Sonnet finishes. Newer builds use the durable async job endpoint.
+  if (buildNumber === 38 && (mode === "adapt" || mode === "update_goals")) {
+    return {
+      ...timeouts,
+      primaryTimeoutMs: 38000,
+      primaryModel: process.env.COACH_TRAINER_FALLBACK_MODEL || "claude-haiku-4-5-20251001",
+      maxTokens: 3200,
+      temperature: 0.2,
+    };
+  }
+
+  return timeouts;
 }
 
 async function getAuthenticatedUserId(req: Request): Promise<string | null> {
@@ -67,7 +83,7 @@ async function getAuthenticatedUserId(req: Request): Promise<string | null> {
   return data.user.id;
 }
 
-async function runCoachRequest(req: Request, coachOptions = getCoachTimeouts(req)) {
+async function runCoachRequest(req: Request, coachOptions = getCoachOptions(req)) {
   const mode = req.body?.mode;
   const units = req.body?.units;
 
