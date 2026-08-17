@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { extractEquipmentName, identifyEquipment } from "../services/claudeService";
+import { extractEquipmentName, identifyEquipment } from "../services/equipmentAiService";
 import { getEquipmentVideos } from "../services/youtubeService";
 import { createClient } from "@supabase/supabase-js";
 
@@ -9,6 +9,16 @@ const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+async function getAuthenticatedUserId(req: Request): Promise<string | null> {
+  const header = req.header("authorization");
+  const match = header?.match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+
+  const { data, error } = await supabase.auth.getUser(match[1]);
+  if (error || !data.user) return null;
+  return data.user.id;
+}
 
 // ─── String-similarity helpers ────────────────────────────────────────────────
 
@@ -135,14 +145,15 @@ async function upsertIdentificationRecord(
 
 router.post("/", async (req: Request, res: Response) => {
   try {
-    const { image, userId } = req.body;
+    const { image } = req.body;
+    const userId = await getAuthenticatedUserId(req);
     console.log("[identify] POST received — userId:", userId, "| image length:", image?.length ?? 0);
 
     if (!image) {
       return res.status(400).json({ error: "Image is required" });
     }
 
-    // ── Step 1: Quick name extraction (Haiku — cheap) ──────────────────────
+    // ── Step 1: Quick name extraction (low-detail OpenAI vision) ───────────
     const quickName = await extractEquipmentName(image);
     console.log("[identify] quick name extracted:", quickName);
 
@@ -189,11 +200,21 @@ router.post("/", async (req: Request, res: Response) => {
       }
     }
 
-    // ── Step 3b: CACHE MISS — full Anthropic call ──────────────────────────
-    console.log(`NEW SCAN - calling Anthropic for: ${quickName}`);
+    // ── Step 3b: CACHE MISS — full OpenAI vision call ──────────────────────
+    console.log(`NEW SCAN - calling OpenAI for: ${quickName}`);
 
     const identification = await identifyEquipment(image);
-    console.log("[identify] Claude full result:", identification?.name);
+    console.log("[identify] OpenAI full result:", identification?.name);
+
+    if (
+      !identification?.name ||
+      /unknown|not (gym )?equipment|unable to identify/i.test(identification.name) ||
+      identification.confidence < 0.55
+    ) {
+      return res.status(422).json({
+        error: "I couldn't identify that equipment confidently. Try a closer photo with the full machine visible.",
+      });
+    }
 
     const videos = await getEquipmentVideos(identification.search_query);
 

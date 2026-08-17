@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { usePathname } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { apiFetch } from "@/lib/api";
 
 // Lazy-load native-only packages so a missing link never crashes the root layout.
 let Device: typeof import("expo-device") | null = null;
@@ -128,10 +129,8 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
         console.warn("Supabase feedback insert error:", dbError.message);
       }
 
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
       try {
-        await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/api/feedback/email`, {
+        await apiFetch("/api/feedback/email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -142,10 +141,9 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
             deviceInfo,
             screenshotUri,
           }),
-          signal: controller.signal,
-        });
-      } finally {
-        clearTimeout(timeout);
+        }, 8000);
+      } catch {
+        // Email notification is optional; keep the in-app/Supabase feedback path successful.
       }
 
       Alert.alert("Thanks! 🙌", "Your feedback was submitted. It helps make GymLens better.");

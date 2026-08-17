@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { createClient } from "@supabase/supabase-js";
-import Anthropic from "@anthropic-ai/sdk";
+import { createStructuredResponse } from "../services/openaiService";
 
 const router = Router();
 
@@ -8,8 +8,6 @@ const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 router.get("/:id", async (req: Request, res: Response) => {
   try {
@@ -38,7 +36,7 @@ router.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
-// Returns existing weight_factor or asks Claude and saves it
+// Returns an existing weight factor or asks OpenAI once and saves it.
 router.get("/:id/weight-factor", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -57,21 +55,23 @@ router.get("/:id/weight-factor", async (req: Request, res: Response) => {
       return res.json({ weight_factor: Number(equipment.weight_factor) });
     }
 
-    // Call Claude once to get weight factor
-    console.log(`[weight-factor] Asking Claude for: ${equipment.name}`);
-    const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 16,
-      messages: [
-        {
-          role: "user",
-          content: `For the gym exercise ${equipment.name}, what percentage of a person's body weight is a reasonable starting weight for a complete beginner? Reply with ONLY a decimal between 0.05 and 1.5, nothing else.`,
-        },
-      ],
+    console.log(`[weight-factor] Asking OpenAI for: ${equipment.name}`);
+    const response = await createStructuredResponse<{ weight_factor: number }>({
+      instructions:
+        "Estimate conservative beginner starting loads for gym exercises. This is educational guidance, not a medical prescription.",
+      input: `For ${equipment.name}, return a reasonable beginner starting load as a fraction of body weight between 0.05 and 1.5.`,
+      schemaName: "weight_factor",
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["weight_factor"],
+        properties: { weight_factor: { type: "number", minimum: 0.05, maximum: 1.5 } },
+      },
+      maxOutputTokens: 80,
+      timeoutMs: 20000,
     });
 
-    const raw = response.content[0].type === "text" ? response.content[0].text.trim() : "0.3";
-    const parsed = parseFloat(raw);
+    const parsed = Number(response.weight_factor);
     const factor = isNaN(parsed) ? 0.3 : Math.min(1.5, Math.max(0.05, parsed));
 
     await supabase

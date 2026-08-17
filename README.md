@@ -8,7 +8,7 @@ AI-powered gym equipment identifier. Point your camera at any piece of gym equip
 - **Navigation**: Expo Router (file-based)
 - **Backend**: Node.js + Express
 - **Database**: Supabase (Postgres + Auth + Storage)
-- **AI Vision**: Anthropic Claude API (`claude-sonnet-4-20250514`)
+- **AI**: OpenAI Responses API for vision, Coach, exercise guides, and structured generation
 - **Video**: YouTube Data API v3
 - **i18n**: i18next (EN/ES)
 - **State**: Zustand
@@ -44,7 +44,7 @@ cp .env.example .env
 ```
 
 ```env
-ANTHROPIC_API_KEY=...
+OPENAI_API_KEY=...
 SUPABASE_URL=...
 SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
@@ -55,6 +55,8 @@ EXPO_PUBLIC_SUPABASE_URL=...
 EXPO_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
+For App Store / production builds, `API_BASE_URL` and `EXPO_PUBLIC_API_BASE_URL` must point to the deployed backend URL, not `localhost` or a LAN IP.
+
 ### 3. Set up Supabase
 
 1. Create a project at [supabase.com](https://supabase.com)
@@ -62,10 +64,11 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=...
 3. Copy your **Project URL** and **anon key** from **Settings → API**
 4. Copy your **service_role key** (keep this server-side only)
 
-### 4. Set up Anthropic API
+### 4. Set up the OpenAI API
 
-1. Sign up at [console.anthropic.com](https://console.anthropic.com)
-2. Create an API key and add it to `.env` as `ANTHROPIC_API_KEY`
+1. Create an API key in the [OpenAI Platform](https://platform.openai.com/)
+2. Add it to `.env.local` as `OPENAI_API_KEY`
+3. Optionally configure `OPENAI_MODEL`, `OPENAI_VISION_MODEL`, `OPENAI_COACH_MODEL`, `OPENAI_FALLBACK_MODEL`, and `OPENAI_WORKOUT_MODEL`
 
 ### 5. Set up YouTube Data API
 
@@ -74,6 +77,12 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=...
 3. Create an API key and add it to `.env` as `YOUTUBE_API_KEY`
 
 ---
+
+### Rules-first Coach Trainer
+
+Workout check-ins use a cost-controlled coaching pipeline. SpotLift handles routine holds and earned progression with deterministic rules; pain, repeated high difficulty, low adherence, low energy, or written context escalates to OpenAI with a compact summary. Server guardrails cap prescriptions, and AI-recommended plan changes require user confirmation.
+
+`workout_feedback` stores structured check-ins. `ai_usage_events` stores only feature, model, token totals, latency, and success metadata—never prompts or workout notes. YouTube tutorial search remains a separate YouTube Data API workflow.
 
 ## Running the App
 
@@ -86,6 +95,28 @@ npm run server:dev
 The server runs on `http://localhost:3001`.
 
 > On a physical device, replace `localhost` with your machine's local IP in `.env`.
+
+### Release safety check
+
+Before submitting an App Store build, point `EXPO_PUBLIC_API_BASE_URL` at the deployed API and run:
+
+```bash
+npm run check:release
+```
+
+Production EAS builds should also have Sentry configured so source maps upload with the build:
+
+```bash
+eas secret:create --scope project --name SENTRY_AUTH_TOKEN --value your_sentry_auth_token
+```
+
+Set `EXPO_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, and `SENTRY_PROJECT` in the build environment for symbolicated crash reports.
+
+For local development only, you can run:
+
+```bash
+npm run smoke:api:local
+```
 
 ### Start the Expo app
 
@@ -114,11 +145,11 @@ gymlens/
 │   ├── UI/                # Shared UI components
 │   └── Layout/            # Screen wrappers
 ├── hooks/                 # Custom React hooks
-├── lib/                   # API clients (Supabase, Claude, YouTube)
+├── lib/                   # Shared AI schemas and API clients
 ├── locales/               # EN/ES translation files
 ├── server/                # Express backend
 │   ├── routes/            # API route handlers
-│   └── services/          # Claude & YouTube services
+│   └── services/          # OpenAI and YouTube services
 ├── store/                 # Zustand state stores
 └── supabase/              # Database schema
 ```

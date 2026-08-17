@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Coachlift — Your AI gym coach</title>
-  <meta name="description" content="Point your phone at any gym machine and instantly learn how to use it safely. Coachlift uses AI to identify 77+ pieces of equipment, show muscle diagrams, step-by-step tutorials, and keep you injury-free." />
-  <meta property="og:title" content="Coachlift — Your AI gym coach" />
+  <title>SpotLift — Your AI gym coach</title>
+  <meta name="description" content="Point your phone at any gym machine and instantly learn how to use it safely. SpotLift uses AI to identify 77+ pieces of equipment, show muscle diagrams, step-by-step tutorials, and keep you injury-free." />
+  <meta property="og:title" content="SpotLift — Your AI gym coach" />
   <meta property="og:description" content="AI-powered gym equipment identifier. Now available on the App Store." />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="https://coachlift.app/og-image.png" />
@@ -303,82 +303,13 @@
       position: relative;
     }
 
-    .app-header {
-      background: var(--bg);
-      padding: 36px 16px 12px;
-      border-bottom: 1px solid var(--border);
+    .phone-screenshot {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: top center;
     }
-    .app-greeting { font-size: 10px; color: var(--text-muted); font-family: var(--font-body); margin-bottom: 2px; }
-    .app-logo { font-family: var(--font-heading); font-size: 18px; color: var(--text); }
-    .app-logo span { color: var(--coral); }
-
-    .app-cta {
-      margin: 12px 14px;
-      background: var(--coral);
-      border-radius: 12px;
-      padding: 12px 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .app-cta-icon {
-      width: 32px; height: 32px;
-      border-radius: 8px;
-      background: rgba(255,255,255,0.2);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px;
-    }
-    .app-cta-label { font-size: 10px; font-family: var(--font-body); font-weight: 700; color: #fff; }
-    .app-cta-sub { font-size: 8px; font-family: var(--font-body); color: rgba(255,255,255,0.7); margin-top: 1px; }
-
-    .app-section-label {
-      font-size: 9px; font-weight: 700; font-family: var(--font-body);
-      color: var(--text); padding: 0 14px; margin-bottom: 6px;
-    }
-
-    .app-card {
-      margin: 0 14px 10px;
-      background: var(--card);
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      overflow: hidden;
-      display: flex;
-    }
-    .app-card-thumb {
-      width: 56px; height: 56px;
-      background: linear-gradient(135deg, #f0ece3, #e8e0d4);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px; flex-shrink: 0;
-    }
-    .app-card-body { padding: 8px 10px; }
-    .app-card-name { font-size: 9px; font-weight: 700; font-family: var(--font-body); color: var(--text); margin-bottom: 3px; }
-    .app-card-tag {
-      display: inline-block;
-      background: rgba(106,170,0,0.12);
-      color: var(--lime);
-      border: 1px solid rgba(106,170,0,0.25);
-      border-radius: 4px;
-      font-size: 7px; font-weight: 700; font-family: var(--font-body);
-      padding: 1px 5px; margin-right: 3px;
-    }
-
-    .app-tip {
-      margin: 0 14px;
-      background: var(--card);
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      padding: 10px;
-    }
-    .app-tip-badge {
-      display: inline-block;
-      background: rgba(106,170,0,0.12);
-      color: var(--lime);
-      border: 1px solid rgba(106,170,0,0.25);
-      border-radius: 4px;
-      font-size: 7px; font-weight: 700; font-family: var(--font-body);
-      padding: 2px 6px; margin-bottom: 5px;
-    }
-    .app-tip-text { font-size: 8px; font-family: var(--font-body); color: var(--text-secondary); line-height: 1.5; }
 
     .blob {
       position: absolute;
@@ -741,9 +672,8 @@
 <nav>
   <div class="container">
     <div class="nav-inner">
-      <a href="#" class="logo-text" style="display:flex;align-items:center;gap:8px;">
-        <img src="logo.png" alt="Coachlift" style="height:48px;width:auto;display:block;" />
-        Coach<span>lift</span>
+      <a href="#" class="logo-text" aria-label="SpotLift">
+        <img src="logo.png" alt="SpotLift" style="height:52px;width:auto;display:block;" />
       </a>
 
       <ul class="nav-links">
@@ -834,43 +764,11 @@
           <div class="phone-frame">
             <div class="phone-notch"></div>
             <div class="phone-screen">
-
-              <div class="app-header">
-                <div class="app-greeting">Good morning 👋</div>
-                <div class="app-logo">Coach<span>lift</span></div>
-              </div>
-
-              <div style="height:12px;"></div>
-
-              <div class="app-cta">
-                <div class="app-cta-icon">📷</div>
-                <div>
-                  <div class="app-cta-label">Identify Equipment</div>
-                  <div class="app-cta-sub">Point camera at any gym machine</div>
-                </div>
-              </div>
-
-              <div style="height:14px;"></div>
-
-              <div class="app-section-label">Equipment Spotlight</div>
-              <div class="app-card">
-                <div class="app-card-thumb">🏋️</div>
-                <div class="app-card-body">
-                  <div class="app-card-name">Lat Pulldown Machine</div>
-                  <div style="margin-top:4px;">
-                    <span class="app-card-tag">lats</span>
-                    <span class="app-card-tag">back</span>
-                  </div>
-                </div>
-              </div>
-
-              <div style="height:10px;"></div>
-
-              <div class="app-tip">
-                <div class="app-tip-badge">Today's Tip</div>
-                <div class="app-tip-text">Focus on form over weight — quality reps build more muscle safely.</div>
-              </div>
-
+              <img
+                class="phone-screenshot"
+                src="hero-app-screenshot.png"
+                alt="SpotLift app home screen with workout search, camera equipment scan, and training plan"
+              />
             </div>
           </div>
         </div>
@@ -890,7 +788,7 @@
       </div>
       <h2 class="section-title">Everything you need to train smarter</h2>
       <p class="section-sub">
-        From your first machine to your hundredth workout — Coachlift has the tools to keep you safe and progressing.
+        From your first machine to your hundredth workout — SpotLift has the tools to keep you safe and progressing.
       </p>
     </div>
 
@@ -958,7 +856,7 @@
       </div>
       <h2 class="section-title">Three steps to gym confidence</h2>
       <p class="section-sub">
-        No personal trainer needed. Coachlift turns your phone into an
+        No personal trainer needed. SpotLift turns your phone into an
         expert spotter — available anytime, for any machine.
       </p>
     </div>
@@ -970,7 +868,7 @@
         <div class="step-icon">📷</div>
         <div class="step-title">Point &amp; scan</div>
         <p class="step-desc">
-          Open Coachlift and point your camera at any gym machine or free weight.
+          Open SpotLift and point your camera at any gym machine or free weight.
           Our AI identifies it in seconds.
         </p>
       </div>
@@ -1015,7 +913,7 @@
         Start training<br /><em>smarter</em> today
       </h2>
       <p class="download-card-sub">
-        Download Coachlift free and never feel lost in the gym again.
+        Download SpotLift free and never feel lost in the gym again.
         AI-powered, always in your pocket.
       </p>
 
@@ -1076,11 +974,10 @@
   <div class="container">
     <div class="footer-inner">
       <div>
-        <a href="#" class="logo-text" style="font-size:20px;display:flex;align-items:center;gap:8px;">
-          <img src="logo.png" alt="Coachlift" style="height:36px;width:auto;display:block;" />
-          Coach<span>lift</span>
+        <a href="#" class="logo-text" aria-label="SpotLift">
+          <img src="logo.png" alt="SpotLift" style="height:42px;width:auto;display:block;" />
         </a>
-        <p class="footer-copy" style="margin-top:10px;">© 2025 Coachlift. All rights reserved.</p>
+        <p class="footer-copy" style="margin-top:10px;">© 2025 SpotLift. All rights reserved.</p>
       </div>
 
       <div class="footer-right">

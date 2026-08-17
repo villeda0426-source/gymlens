@@ -6,11 +6,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 
 const CREAM = 0xfaf7f0ff;
-const DARK = 0x0a0a0aff;
+const WHITE = 0xffffffff;
 
 async function makeIcon(outputPath, size, bgColor, logoScale = 0.6) {
   const bg = new Jimp({ width: size, height: size, color: bgColor });
-  const logo = await Jimp.read(join(ROOT, "assets/images/coachlift-logo.png"));
+  const logo = await Jimp.read(join(ROOT, "assets/images/spotlift-mark.png"));
 
   const maxDim = Math.round(size * logoScale);
   const ratio = Math.min(maxDim / logo.width, maxDim / logo.height);
@@ -27,10 +27,11 @@ async function makeIcon(outputPath, size, bgColor, logoScale = 0.6) {
 
 async function makeSplash(outputPath, w, h, bgColor, logoScale = 0.45) {
   const bg = new Jimp({ width: w, height: h, color: bgColor });
-  const logo = await Jimp.read(join(ROOT, "assets/images/coachlift-logo.png"));
+  const logo = await Jimp.read(join(ROOT, "assets/images/spotlift-logo.png"));
 
-  const maxDim = Math.round(Math.min(w, h) * logoScale);
-  const ratio = Math.min(maxDim / logo.width, maxDim / logo.height);
+  const maxW = Math.round(w * logoScale);
+  const maxH = Math.round(h * 0.24);
+  const ratio = Math.min(maxW / logo.width, maxH / logo.height);
   const lw = Math.round(logo.width * ratio);
   const lh = Math.round(logo.height * ratio);
   logo.resize({ w: lw, h: lh });
@@ -43,7 +44,7 @@ async function makeSplash(outputPath, w, h, bgColor, logoScale = 0.45) {
 }
 
 async function makeFavicon(outputPath) {
-  const logo = await Jimp.read(join(ROOT, "assets/images/coachlift-logo.png"));
+  const logo = await Jimp.read(join(ROOT, "assets/images/spotlift-mark.png"));
   logo.resize({ w: 32, h: 32 });
   await logo.write(outputPath);
   console.log(`✓ ${outputPath} (32×32)`);
@@ -51,13 +52,13 @@ async function makeFavicon(outputPath) {
 
 (async () => {
   // iOS app icon — cream background, logo centered
-  await makeIcon(join(ROOT, "assets/icon.png"), 1024, CREAM);
+  await makeIcon(join(ROOT, "assets/icon.png"), 1024, CREAM, 0.76);
 
   // iOS splash — cream background, logo centered, portrait
-  await makeSplash(join(ROOT, "assets/splash.png"), 1284, 2778, CREAM);
+  await makeSplash(join(ROOT, "assets/splash.png"), 1284, 2778, CREAM, 0.72);
 
-  // Android adaptive icon foreground — dark background, logo centered
-  await makeIcon(join(ROOT, "assets/adaptive-icon.png"), 1024, DARK, 0.55);
+  // Android adaptive icon foreground — white background, logo centered
+  await makeIcon(join(ROOT, "assets/adaptive-icon.png"), 1024, WHITE, 0.66);
 
   // Web favicon
   await makeFavicon(join(ROOT, "assets/favicon.png"));

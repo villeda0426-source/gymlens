@@ -78,10 +78,8 @@ export default function SavedScreen() {
           onPress={() => router.push("/(auth)/login")}
           style={styles.syncBanner}
         >
-          <Text style={styles.syncBannerText}>
-            Sign in to sync saved items across devices
-          </Text>
-          <Text style={styles.syncBannerCta}>Sign In →</Text>
+          <Text style={styles.syncBannerText}>{t("saved_extra.sync_banner")}</Text>
+          <Text style={styles.syncBannerCta}>{t("saved_extra.sync_cta")}</Text>
         </TouchableOpacity>
       )}
 
@@ -107,7 +105,7 @@ export default function SavedScreen() {
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>🔖</Text>
           <Text style={styles.emptyTitle}>
-            {activeCategory !== "all" ? "No items in this category" : t("saved.empty")}
+            {activeCategory !== "all" ? t("saved_extra.empty_category") : t("saved.empty")}
           </Text>
           <Text style={styles.emptySubtitle}>{t("saved.empty_subtitle")}</Text>
           <TouchableOpacity onPress={() => router.push("/(tabs)")} style={styles.cta}>
@@ -126,7 +124,7 @@ export default function SavedScreen() {
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             <Text style={styles.count}>
-              {filtered.length} item{filtered.length !== 1 ? "s" : ""}
+              {t(filtered.length === 1 ? "saved_extra.count" : "saved_extra.count_plural", { count: filtered.length })}
             </Text>
           }
         />

@@ -71,14 +71,14 @@ export default function CameraViewComponent({ onCapture }: CameraViewComponentPr
 
   return (
     <View style={styles.container}>
-      <ExpoCameraView ref={cameraRef} style={styles.camera} facing="back">
-        {/* Header — language toggle only; title is in the screen-level greeting header */}
+      <ExpoCameraView ref={cameraRef} style={styles.camera} facing="back" />
+
+      <View style={styles.overlay} pointerEvents="box-none">
         <View style={styles.header}>
           <View />
           <LanguageToggle />
         </View>
 
-        {/* Viewfinder brackets */}
         <View style={styles.viewfinder}>
           <View style={[styles.corner, styles.topLeft]} />
           <View style={[styles.corner, styles.topRight]} />
@@ -88,7 +88,6 @@ export default function CameraViewComponent({ onCapture }: CameraViewComponentPr
 
         <Text style={styles.hint}>{t("camera.capture")}</Text>
 
-        {/* Controls */}
         <View style={styles.controls}>
           <TouchableOpacity onPress={handleUpload} style={styles.uploadButton}>
             <View style={styles.uploadIconWrap}>
@@ -105,7 +104,7 @@ export default function CameraViewComponent({ onCapture }: CameraViewComponentPr
 
           <View style={{ width: 80 }} />
         </View>
-      </ExpoCameraView>
+      </View>
     </View>
   );
 }
@@ -117,6 +116,7 @@ const VF_SIZE = width * 0.75;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0A0A0A" },
   camera: { flex: 1 },
+  overlay: { ...StyleSheet.absoluteFillObject },
   permissionContainer: {
     flex: 1,
     backgroundColor: "#0A0A0A",

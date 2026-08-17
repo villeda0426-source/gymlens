@@ -26,6 +26,7 @@ import MuscleMapView from "@/components/Equipment/MuscleMapView";
 import { useEquipmentStore } from "@/store/equipmentStore";
 import { useAuthStore } from "@/store/authStore";
 import { colors, fonts } from "@/constants/theme";
+import { apiFetch } from "@/lib/api";
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   beginner: colors.lime,
@@ -37,19 +38,6 @@ const TABS = ["tutorial", "safety", "videos", "workout"] as const;
 type TabType = typeof TABS[number];
 
 const LEVEL_MULTIPLIERS = { Beginner: 1.0, Intermediate: 1.4, Advanced: 1.8 };
-const LEVEL_SETS_REPS = {
-  Beginner: "3 sets × 10–12 reps",
-  Intermediate: "4 sets × 8–10 reps",
-  Advanced: "5 sets × 6–8 reps",
-};
-const LEVEL_REST = {
-  Beginner: "90 sec",
-  Intermediate: "75 sec",
-  Advanced: "60 sec",
-};
-
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3001";
-
 export default function EquipmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, i18n } = useTranslation();
@@ -112,15 +100,10 @@ export default function EquipmentDetailScreen() {
     setIsLoading(true);
     setFetchError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/equipment/${id}`);
-      const data = await res.json();
-      if (!res.ok) {
-        setFetchError(data?.error || "Failed to load equipment");
-      } else {
-        setEquipment(data);
-      }
+      const data = await apiFetch(`/api/equipment/${id}`, {}, 12000);
+      setEquipment(data);
     } catch (err: any) {
-      setFetchError(err.message || "Failed to load equipment");
+      setFetchError(err.message || t("equipment.could_not_load_equipment"));
     } finally {
       setIsLoading(false);
     }
@@ -134,13 +117,8 @@ export default function EquipmentDetailScreen() {
     }
     setWeightFactorLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/equipment/${equipment.id}/weight-factor`);
-      if (res.ok) {
-        const data = await res.json();
-        setWeightFactor(Number(data.weight_factor) || 0.3);
-      } else {
-        setWeightFactor(0.3);
-      }
+      const data = await apiFetch<{ weight_factor: number }>(`/api/equipment/${equipment.id}/weight-factor`, {}, 15000);
+      setWeightFactor(Number(data.weight_factor) || 0.3);
     } catch {
       setWeightFactor(0.3);
     } finally {
@@ -152,13 +130,10 @@ export default function EquipmentDetailScreen() {
     if (!name) return;
     setVideosLoading(true);
     try {
-      const params = new URLSearchParams({ name });
+      const params = new URLSearchParams({ name, language: isEs ? "es" : "en" });
       if (equipmentId) params.set("equipment_id", equipmentId);
-      const res = await fetch(`${API_BASE}/api/videos?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setVideos(data);
-      }
+      const data = await apiFetch<any[]>(`/api/videos?${params.toString()}`, {}, 15000);
+      setVideos(data);
     } catch {
       // Server unavailable — leave videos empty
     } finally {
@@ -181,15 +156,15 @@ export default function EquipmentDetailScreen() {
     if (!equipment?.id) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const result = await toggleSave(equipment, authenticatedUserId);
-    if (result === "saved") showToast("Saved!");
-    else if (result === "removed") showToast("Removed from saved");
-    else showToast("Could not save — try again");
+    if (result === "saved") showToast(t("equipment.saved_toast"));
+    else if (result === "removed") showToast(t("equipment.removed_toast"));
+    else showToast(t("equipment.save_try_again"));
   };
 
   const handleShare = async () => {
     if (!equipment) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const message = `Check out ${equipment.name} on CoachLift.\n${equipment.description || ""}`;
+    const message = `Check out ${equipment.name} on SpotLift.\n${equipment.description || ""}`;
 
     try {
       const uri = await captureScreen({ format: "jpg", quality: 0.92 });
@@ -209,7 +184,7 @@ export default function EquipmentDetailScreen() {
     try {
       await Share.share({ title: equipment.name, message });
     } catch {
-      Alert.alert("Could not share", "Try again in a moment.");
+      Alert.alert(t("equipment.could_not_share"), t("equipment.share_try_again"));
     }
   };
 
@@ -236,16 +211,16 @@ export default function EquipmentDetailScreen() {
       <SafeScreen>
         <View style={styles.center}>
           <Text style={styles.errorEmoji}>⚠️</Text>
-          <Text style={styles.errorText}>Could not load equipment</Text>
+          <Text style={styles.errorText}>{t("equipment.could_not_load_equipment")}</Text>
           {fetchError && (
             <Text style={styles.errorDetail}>{fetchError}</Text>
           )}
           <View style={styles.errorActions}>
             <TouchableOpacity onPress={fetchEquipment} style={styles.backButton}>
-              <Text style={styles.backText}>Retry</Text>
+              <Text style={styles.backText}>{t("equipment.retry")}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButtonOutline}>
-              <Text style={styles.backButtonOutlineText}>Go Back</Text>
+              <Text style={styles.backButtonOutlineText}>{t("equipment.go_back")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -283,7 +258,7 @@ export default function EquipmentDetailScreen() {
               color={saved ? colors.coral : colors.textMuted}
             />
             <Text style={[styles.actionLabel, saved && styles.actionLabelSaved]}>
-              {saved ? "Saved" : "Save"}
+              {saved ? t("equipment.saved") : t("common.save")}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleShare} style={styles.actionBtn}>
@@ -361,7 +336,7 @@ export default function EquipmentDetailScreen() {
           {activeTab === "tutorial" && (
             <View style={styles.tabContent}>
               {tutorials.length === 0 ? (
-                <Text style={styles.noVideos}>No tutorial steps available</Text>
+                <Text style={styles.noVideos}>{t("equipment.tutorial_empty")}</Text>
               ) : tutorials.map((step: any, index: number) => (
                 <TouchableOpacity
                   key={step.step || index}
@@ -386,7 +361,7 @@ export default function EquipmentDetailScreen() {
           {activeTab === "safety" && (
             <View style={styles.tabContent}>
               {safetyTips.length === 0 ? (
-                <Text style={styles.noVideos}>No safety tips available</Text>
+                <Text style={styles.noVideos}>{t("equipment.safety_empty")}</Text>
               ) : safetyTips.map((tip: string, index: number) => (
                 <View key={index} style={styles.safetyItem}>
                   <Text style={styles.safetyIcon}>⚠️</Text>
@@ -402,11 +377,11 @@ export default function EquipmentDetailScreen() {
               {videosLoading ? (
                 <View style={styles.videosLoading}>
                   <ActivityIndicator color={colors.coral} />
-                  <Text style={styles.videosLoadingText}>Finding tutorial videos…</Text>
+                  <Text style={styles.videosLoadingText}>{t("equipment.videos_loading")}</Text>
                 </View>
               ) : videos.length === 0 && videosFetched ? (
                 <View style={styles.videosEmpty}>
-                  <Text style={styles.noVideos}>No videos found</Text>
+                  <Text style={styles.noVideos}>{t("equipment.videos_empty")}</Text>
                   <TouchableOpacity
                     onPress={() => {
                       setVideosFetched(false);
@@ -414,7 +389,7 @@ export default function EquipmentDetailScreen() {
                     }}
                     style={styles.retryVideos}
                   >
-                    <Text style={styles.retryVideosText}>Retry</Text>
+                    <Text style={styles.retryVideosText}>{t("equipment.retry")}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -455,16 +430,16 @@ export default function EquipmentDetailScreen() {
               {weightFactorLoading ? (
                 <View style={styles.videosLoading}>
                   <ActivityIndicator color={colors.coral} />
-                  <Text style={styles.videosLoadingText}>Calculating recommendations…</Text>
+                  <Text style={styles.videosLoadingText}>{t("equipment.calculating")}</Text>
                 </View>
               ) : (
                 <>
                   <View style={styles.calcCard}>
-                    <Text style={styles.calcLabel}>Body Weight</Text>
+                    <Text style={styles.calcLabel}>{t("equipment.body_weight")}</Text>
                     <View style={styles.calcInputRow}>
                       <TextInput
                         style={styles.calcInput}
-                        placeholder="e.g. 160"
+                        placeholder={t("equipment.body_weight_placeholder")}
                         placeholderTextColor={colors.textMuted}
                         keyboardType="numeric"
                         value={bodyWeight}
@@ -484,7 +459,7 @@ export default function EquipmentDetailScreen() {
                   </View>
 
                   <View style={styles.calcCard}>
-                    <Text style={styles.calcLabel}>Experience Level</Text>
+                    <Text style={styles.calcLabel}>{t("equipment.experience_level")}</Text>
                     <View style={styles.levelRow}>
                       {(["Beginner", "Intermediate", "Advanced"] as const).map((l) => (
                         <TouchableOpacity
@@ -493,7 +468,7 @@ export default function EquipmentDetailScreen() {
                           onPress={() => setLevel(l)}
                         >
                           <Text style={[styles.levelBtnText, level === l && styles.levelBtnTextActive]}>
-                            {l}
+                          {t(`equipment.${l.toLowerCase()}`)}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -501,25 +476,25 @@ export default function EquipmentDetailScreen() {
                   </View>
 
                   <View style={styles.resultsCard}>
-                    <Text style={styles.resultsTitle}>Your Starting Weight</Text>
-                    <Text style={styles.resultsWeight}>{bodyWeight ? calcWeight() : "Enter weight"}</Text>
+                    <Text style={styles.resultsTitle}>{t("equipment.your_starting_weight")}</Text>
+                    <Text style={styles.resultsWeight}>{bodyWeight ? calcWeight() : t("equipment.enter_weight")}</Text>
 
                     <View style={styles.resultsDivider} />
 
                     <View style={styles.resultRow}>
-                      <Text style={styles.resultKey}>Sets & Reps</Text>
-                      <Text style={styles.resultVal}>{LEVEL_SETS_REPS[level]}</Text>
+                      <Text style={styles.resultKey}>{t("equipment.sets_reps")}</Text>
+                      <Text style={styles.resultVal}>{t(`equipment.sets_reps_by_level.${level}`)}</Text>
                     </View>
                     <View style={styles.resultRow}>
-                      <Text style={styles.resultKey}>Rest Time</Text>
-                      <Text style={styles.resultVal}>{LEVEL_REST[level]}</Text>
+                      <Text style={styles.resultKey}>{t("equipment.rest_time")}</Text>
+                      <Text style={styles.resultVal}>{t(`equipment.rest_by_level.${level}`)}</Text>
                     </View>
 
                     <View style={styles.tipBox}>
                       <Text style={styles.tipBoxText}>
                         {bodyWeight
-                          ? `Personalized for ${name} based on your body weight`
-                          : "Add your body weight above and this updates instantly."}
+                          ? t("equipment.personalized_tip", { name })
+                          : t("equipment.add_weight_tip")}
                       </Text>
                     </View>
                   </View>

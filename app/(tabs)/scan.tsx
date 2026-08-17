@@ -21,7 +21,7 @@ export default function ScanScreen() {
     if (!capturedUri) return;
     const response = await identify(capturedUri);
     if (response?.requiresAuth) { setShowGuestPrompt(true); return; }
-    if (response?.error) { Alert.alert("Identification Failed", response.error, [{ text: "OK" }]); return; }
+    if (response?.error) { Alert.alert(t("errors.identification_title"), response.error, [{ text: "OK" }]); return; }
     if (response?.result) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push(`/equipment/${response.result.id || "result"}`);

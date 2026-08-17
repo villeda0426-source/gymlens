@@ -1,17 +1,17 @@
 /**
  * Searches LottieFiles for gym/fitness animations, then:
  *   - Updates existing equipment rows with lottie_animation_url
- *   - Uses Anthropic to generate data for new equipment and inserts them
+ *   - Uses OpenAI to generate data for new equipment and inserts them
  *
  * Run: npx ts-node --project server/tsconfig.json server/scripts/lottie-seed.ts
  */
 import dotenv from "dotenv";
-dotenv.config({ override: true });
-import Anthropic from "@anthropic-ai/sdk";
+dotenv.config({ path: ".env" });
+dotenv.config({ path: ".env.local", override: true });
+import { createStructuredResponse } from "../services/openaiService";
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY!;
 
 const LOTTIE_GRAPHQL = "https://graphql.lottiefiles.com/2022-08";
 
@@ -131,9 +131,7 @@ function findExistingMatch(animName: string, equipment: EquipmentRow[]): Equipme
   return contained ?? null;
 }
 
-// ─── Anthropic helper ────────────────────────────────────────────────────────
-
-const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+// ─── OpenAI helper ───────────────────────────────────────────────────────────
 
 interface EquipmentData {
   isEquipment: boolean;
@@ -150,40 +148,44 @@ interface EquipmentData {
 }
 
 async function generateEquipmentData(animationName: string): Promise<EquipmentData> {
-  const prompt = `You are a fitness expert. Given the animation name "${animationName}" from a gym/fitness animation library, determine if it represents a specific, recognizable piece of gym equipment or a specific gym exercise with a clear equipment association.
-
-If it's too generic (like "workout", "fitness", "gym", "exercise", "motion") — set isEquipment: false.
-If it's a real, identifiable piece of equipment or exercise (like "dumbbell curl", "lat pulldown", "squat rack", "barbell") — set isEquipment: true and fill in all fields.
-
-Respond with ONLY valid JSON matching this schema:
-{
-  "isEquipment": boolean,
-  "name": "English name (proper gym equipment/exercise name)",
-  "name_es": "Spanish name",
-  "description": "2-sentence English description",
-  "description_es": "2-sentence Spanish description",
-  "muscle_groups": ["primary muscles", "secondary muscles"],
-  "category": "machine" | "free weights" | "bodyweight" | "cable" | "cardio" | "accessory",
-  "difficulty": "beginner" | "intermediate" | "advanced",
-  "tutorial_steps": [
-    { "step": 1, "instruction": "English step", "instruction_es": "Spanish step" },
-    { "step": 2, "instruction": "English step", "instruction_es": "Spanish step" },
-    { "step": 3, "instruction": "English step", "instruction_es": "Spanish step" }
-  ],
-  "safety_tips": ["English tip 1", "English tip 2", "English tip 3"],
-  "safety_tips_es": ["Spanish tip 1", "Spanish tip 2", "Spanish tip 3"]
-}`;
-
-  const msg = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 1024,
-    messages: [{ role: "user", content: prompt }],
+  return createStructuredResponse<EquipmentData>({
+    instructions:
+      "You are a fitness equipment catalog editor. Reject generic animation labels. For recognizable equipment or exercises, provide concise bilingual catalog data and conservative safety guidance.",
+    input: `Animation library label: ${animationName}`,
+    schemaName: "equipment_seed_data",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["isEquipment", "name", "name_es", "description", "description_es", "muscle_groups", "category", "difficulty", "tutorial_steps", "safety_tips", "safety_tips_es"],
+      properties: {
+        isEquipment: { type: "boolean" },
+        name: { type: "string" },
+        name_es: { type: "string" },
+        description: { type: "string" },
+        description_es: { type: "string" },
+        muscle_groups: { type: "array", items: { type: "string" } },
+        category: { type: "string", enum: ["machine", "free weights", "bodyweight", "cable", "cardio", "accessory"] },
+        difficulty: { type: "string", enum: ["beginner", "intermediate", "advanced"] },
+        tutorial_steps: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["step", "instruction", "instruction_es"],
+            properties: {
+              step: { type: "integer" },
+              instruction: { type: "string" },
+              instruction_es: { type: "string" },
+            },
+          },
+        },
+        safety_tips: { type: "array", items: { type: "string" } },
+        safety_tips_es: { type: "array", items: { type: "string" } },
+      },
+    },
+    maxOutputTokens: 1200,
+    timeoutMs: 30000,
   });
-
-  const text = (msg.content[0] as { type: string; text: string }).text.trim();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("No JSON in Anthropic response");
-  return JSON.parse(jsonMatch[0]) as EquipmentData;
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
@@ -235,7 +237,7 @@ async function main() {
         skipped++;
       }
     } else {
-      // Ask Anthropic if this is real equipment worth inserting
+      // Ask OpenAI if this is real equipment worth inserting
       try {
         const data = await generateEquipmentData(anim.name);
         if (!data.isEquipment) {
@@ -274,7 +276,7 @@ async function main() {
         console.error(`  ❌ Failed to process "${anim.name}": ${err.message}`);
         skipped++;
       }
-      // Respect Anthropic rate limits
+      // Keep catalog generation deliberately paced.
       await new Promise((r) => setTimeout(r, 300));
     }
   }

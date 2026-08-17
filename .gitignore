@@ -18,3 +18,9 @@ expo-env.d.ts
 # Local Netlify folder
 .netlify
 assets/*.backup.png
+.codex-beta-monitor-state.json
+.spotlift-build.*/
+tmp/
+output/
+undefined/
+spotlift-expo-qr.png

@@ -4,6 +4,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const GUEST_SAVED_KEY = "coachlift_guest_saved";
 
+function parseStoredItems(raw: string | null): any[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 interface EquipmentResult {
   id?: string;
   name: string;
@@ -65,7 +75,7 @@ export const useEquipmentStore = create<EquipmentStore>((set, get) => ({
       }
     } else {
       const stored = await AsyncStorage.getItem(GUEST_SAVED_KEY);
-      const items: any[] = stored ? JSON.parse(stored) : [];
+      const items = parseStoredItems(stored);
       set({ savedIds: items.map((i) => i.id).filter(Boolean), guestSavedItems: items });
     }
   },
@@ -107,7 +117,7 @@ export const useEquipmentStore = create<EquipmentStore>((set, get) => ({
     } else {
       // Guest: AsyncStorage with full equipment object
       const stored = await AsyncStorage.getItem(GUEST_SAVED_KEY);
-      const items: any[] = stored ? JSON.parse(stored) : [];
+      const items = parseStoredItems(stored);
       if (alreadySaved) {
         const updated = items.filter((i) => i.id !== equipmentId);
         await AsyncStorage.setItem(GUEST_SAVED_KEY, JSON.stringify(updated));

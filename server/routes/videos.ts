@@ -12,7 +12,8 @@ const supabase = createClient(
 // GET /api/videos?equipment_id=<uuid>&name=<string>
 // Returns cached videos from Supabase or fetches from YouTube and caches them.
 router.get("/", async (req: Request, res: Response) => {
-  const { equipment_id, name } = req.query as { equipment_id?: string; name?: string };
+  const { equipment_id, name, language: requestedLanguage } = req.query as { equipment_id?: string; name?: string; language?: string };
+  const language = requestedLanguage === "es" ? "es" : "en";
 
   if (!name) {
     return res.status(400).json({ error: "name is required" });
@@ -24,6 +25,7 @@ router.get("/", async (req: Request, res: Response) => {
       .from("equipment_videos")
       .select("*")
       .eq("equipment_id", equipment_id)
+      .eq("language", language)
       .order("curator_approved", { ascending: false })
       .limit(5);
 
@@ -33,7 +35,7 @@ router.get("/", async (req: Request, res: Response) => {
   }
 
   // 2. Fetch from YouTube
-  const query = `${name} gym tutorial how to use`;
+  const query = language === "es" ? `${name} tutorial gimnasio cómo usar` : `${name} gym tutorial how to use`;
   let videos = await searchYouTubeVideos(query, 5);
 
   if (videos.length === 0) {
@@ -45,7 +47,7 @@ router.get("/", async (req: Request, res: Response) => {
     const rows = videos.map((v) => ({
       ...v,
       equipment_id,
-      language: "en",
+      language,
       curator_approved: false,
     }));
 
