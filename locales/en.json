@@ -214,7 +214,12 @@
     "display_name_hint": "Used for greetings and your profile.",
     "your_name": "Your name",
     "account_folder": "Account folder",
-    "account_folder_text": "Scans and saved equipment are stored under your signed-in account."
+    "account_folder_text": "Scans and saved equipment are stored under your signed-in account.",
+    "delete_account": "Delete account",
+    "delete_account_hint": "Permanently deletes your profile, workout feedback, progress, scans, saved equipment, and sign-in account.",
+    "delete_account_confirm": "This permanently deletes your SpotLift account and all associated data. This cannot be undone.",
+    "delete_account_action": "Permanently delete account",
+    "delete_account_error": "Could not delete account"
   },
   "feedback": {
     "title": "Send Feedback",

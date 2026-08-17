@@ -12,6 +12,7 @@ import feedbackRouter from "./routes/feedback";
 import videosRouter from "./routes/videos";
 import workoutSearchRouter from "./routes/workout-search";
 import coachTrainerRouter from "./routes/coach-trainer";
+import accountRouter from "./routes/account";
 
 const app = express();
 
@@ -154,6 +155,7 @@ app.use("/api/videos", videosRouter);
 app.use("/workout-search", workoutSearchRouter);
 app.use("/api/workout-search", workoutSearchRouter);
 app.use("/api/coach-trainer", coachTrainerRouter);
+app.use("/api/account", accountRouter);
 
 const PORT = Number(process.env.PORT) || 3001;
 app.listen(PORT, "0.0.0.0", () => {

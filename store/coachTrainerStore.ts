@@ -69,6 +69,7 @@ interface CoachTrainerState {
   setLatestWorkoutReview: (review: Omit<CoachWorkoutReview, "createdAt"> | null) => void;
   resetChatSession: () => void;
   clearTrainer: () => void;
+  purgeTrainer: () => Promise<void>;
   loadTrainer: () => Promise<void>;
 }
 
@@ -341,6 +342,24 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
     };
     set(next);
     persist(next);
+  },
+
+  purgeTrainer: async () => {
+    set({
+      units: "lbs",
+      plan: null,
+      coachAvatar: null,
+      hasEnteredCoachChat: false,
+      failedPrompt: null,
+      completedExerciseIds: [],
+      intakeHistory: [],
+      conversation: [],
+      latestWorkoutReview: null,
+      threads: [],
+      activeThreadId: null,
+      hasLoaded: true,
+    });
+    await AsyncStorage.removeItem(STORAGE_KEY);
   },
 
   loadTrainer: async () => {

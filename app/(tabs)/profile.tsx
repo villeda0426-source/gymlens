@@ -20,10 +20,11 @@ import { colors, fonts } from "@/constants/theme";
 export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
-  const { user, profile, signOut, updateProfileName } = useAuthStore();
+  const { user, profile, signOut, updateProfileName, deleteAccount } = useAuthStore();
   const [name, setName] = useState(profile?.username || "");
   const [editingName, setEditingName] = useState(!profile?.username);
   const [savingName, setSavingName] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     setName(profile?.username || "");
@@ -45,6 +46,22 @@ export default function ProfileScreen() {
     Alert.alert(t("auth.logout"), t("profile.sign_out_confirm"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("auth.logout"), style: "destructive", onPress: signOut },
+    ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(t("profile.delete_account"), t("profile.delete_account_confirm"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("profile.delete_account_action"),
+        style: "destructive",
+        onPress: async () => {
+          setDeletingAccount(true);
+          const result = await deleteAccount();
+          setDeletingAccount(false);
+          if (result.error) Alert.alert(t("profile.delete_account_error"), result.error);
+        },
+      },
     ]);
   };
 
@@ -146,6 +163,21 @@ export default function ProfileScreen() {
           <Ionicons name="log-out-outline" size={20} color={colors.danger} />
           <Text style={styles.dangerText}>{t("auth.logout")}</Text>
         </TouchableOpacity>
+        <View style={styles.deleteSection}>
+          <Text style={styles.deleteTitle}>{t("profile.delete_account")}</Text>
+          <Text style={styles.deleteHint}>{t("profile.delete_account_hint")}</Text>
+          <TouchableOpacity
+            style={[styles.deleteButton, deletingAccount && styles.saveNameButtonDisabled]}
+            onPress={handleDeleteAccount}
+            disabled={deletingAccount}
+          >
+            {deletingAccount ? (
+              <ActivityIndicator color={colors.danger} />
+            ) : (
+              <Text style={styles.dangerText}>{t("profile.delete_account_action")}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeScreen>
   );
@@ -222,4 +254,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.danger + "35",
   },
   dangerText: { color: colors.danger, fontSize: 15, fontFamily: fonts.semiBold },
+  deleteSection: {
+    marginHorizontal: 16, marginBottom: 40, padding: 18, borderRadius: 16,
+    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.danger + "35",
+  },
+  deleteTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.bold },
+  deleteHint: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.body, lineHeight: 19, marginTop: 5, marginBottom: 14 },
+  deleteButton: {
+    alignItems: "center", justifyContent: "center", minHeight: 46, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.danger,
+  },
 });

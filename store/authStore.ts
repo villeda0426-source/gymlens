@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
+import { apiFetch } from "@/lib/api";
 
 const GUEST_USES_KEY = "coachlift_guest_uses";
 const MAX_GUEST_USES = 3;
@@ -19,6 +20,7 @@ interface AuthState {
   incrementGuestUses: () => Promise<void>;
   canUseAsGuest: () => boolean;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<{ error?: string }>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -105,5 +107,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     useCoachTrainerStore.getState().resetChatSession();
     await supabase.auth.signOut();
     set({ user: null, profile: null, isGuest: true });
+  },
+
+  deleteAccount: async () => {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return { error: "Your session is no longer valid. Please sign in again." };
+
+    try {
+      await apiFetch<{ deleted: boolean }>("/api/account", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }, 30_000);
+      await useCoachTrainerStore.getState().purgeTrainer();
+      await AsyncStorage.removeItem(GUEST_USES_KEY);
+      await supabase.auth.signOut({ scope: "local" });
+      set({ user: null, profile: null, isGuest: true, guestUses: 0 });
+      return {};
+    } catch (error: any) {
+      return { error: error?.message || "Account deletion failed." };
+    }
   },
 }));
