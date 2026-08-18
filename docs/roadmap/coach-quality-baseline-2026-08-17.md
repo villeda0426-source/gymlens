@@ -143,7 +143,7 @@ Median generation time was 48.4 seconds. One Spanish returning-strength request 
 
 Required follow-up:
 
-1. Measure job creation time, queue time, model time, validation/retry time, and client polling time separately.
+1. Measure job creation time, queue time, model time, validation/retry time, and client polling time separately. **Implemented August 18; production sample verification pending.**
 2. Show trustworthy progress states during generation.
 3. Track p50/p95 by language, model, success, retry, and build.
 4. Investigate whether output size can be reduced without harming coaching quality.
@@ -166,4 +166,3 @@ Required follow-up:
 3. Run one authenticated sacrificial account through feedback persistence and account deletion.
 4. Run the complete journey on TestFlight in English and Spanish.
 5. Begin ten observed-user sessions after critical controlled defects are cleared.
-
