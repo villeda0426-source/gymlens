@@ -188,3 +188,9 @@ The decision must cite the scorecard and user evidence. â€œBuild more featuresâ€
 | AI cost per activated user unknown | P1 | NEXT | Token usage joined to activation cohort |
 | Test-user panel not recruited | P1 | NEXT | Ten sessions scheduled or completed |
 | Coach plan latency is long | P1 | NEXT | Instrument stages; reduce p95 without lowering quality |
+
+## Field observations
+
+| Date | Tester | Journey | Result | Notes |
+|---|---|---|---|---|
+| 2026-08-18 | Founder | Real workout; update and change workouts | PASS | No issues reported in one session; device/build/language details not recorded |

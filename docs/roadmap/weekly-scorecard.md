@@ -115,9 +115,9 @@ Weekly economics:
 
 ### User learning
 
-- Sessions completed:
-- Top repeated friction:
-- Strongest exact user phrase:
+- Sessions completed: 1 founder field session reported on August 18, 2026.
+- Top repeated friction: None reported during workout updating/changing in this session.
+- Strongest exact user phrase: “It worked pretty good. I had no issues updating my workouts or changing my workouts.”
 - Safety/trust concern:
 - Feature users expected but could not find:
 
@@ -136,4 +136,3 @@ Weekly economics:
 | Item | Old status | New status | Evidence |
 |---|---|---|---|
 | | | | |
-

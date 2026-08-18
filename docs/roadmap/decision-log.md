@@ -67,3 +67,11 @@ Use this file for consequential decisions. A decision can be revised, but the or
 - Observation: iOS 1.0.7 build 43 was built, uploaded, and submitted after addressing in-app account deletion.
 - Interpretation: release work is waiting on Apple; active product time should move to measurement preparation without changing the submitted binary.
 - Action: monitor review while preparing the validation sprint.
+
+### 2026-08-18 — Founder real-device workout update
+
+- Observation: the founder used the app during a real workout and reported that updating and changing workouts worked well, with no issues observed during the session.
+- Interpretation: this is positive field evidence for the normal workout-update path and supports the controlled coaching results. It does not yet establish a failure rate, cross-device reliability, Spanish parity, or full-plan completion behavior.
+- Journey stage covered: active workout updates and workout changes.
+- Result: pass for one founder session.
+- Action: keep the workflow unchanged for now; continue collecting device/build/language and repeat-session evidence. Prioritize any future regression only if it is reproducible or repeated.
