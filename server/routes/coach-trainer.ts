@@ -5,6 +5,8 @@ import {
   chatWithCoach,
   CoachMessage,
   CoachMode,
+  CoachCallOptions,
+  CoachStageTiming,
   intakeTurn,
   isPlan,
   Plan,
@@ -97,7 +99,7 @@ function isWorkoutFeedback(value: unknown): value is WorkoutFeedback {
   );
 }
 
-async function runCoachRequest(req: Request, coachOptions = getCoachTimeouts(req)) {
+async function runCoachRequest(req: Request, coachOptions: CoachCallOptions = getCoachTimeouts(req)) {
   const mode = req.body?.mode;
   const units = req.body?.units;
   const language = req.body?.language === "es" ? "es" : "en";
@@ -144,36 +146,59 @@ async function runCoachRequest(req: Request, coachOptions = getCoachTimeouts(req
 }
 
 async function processCoachJob(jobId: string, payload: unknown) {
-  await supabase
+  const processStartedAt = Date.now();
+  const timing: CoachStageTiming = { openAiMs: 0, validationMs: 0, retryMs: 0, attempts: 0, fallbackUsed: false };
+  const { data: jobRow } = await supabase
     .from("coach_trainer_jobs")
     .update({ status: "running", updated_at: new Date().toISOString() })
-    .eq("id", jobId);
+    .eq("id", jobId)
+    .select("created_at")
+    .single();
+  const queueMs = jobRow?.created_at ? Math.max(0, processStartedAt - new Date(jobRow.created_at).getTime()) : 0;
 
   try {
     const mockReq = { body: payload, header: () => undefined } as unknown as Request;
-    const result = await runCoachRequest(mockReq, { primaryTimeoutMs: 110000, fallbackTimeoutMs: 25000 });
+    const result = await runCoachRequest(mockReq, { primaryTimeoutMs: 110000, fallbackTimeoutMs: 25000, timing });
+    const processingMs = Date.now() - processStartedAt;
+    const saveStartedAt = Date.now();
     const { error } = await supabase
       .from("coach_trainer_jobs")
       .update({
         status: "completed",
         result,
         error: null,
+        timings: { queueMs, ...timing, processingMs, databaseSaveMs: 0 },
         updated_at: new Date().toISOString(),
         completed_at: new Date().toISOString(),
       })
       .eq("id", jobId);
 
     if (error) console.error("[coach-trainer-jobs] complete update error:", error.message);
+    if (!error) {
+      const databaseSaveMs = Date.now() - saveStartedAt;
+      await supabase
+        .from("coach_trainer_jobs")
+        .update({ timings: { queueMs, ...timing, processingMs, databaseSaveMs } })
+        .eq("id", jobId);
+    }
   } catch (error: any) {
     console.error("[coach-trainer-jobs] job failed:", error.message ?? error);
+    const processingMs = Date.now() - processStartedAt;
+    const saveStartedAt = Date.now();
     await supabase
       .from("coach_trainer_jobs")
       .update({
         status: "failed",
         error: error.message || "Coach plan generation failed.",
+        timings: { queueMs, ...timing, processingMs, databaseSaveMs: 0 },
         updated_at: new Date().toISOString(),
         completed_at: new Date().toISOString(),
       })
+      .eq("id", jobId);
+    const databaseSaveMs = Date.now() - saveStartedAt;
+    await supabase
+      .from("coach_trainer_jobs")
+      .update({ timings: { queueMs, ...timing, processingMs, databaseSaveMs } })
       .eq("id", jobId);
   }
 }
@@ -190,6 +215,7 @@ router.post("/jobs", async (req: Request, res: Response) => {
     }
 
     const userId = await getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ error: "Sign in is required to create a Coach job." });
     const { data, error } = await supabase
       .from("coach_trainer_jobs")
       .insert({
@@ -212,10 +238,13 @@ router.post("/jobs", async (req: Request, res: Response) => {
 
 router.get("/jobs/:id", async (req: Request, res: Response) => {
   try {
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ error: "Sign in is required to read a Coach job." });
     const { data, error } = await supabase
       .from("coach_trainer_jobs")
-      .select("id, status, result, error, created_at, updated_at, completed_at")
+      .select("id, status, result, error, timings, created_at, updated_at, completed_at")
       .eq("id", req.params.id)
+      .eq("user_id", userId)
       .single();
 
     if (error || !data) {
@@ -227,6 +256,7 @@ router.get("/jobs/:id", async (req: Request, res: Response) => {
       status: data.status,
       result: data.result,
       error: data.error,
+      timings: data.timings ?? null,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       completedAt: data.completed_at,
@@ -234,6 +264,36 @@ router.get("/jobs/:id", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("[coach-trainer-jobs] status error:", error.message ?? error);
     return res.status(500).json({ error: error.message || "Could not check coach plan generation." });
+  }
+});
+
+router.post("/jobs/:id/client-timing", async (req: Request, res: Response) => {
+  try {
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ error: "Sign in is required to record Coach timing." });
+    const allowed = ["jobStartRequestMs", "clientPollingMs", "responseToRenderMs", "clientTotalMs", "pollCount"];
+    const clientTiming = Object.fromEntries(
+      allowed
+        .filter((key) => Number.isFinite(req.body?.[key]) && Number(req.body[key]) >= 0)
+        .map((key) => [key, Math.round(Number(req.body[key]))])
+    );
+    const { data: row, error: readError } = await supabase
+      .from("coach_trainer_jobs")
+      .select("timings")
+      .eq("id", req.params.id)
+      .eq("user_id", userId)
+      .single();
+    if (readError || !row) return res.status(404).json({ error: "Coach job not found." });
+    const { error } = await supabase
+      .from("coach_trainer_jobs")
+      .update({ timings: { ...(row.timings ?? {}), ...clientTiming } })
+      .eq("id", req.params.id)
+      .eq("user_id", userId);
+    if (error) throw error;
+    return res.json({ recorded: true });
+  } catch (error: any) {
+    console.error("[coach-trainer-jobs] client timing error:", error.message ?? error);
+    return res.status(500).json({ error: "Could not record Coach timing." });
   }
 });
 

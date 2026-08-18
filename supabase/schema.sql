@@ -127,6 +127,7 @@ create table coach_trainer_jobs (
   status text not null default 'queued' check (status in ('queued', 'running', 'completed', 'failed')),
   payload jsonb,
   result jsonb,
+  timings jsonb not null default '{}'::jsonb,
   error text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),

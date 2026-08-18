@@ -165,6 +165,15 @@ export type CoachResponse =
 export type CoachCallOptions = {
   primaryTimeoutMs?: number;
   fallbackTimeoutMs?: number;
+  timing?: CoachStageTiming;
+};
+
+export type CoachStageTiming = {
+  openAiMs: number;
+  validationMs: number;
+  retryMs: number;
+  attempts: number;
+  fallbackUsed: boolean;
 };
 
 function context(obj: Record<string, unknown>): string {
@@ -466,17 +475,34 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
   const primaryTimeoutMs = options.primaryTimeoutMs ?? COACH_TRAINER_PRIMARY_TIMEOUT_MS;
   const fallbackTimeoutMs = options.fallbackTimeoutMs ?? COACH_TRAINER_FALLBACK_TIMEOUT_MS;
 
-  async function run(nextMessages: CoachMessage[], model: string, timeoutMs: number): Promise<CoachResponse> {
-    const text = await createTextResponse({
-      model,
-      instructions: COACH_TRAINER_SYSTEM_PROMPT,
-      input: nextMessages,
-      maxOutputTokens: Number.isFinite(COACH_TRAINER_MAX_TOKENS) ? COACH_TRAINER_MAX_TOKENS : 5000,
-      timeoutMs,
-      telemetryFeature: "coach_trainer",
-    });
+  const timing = options.timing;
+  let firstFailureAt: number | null = null;
 
-    return parseCoachResponse(text);
+  async function run(nextMessages: CoachMessage[], model: string, timeoutMs: number, fallback = false): Promise<CoachResponse> {
+    if (timing) {
+      timing.attempts += 1;
+      timing.fallbackUsed = timing.fallbackUsed || fallback;
+    }
+    const openAiStartedAt = Date.now();
+    let text: string;
+    try {
+      text = await createTextResponse({
+        model,
+        instructions: COACH_TRAINER_SYSTEM_PROMPT,
+        input: nextMessages,
+        maxOutputTokens: Number.isFinite(COACH_TRAINER_MAX_TOKENS) ? COACH_TRAINER_MAX_TOKENS : 5000,
+        timeoutMs,
+        telemetryFeature: "coach_trainer",
+      });
+    } finally {
+      if (timing) timing.openAiMs += Date.now() - openAiStartedAt;
+    }
+    const validationStartedAt = Date.now();
+    try {
+      return parseCoachResponse(text);
+    } finally {
+      if (timing) timing.validationMs += Date.now() - validationStartedAt;
+    }
   }
 
   const isRecoverableFormatError = (error: unknown) =>
@@ -490,6 +516,7 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
   try {
     return await run(messages, COACH_TRAINER_MODEL, primaryTimeoutMs);
   } catch (error) {
+    firstFailureAt = Date.now();
     if (!isRecoverableFormatError(error)) {
       throw error;
     }
@@ -497,7 +524,9 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
     if (error instanceof Error && error.message.includes("timed out")) {
       console.error("[coach-trainer] primary response timed out:", error.message);
       try {
-        return await run(messages, COACH_TRAINER_FALLBACK_MODEL, fallbackTimeoutMs);
+        const response = await run(messages, COACH_TRAINER_FALLBACK_MODEL, fallbackTimeoutMs, true);
+        if (timing && firstFailureAt) timing.retryMs += Date.now() - firstFailureAt;
+        return response;
       } catch (fallbackError) {
         if (isRecoverableFormatError(fallbackError)) {
           console.error("[coach-trainer] fallback response failed:", fallbackError);
@@ -508,7 +537,7 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
     }
 
     try {
-      return await run([
+      const response = await run([
       ...messages,
       {
         role: "user",
@@ -516,11 +545,15 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
             "Your previous response was not valid JSON for the schema. Reply again with ONE valid JSON object only. Keep the plan concise: 3 weeks, no more than 4 exercises per session, no markdown, no comments.",
       },
       ], COACH_TRAINER_MODEL, primaryTimeoutMs);
+      if (timing && firstFailureAt) timing.retryMs += Date.now() - firstFailureAt;
+      return response;
     } catch (retryError) {
       if (isRecoverableFormatError(retryError)) {
         console.error("[coach-trainer] primary JSON formatting failed after retry:", retryError);
         try {
-          return await run(messages, COACH_TRAINER_FALLBACK_MODEL, fallbackTimeoutMs);
+          const response = await run(messages, COACH_TRAINER_FALLBACK_MODEL, fallbackTimeoutMs, true);
+          if (timing && firstFailureAt) timing.retryMs += Date.now() - firstFailureAt;
+          return response;
         } catch (fallbackError) {
           if (isRecoverableFormatError(fallbackError)) {
             console.error("[coach-trainer] fallback response failed:", fallbackError);

@@ -25,6 +25,7 @@ import {
   getCoachTrainerJob,
   getLatestCoachWorkoutReview,
   makeFreeformWorkoutLog,
+  recordCoachJobClientTiming,
   startCoachTrainerJob,
 } from "@/lib/coachTrainer";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
@@ -280,12 +281,16 @@ export default function TrainerScreen() {
 
   const waitForCoachJob = async (jobId: string, authToken: string, signal: AbortSignal) => {
     const startedAt = Date.now();
+    let pollCount = 0;
 
     while (Date.now() - startedAt < COACH_JOB_MAX_WAIT_MS) {
       if (signal.aborted) throw makeAbortError();
 
       const job = await getCoachTrainerJob(jobId, { authToken, signal });
-      if (job.status === "completed" && job.result) return job.result;
+      pollCount += 1;
+      if (job.status === "completed" && job.result) {
+        return { result: job.result, timings: job.timings, pollingMs: Date.now() - startedAt, pollCount };
+      }
       if (job.status === "failed") {
         throw new Error(job.error || t("trainer.coach_connect_error"));
       }
@@ -340,6 +345,8 @@ export default function TrainerScreen() {
             : [...intakeHistory, { role: "user" as const, content: text }];
 
         setNotice(t("trainer.coach_building_plan"));
+        const clientStartedAt = Date.now();
+        const jobStartAt = Date.now();
         const job = await startCoachTrainerJob({
           mode: "intake",
           units,
@@ -347,9 +354,23 @@ export default function TrainerScreen() {
           history: intakeHistory,
           userMessage: text,
         }, { authToken: session.access_token, signal: controller.signal });
-        const response = await waitForCoachJob(job.jobId, session.access_token, controller.signal);
+        const jobStartRequestMs = Date.now() - jobStartAt;
+        const completion = await waitForCoachJob(job.jobId, session.access_token, controller.signal);
+        const response = completion.result;
+        const responseReceivedAt = Date.now();
         setIntakeHistory(nextHistory);
         handleResponse(response, nextHistory);
+        requestAnimationFrame(() => {
+          const clientTiming = {
+            jobStartRequestMs,
+            clientPollingMs: completion.pollingMs,
+            responseToRenderMs: Date.now() - responseReceivedAt,
+            clientTotalMs: Date.now() - clientStartedAt,
+            pollCount: completion.pollCount,
+          };
+          console.info("[coach-timing]", { jobId: job.jobId, ...completion.timings, ...clientTiming });
+          void recordCoachJobClientTiming(job.jobId, clientTiming, { authToken: session.access_token }).catch(() => undefined);
+        });
         setFailedPrompt(null);
       } else if (/goal|constraint|injur|days|equipment|schedule/i.test(text)) {
         const response = await callCoachTrainer({

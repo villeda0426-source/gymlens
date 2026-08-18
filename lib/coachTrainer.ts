@@ -79,7 +79,23 @@ export type CoachJobStatusResponse = {
   createdAt?: string;
   updatedAt?: string;
   completedAt?: string | null;
+  timings?: Record<string, number | boolean> | null;
 };
+
+export async function recordCoachJobClientTiming(
+  jobId: string,
+  timing: Record<string, number>,
+  options: CoachTrainerRequestOptions = {}
+): Promise<void> {
+  await apiFetch(`/api/coach-trainer/jobs/${jobId}/client-timing`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.authToken ? { Authorization: `Bearer ${options.authToken}` } : {}),
+    },
+    body: JSON.stringify(timing),
+  }, 15_000);
+}
 
 export type WorkoutEvaluationResponse = CoachingDecision & {
   summary: CoachingSummary;
