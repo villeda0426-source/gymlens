@@ -19,10 +19,10 @@ By day 30, SpotLift must have:
 | ID | Work item | Status | Owner | Evidence / completion rule |
 |---|---|---|---|---|
 | P-01 | Monitor App Store review | WAITING | Founder + Codex | Status and any Apple message recorded |
-| P-02 | Finalize analytics event dictionary | NEXT | Codex | Event names, triggers, required properties, privacy classification |
+| P-02 | Finalize analytics event dictionary | DONE | Codex | `event-dictionary.md` defines events, properties, privacy rules, funnels, and verification |
 | P-03 | Confirm Sentry build 43 release mapping | NEXT | Codex | `spotlift@1.0.7`, dist `43`, production event visible |
 | P-04 | Define test-user recruitment list | NEXT | Founder | 10 candidates: beginners, returning users, and 2–3 active lifters |
-| P-05 | Prepare test scripts | NEXT | Codex | Activation and Coach-quality scripts ready |
+| P-05 | Prepare controlled Coach test harness and baseline | DONE | Codex | 20/20 plans and 4/4 adaptations passed; see `coach-quality-baseline-2026-08-17.md` |
 
 ## Week 1 — Measurement and release health
 
@@ -179,4 +179,4 @@ The decision must cite the scorecard and user evidence. “Build more features�
 | Retention baseline unavailable | P1 | NEXT | D1/D7 cohorts measurable for two weeks |
 | AI cost per activated user unknown | P1 | NEXT | Token usage joined to activation cohort |
 | Test-user panel not recruited | P1 | NEXT | Ten sessions scheduled or completed |
-
+| Coach plan latency is long | P1 | NEXT | Instrument stages; reduce p95 without lowering quality |

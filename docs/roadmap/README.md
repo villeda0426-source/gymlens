@@ -14,7 +14,8 @@ This is SpotLift's operating system. It is deliberately separate from product co
 3. Update [weekly-scorecard.md](./weekly-scorecard.md) every Monday with verified numbers.
 4. Record important product and business choices in [decision-log.md](./decision-log.md).
 5. Use [event-dictionary.md](./event-dictionary.md) as the authoritative analytics contract.
-6. Do not mark an item complete without linking or naming the evidence.
+6. Read [coach-quality-baseline-2026-08-17.md](./coach-quality-baseline-2026-08-17.md) for the first controlled Coach results.
+7. Do not mark an item complete without linking or naming the evidence.
 
 Status vocabulary:
 
@@ -161,7 +162,7 @@ Only the first three items may be treated as immediate priorities.
 | 1 | Monitor Apple review and release health | WAITING | Apple status, release date, first 72-hour health read |
 | 2 | Establish the event dictionary and measurement pipeline | NEXT | Verified event records from a TestFlight/production journey |
 | 3 | Create the first weekly baseline scorecard | NEXT | App Store, Sentry, API, product, and AI cost numbers with date ranges |
-| 4 | Run end-to-end coaching-quality test matrix | NEXT | Scenario results and pass/fail evidence |
+| 4 | Complete the next layers of coaching-quality testing | IN PROGRESS | Controlled baseline: 20/20 plans and 4/4 adaptations passed; expert/device/persistence layers remain |
 | 5 | Observe ten new-user journeys | NEXT | Friction log with severity and journey stage |
 | 6 | Run founder-led message tests | PARKED | Attributed content results |
 | 7 | Define free versus paid packaging | PARKED | Activation, retention, cost, and willingness-to-pay evidence |
