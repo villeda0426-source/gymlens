@@ -113,7 +113,8 @@ Controlled evidence completed before the sprint:
 - 20/20 English/Spanish plan-contract scenarios passed.
 - 4/4 full-plan adaptations passed.
 - 16/16 English/Spanish high-risk safety/refusal scenarios passed after two instruction defects were corrected.
-- Expert semantic scoring, authenticated persistence, and device verification remain open.
+- Authenticated production job ownership, stage timing, feedback persistence, review readback, and account deletion passed with a temporary synthetic account.
+- Expert semantic scoring and physical-device verification remain open.
 
 ## Week 3 — User validation
 

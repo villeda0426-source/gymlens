@@ -17,7 +17,9 @@ This is SpotLift's operating system. It is deliberately separate from product co
 6. Read [coach-quality-baseline-2026-08-17.md](./coach-quality-baseline-2026-08-17.md) for the first controlled Coach results.
 7. Read [coach-latency-instrumentation.md](./coach-latency-instrumentation.md) for the stage-by-stage performance contract.
 8. Read [coach-safety-baseline-2026-08-18.md](./coach-safety-baseline-2026-08-18.md) for the high-risk safety regression.
-9. Do not mark an item complete without linking or naming the evidence.
+9. Read [coach-authenticated-e2e-2026-08-18.md](./coach-authenticated-e2e-2026-08-18.md) for the production persistence proof.
+10. Use [testflight-coach-device-checklist.md](./testflight-coach-device-checklist.md) for English/Spanish physical-device verification.
+11. Do not mark an item complete without linking or naming the evidence.
 
 Status vocabulary:
 
