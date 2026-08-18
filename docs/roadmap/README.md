@@ -16,7 +16,8 @@ This is SpotLift's operating system. It is deliberately separate from product co
 5. Use [event-dictionary.md](./event-dictionary.md) as the authoritative analytics contract.
 6. Read [coach-quality-baseline-2026-08-17.md](./coach-quality-baseline-2026-08-17.md) for the first controlled Coach results.
 7. Read [coach-latency-instrumentation.md](./coach-latency-instrumentation.md) for the stage-by-stage performance contract.
-8. Do not mark an item complete without linking or naming the evidence.
+8. Read [coach-safety-baseline-2026-08-18.md](./coach-safety-baseline-2026-08-18.md) for the high-risk safety regression.
+9. Do not mark an item complete without linking or naming the evidence.
 
 Status vocabulary:
 

@@ -108,6 +108,13 @@ Also record binary outcomes:
 - All critical failures have reproducible steps.
 - The highest-value coaching improvement is selected by frequency × severity × north-star impact.
 
+Controlled evidence completed before the sprint:
+
+- 20/20 English/Spanish plan-contract scenarios passed.
+- 4/4 full-plan adaptations passed.
+- 16/16 English/Spanish high-risk safety/refusal scenarios passed after two instruction defects were corrected.
+- Expert semantic scoring, authenticated persistence, and device verification remain open.
+
 ## Week 3 — User validation
 
 Goal: observe real beginner behavior rather than relying on founder familiarity.
