@@ -7,6 +7,7 @@ import {
   Dimensions,
   Animated,
   Easing,
+  Linking,
 } from "react-native";
 import { CameraView as ExpoCameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
@@ -58,12 +59,22 @@ export default function CameraViewComponent({ onCapture }: CameraViewComponentPr
   if (!permission) return <View style={styles.container} />;
 
   if (!permission.granted) {
+    const canRequestPermission = permission.canAskAgain;
     return (
       <View style={styles.permissionContainer}>
-        <Text style={styles.permissionTitle}>{t("camera.permission_title")}</Text>
-        <Text style={styles.permissionMessage}>{t("camera.permission_message")}</Text>
-        <TouchableOpacity onPress={requestPermission} style={styles.permissionButton}>
-          <Text style={styles.permissionButtonText}>{t("camera.permission_button")}</Text>
+        <Text style={styles.permissionTitle}>
+          {t(canRequestPermission ? "camera.permission_title" : "camera.permission_denied_title")}
+        </Text>
+        <Text style={styles.permissionMessage}>
+          {t(canRequestPermission ? "camera.permission_message" : "camera.permission_denied_message")}
+        </Text>
+        <TouchableOpacity
+          onPress={canRequestPermission ? requestPermission : () => Linking.openSettings()}
+          style={styles.permissionButton}
+        >
+          <Text style={styles.permissionButtonText}>
+            {t(canRequestPermission ? "common.continue" : "camera.open_settings")}
+          </Text>
         </TouchableOpacity>
       </View>
     );

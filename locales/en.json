@@ -8,6 +8,7 @@
     "delete": "Delete",
     "share": "Share",
     "close": "Close",
+    "continue": "Continue",
     "back": "Back",
     "next": "Next",
     "done": "Done",
@@ -32,9 +33,11 @@
     "analyzing_subtitle": "Identifying your equipment",
     "retake": "Retake",
     "identify": "Identify Equipment",
-    "permission_title": "Camera Access Required",
-    "permission_message": "SpotLift needs camera access to identify gym equipment.",
-    "permission_button": "Grant Access",
+    "permission_title": "Camera access",
+    "permission_message": "Use your camera to identify gym equipment. You can choose whether to allow access on the next screen.",
+    "permission_denied_title": "Camera access is off",
+    "permission_denied_message": "To scan gym equipment, allow camera access for SpotLift in Settings. You can still use the rest of the app without it.",
+    "open_settings": "Open Settings",
     "no_camera": "No camera available"
   },
   "home": {

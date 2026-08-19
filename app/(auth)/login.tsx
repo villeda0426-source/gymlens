@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from "react-native";
 import * as AppleAuthentication from "expo-apple-authentication";
+import * as Crypto from "expo-crypto";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -52,6 +53,10 @@ function reportAuthFailure(provider: "email" | "apple", error: any) {
     });
     Sentry.captureException(error instanceof Error ? error : new Error(error?.message || "Authentication failed"));
   });
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export default function LoginScreen() {
@@ -119,26 +124,45 @@ export default function LoginScreen() {
     if (loading) return;
     setLoading(true);
     try {
+      Sentry.addBreadcrumb({ category: "auth.apple", message: "native_sign_in_started", level: "info" });
+      const rawNonce = bytesToHex(await Crypto.getRandomBytesAsync(32));
+      const hashedNonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        rawNonce
+      );
       const credential = await AppleAuthentication.signInAsync({
+        nonce: hashedNonce,
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
       });
       if (!credential.identityToken) {
-        Alert.alert(t("common.error"), t("auth.apple_failed"));
-        return;
+        throw new Error("APPLE_IDENTITY_TOKEN_MISSING");
       }
+      Sentry.addBreadcrumb({ category: "auth.apple", message: "native_credential_received", level: "info" });
       const identityToken = credential.identityToken;
       const { data, error } = await runSignInRequest(
         () => supabase.auth.signInWithIdToken({
           provider: "apple",
           token: identityToken,
+          nonce: rawNonce,
         })
       );
       if (error) throw error;
       if (!data.session?.user) throw new Error(t("auth.session_failed"));
 
+      const givenName = credential.fullName?.givenName?.trim();
+      const familyName = credential.fullName?.familyName?.trim();
+      const fullName = [givenName, familyName].filter(Boolean).join(" ");
+      if (fullName) {
+        const { error: profileError } = await supabase.auth.updateUser({
+          data: { full_name: fullName, given_name: givenName, family_name: familyName },
+        });
+        if (profileError) Sentry.captureException(profileError);
+      }
+
+      Sentry.addBreadcrumb({ category: "auth.apple", message: "supabase_session_created", level: "info" });
       setUser(data.session.user);
       router.replace("/(tabs)");
     } catch (e: any) {

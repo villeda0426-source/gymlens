@@ -8,6 +8,7 @@
     "delete": "Eliminar",
     "share": "Compartir",
     "close": "Cerrar",
+    "continue": "Continuar",
     "back": "Atrás",
     "next": "Siguiente",
     "done": "Listo",
@@ -32,9 +33,11 @@
     "analyzing_subtitle": "Identificando tu equipo",
     "retake": "Repetir",
     "identify": "Identificar Equipo",
-    "permission_title": "Acceso a Cámara Requerido",
-    "permission_message": "SpotLift necesita acceso a la cámara para identificar equipos del gimnasio.",
-    "permission_button": "Conceder Acceso",
+    "permission_title": "Acceso a la cámara",
+    "permission_message": "Usa tu cámara para identificar equipos del gimnasio. En la siguiente pantalla puedes decidir si permites el acceso.",
+    "permission_denied_title": "El acceso a la cámara está desactivado",
+    "permission_denied_message": "Para escanear equipos, permite el acceso a la cámara para SpotLift en Configuración. Puedes seguir usando el resto de la app sin activarlo.",
+    "open_settings": "Abrir Configuración",
     "no_camera": "Cámara no disponible"
   },
   "home": {
