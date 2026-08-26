@@ -7,7 +7,10 @@ create table if not exists public.app_installations (
   build_number integer,
   locale text,
   created_at timestamptz not null default now(),
-  last_seen_at timestamptz not null default now()
+  last_seen_at timestamptz not null default now(),
+  notification_sent_at timestamptz,
+  notification_attempted_at timestamptz,
+  notification_error text
 );
 
 create index if not exists idx_app_installations_user

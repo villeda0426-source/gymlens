@@ -27,8 +27,7 @@ async function sendNewInstallEmail(installation: {
 }) {
   const recipient = process.env.INSTALL_NOTIFICATION_EMAIL || process.env.GMAIL_USER;
   if (!recipient || !process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-    console.warn("[installations] Email notification is not configured.");
-    return;
+    throw new Error("Email notification is not configured.");
   }
 
   const transporter = nodemailer.createTransport({
@@ -53,6 +52,36 @@ async function sendNewInstallEmail(installation: {
   });
 }
 
+async function deliverAndRecordNotification(
+  installationId: string,
+  installation: Parameters<typeof sendNewInstallEmail>[0]
+): Promise<boolean> {
+  try {
+    await sendNewInstallEmail(installation);
+    const { error } = await supabase
+      .from("app_installations")
+      .update({
+        notification_sent_at: new Date().toISOString(),
+        notification_attempted_at: new Date().toISOString(),
+        notification_error: null,
+      })
+      .eq("installation_id", installationId);
+    if (error) throw error;
+    return true;
+  } catch (error: any) {
+    const message = String(error?.message || "Notification delivery failed").slice(0, 500);
+    console.error("[installations] Notification email failed:", message);
+    await supabase
+      .from("app_installations")
+      .update({
+        notification_attempted_at: new Date().toISOString(),
+        notification_error: message,
+      })
+      .eq("installation_id", installationId);
+    return false;
+  }
+}
+
 router.post("/", async (req: Request, res: Response) => {
   try {
     const installationId = cleanText(req.body?.installationId, 100);
@@ -75,7 +104,7 @@ router.post("/", async (req: Request, res: Response) => {
 
     const { data: existing, error: lookupError } = await supabase
       .from("app_installations")
-      .select("id")
+      .select("id, platform, app_version, build_number, locale, created_at, notification_sent_at")
       .eq("installation_id", installationId)
       .maybeSingle();
     if (lookupError) throw lookupError;
@@ -87,7 +116,10 @@ router.post("/", async (req: Request, res: Response) => {
         .update(update)
         .eq("id", existing.id);
       if (error) throw error;
-      return res.json({ success: true, isNew: false });
+      const notificationSent = existing.notification_sent_at
+        ? true
+        : await deliverAndRecordNotification(installationId, existing);
+      return res.json({ success: true, isNew: false, notificationSent });
     }
 
     const { data: created, error: insertError } = await supabase
@@ -101,10 +133,8 @@ router.post("/", async (req: Request, res: Response) => {
       throw insertError;
     }
 
-    sendNewInstallEmail(created).catch((error) =>
-      console.error("[installations] Notification email failed:", error)
-    );
-    return res.status(201).json({ success: true, isNew: true });
+    const notificationSent = await deliverAndRecordNotification(installationId, created);
+    return res.status(201).json({ success: true, isNew: true, notificationSent });
   } catch (error: any) {
     console.error("[installations] Tracking failed:", error?.message || error);
     return res.status(500).json({ error: "Unable to record installation." });

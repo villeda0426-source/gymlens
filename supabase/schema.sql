@@ -134,7 +134,10 @@ create table app_installations (
   build_number integer,
   locale text,
   created_at timestamptz not null default now(),
-  last_seen_at timestamptz not null default now()
+  last_seen_at timestamptz not null default now(),
+  notification_sent_at timestamptz,
+  notification_attempted_at timestamptz,
+  notification_error text
 );
 
 alter table app_installations enable row level security;
