@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { createClient } from "@supabase/supabase-js";
 import nodemailer from "nodemailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import dns from "node:dns";
 
 const router = Router();
@@ -34,7 +35,7 @@ async function sendNewInstallEmail(installation: {
   // Railway containers may resolve Gmail's IPv6 address even when their
   // outbound IPv6 route is unavailable.
   dns.setDefaultResultOrder("ipv4first");
-  const transporter = nodemailer.createTransport({
+  const transportOptions: SMTPTransport.Options = {
     host: "smtp.gmail.com",
     port: 465,
     secure: true,
@@ -43,7 +44,8 @@ async function sendNewInstallEmail(installation: {
     greetingTimeout: 10_000,
     socketTimeout: 20_000,
     auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
-  });
+  };
+  const transporter = nodemailer.createTransport(transportOptions);
   const platform = installation.platform || "unknown platform";
   const version = installation.app_version || "unknown";
   const build = installation.build_number ?? "unknown";
