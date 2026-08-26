@@ -11,6 +11,7 @@ import feedbackRouter from "./routes/feedback";
 import videosRouter from "./routes/videos";
 import workoutSearchRouter from "./routes/workout-search";
 import coachTrainerRouter from "./routes/coach-trainer";
+import installationsRouter from "./routes/installations";
 import {
   getRequestId,
   makeApiErrorBody,
@@ -250,6 +251,7 @@ app.use("/api/identify", identifyRouter);
 app.use("/api/search", searchRouter);
 app.use("/api/equipment", equipmentRouter);
 app.use("/api/feedback", feedbackRouter);
+app.use("/api/installations", installationsRouter);
 app.use("/api/videos", videosRouter);
 app.use("/workout-search", workoutSearchRouter);
 app.use("/api/workout-search", workoutSearchRouter);

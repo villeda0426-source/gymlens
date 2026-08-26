@@ -53,7 +53,17 @@ API_BASE_URL=http://localhost:3001
 EXPO_PUBLIC_API_BASE_URL=http://localhost:3001
 EXPO_PUBLIC_SUPABASE_URL=...
 EXPO_PUBLIC_SUPABASE_ANON_KEY=...
+GMAIL_USER=...
+GMAIL_APP_PASSWORD=...
+INSTALL_NOTIFICATION_EMAIL=you@example.com
+NOTIFICATION_TIME_ZONE=America/Chicago
 ```
+
+`INSTALL_NOTIFICATION_EMAIL` receives a one-time email when a new app
+installation is first opened. Installations are stored in Supabase's
+`app_installations` table and are linked to the user's Supabase account after
+signup or sign-in. Run all files in `supabase/migrations/` against the production
+project before deploying a server version that depends on them.
 
 For App Store / production builds, `API_BASE_URL` and `EXPO_PUBLIC_API_BASE_URL` must point to the deployed backend URL, not `localhost` or a LAN IP.
 

@@ -18,7 +18,10 @@ begin
   values (new.id, new.raw_user_meta_data->>'username');
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = '';
+
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+grant execute on function public.handle_new_user() to service_role;
 
 create trigger on_auth_user_created
   after insert on auth.users
@@ -119,6 +122,26 @@ create index idx_equipment_category on equipment(category);
 create index idx_identifications_user on equipment_identifications(user_id);
 create index idx_saved_user on saved_equipment(user_id);
 create index idx_videos_equipment on equipment_videos(equipment_id);
+
+-- App installations are created anonymously on first launch and linked to a
+-- Supabase account after signup. Server/service-role access only.
+create table app_installations (
+  id uuid primary key default gen_random_uuid(),
+  installation_id text not null unique,
+  user_id uuid references profiles(id) on delete set null,
+  platform text,
+  app_version text,
+  build_number integer,
+  locale text,
+  created_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now()
+);
+
+alter table app_installations enable row level security;
+revoke all on table app_installations from public, anon, authenticated;
+grant select, insert, update, delete on table app_installations to service_role;
+create index idx_app_installations_user on app_installations(user_id);
+create index idx_app_installations_created on app_installations(created_at desc);
 
 -- Async AI trainer plan generation jobs
 create table coach_trainer_jobs (
