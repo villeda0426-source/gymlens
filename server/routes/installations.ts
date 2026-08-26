@@ -34,15 +34,15 @@ async function sendNewInstallEmail(installation: {
 
   // Railway containers may resolve Gmail's IPv6 address even when their
   // outbound IPv6 route is unavailable.
-  dns.setDefaultResultOrder("ipv4first");
+  const [smtpAddress] = await dns.promises.resolve4("smtp.gmail.com");
   const transportOptions: SMTPTransport.Options = {
-    host: "smtp.gmail.com",
+    host: smtpAddress || "smtp.gmail.com",
     port: 465,
     secure: true,
-    family: 4,
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
     socketTimeout: 20_000,
+    tls: { servername: "smtp.gmail.com" },
     auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
   };
   const transporter = nodemailer.createTransport(transportOptions);
