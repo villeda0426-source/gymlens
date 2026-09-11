@@ -239,5 +239,5 @@ Here's why it wins: Gym anxiety is trending *right now* as a social and cultural
 - **Brief generated**: 2026-09-11 by Reacher (automated daily intelligence agent)
 - **File saved**: `reports/reacher-daily-brief-2026-09-11.md`
 - **Git**: Committed and pushed to `main` branch of `villeda0426-source/gymlens`
-- **Email**: Full brief sent to vd@villedasdelight.com via Gmail MCP — subject: `Reacher Daily Brief - 2026-09-11 | CoachLift`
+- **Email**: Attempted via Gmail MCP — send scope not authorized (Gmail connector needs `gmail.send` scope re-granted). Brief is committed to the repo at `reports/reacher-daily-brief-2026-09-11.md` and available on GitHub.
 - **Research scope**: GymScan, Fitbod, JEFIT, Ladder, MyFitnessPal, Apple Fitness+, new entrants (GymVision AI, Sleet), Instagram/TikTok fitness trends September 2026, gym anxiety content, beginner gym social media hooks
