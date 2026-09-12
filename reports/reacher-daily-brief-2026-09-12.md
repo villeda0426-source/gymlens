@@ -247,5 +247,5 @@ The GLP-1 angle is a first-mover opportunity. MyFitnessPal's Summer Release just
 - **Brief generated**: 2026-09-12 by Reacher (automated daily intelligence agent)
 - **File saved**: `reports/reacher-daily-brief-2026-09-12.md`
 - **Git**: Committed and pushed to `main` branch of `villeda0426-source/gymlens`
-- **Email**: Sent via Gmail MCP to vd@villedasdelight.com — Subject: `Reacher Daily Brief - 2026-09-12 | CoachLift`
+- **Email**: Attempted via Gmail MCP — send scope not authorized (Gmail connector needs `gmail.send` scope re-granted). Brief is committed to the repo at `reports/reacher-daily-brief-2026-09-12.md` and available on GitHub.
 - **Research scope**: GymScan (gymscan.io + gymscanai.com), Fitbod, JEFIT, Ladder, MyFitnessPal Summer 2026 AI Coach launch, Apple Fitness+, GymVision AI (Android), Sleet, TikTok/Instagram fitness trends September 2026, beginner hook format research, GLP-1 gym beginner niche, gym anxiety content signals
