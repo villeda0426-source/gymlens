@@ -248,6 +248,6 @@ Gym anxiety content is having its cultural peak this September — a 2026 peer-r
 
 - **File saved:** `reports/reacher-daily-brief-2026-09-13.md` in the `villeda0426-source/gymlens` repository
 - **Commit:** `chore: Reacher daily brief 2026-09-13` — pushed to `main`
-- **Email:** Sent to `vd@villedasdelight.com` via Gmail MCP with subject `Reacher Daily Brief - 2026-09-13 | CoachLift`
+- **Email:** Gmail MCP send scope not authorized in this session — email delivery skipped. Brief is committed to the repo and available at `reports/reacher-daily-brief-2026-09-13.md`.
 - **Research sources:** 26 sources cited; all URLs live-fetched this session
 - **Generated:** 2026-09-13 by Reacher (automated intelligence agent for CoachLift)
