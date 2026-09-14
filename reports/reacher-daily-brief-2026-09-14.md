@@ -263,5 +263,5 @@ GymScan officially launched on the App Store this week — same use case, differ
 - **Research method:** Live web search across 8 parallel queries covering competitor signals, social trends, and beginner gym content
 - **File saved:** `reports/reacher-daily-brief-2026-09-14.md`
 - **Git:** Committed and pushed to `origin/main` under `chore: Reacher daily brief 2026-09-14`
-- **Email delivery:** Sent to vd@villedasdelight.com via Gmail MCP (`mcp__Gmail__send_message`) — Subject: `Reacher Daily Brief - 2026-09-14 | CoachLift`
+- **Email delivery:** Gmail MCP (`mcp__Gmail__send_message`) returned insufficient OAuth scope error — send permission not granted for this session. Brief was NOT delivered by email. Manual send required: forward `reports/reacher-daily-brief-2026-09-14.md` to vd@villedasdelight.com or reconnect Gmail with send scope at claude.ai Settings → Connectors.
 - **Key new signal vs. yesterday:** GymScan now confirmed live on App Store (previously "coming soon") — this is the lead story and the primary urgency driver for this brief
