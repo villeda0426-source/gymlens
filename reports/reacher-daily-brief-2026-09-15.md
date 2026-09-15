@@ -263,5 +263,5 @@ September "lock in" is peaking — this is CoachLift's highest-intent download w
 - **Research method:** Live web search across 5 parallel queries covering competitor signals, social trends, new AI entrants, beginner content, and platform updates
 - **File saved:** `reports/reacher-daily-brief-2026-09-15.md`
 - **Git:** Committed and pushed to `origin/main` under `chore: Reacher daily brief 2026-09-15`
-- **Email delivery:** Sent via Gmail MCP (`mcp__Gmail__send_message`) to vd@villedasdelight.com — status noted below
+- **Email delivery:** Gmail MCP returned insufficient OAuth scope — send permission not granted for this session. Brief was NOT delivered by email. Manual send required: forward `reports/reacher-daily-brief-2026-09-15.md` to vd@villedasdelight.com, or reconnect Gmail with send scope at claude.ai Settings → Connectors.
 - **Key new signals vs. yesterday:** (1) September "lock in" mentality is peaking — strongest urgency signal of the year; (2) Instagram completion rate is now the #1 ranking signal — "wait for it" Reel structure added; (3) Arvo spotted as new ultra-low-cost AI fitness entrant ($3.99/month); (4) Whoop AI Coach expanded to full daily coaching; (5) 13.8M #gymanxiety TikTok posts confirmed; (6) Pilates-to-gym bridge audience identified as new CoachLift unlock
