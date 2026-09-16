@@ -251,6 +251,6 @@
 ## Delivery And Sync Notes
 
 - **File:** `reports/reacher-daily-brief-2026-09-16.md` — saved to repository and committed to `main`
-- **Email:** Sent to vd@villedasdelight.com via Gmail MCP with subject "Reacher Daily Brief - 2026-09-16 | CoachLift"
+- **Email:** Gmail MCP send scope unavailable in this environment — email not delivered. Brief is accessible at `reports/reacher-daily-brief-2026-09-16.md` in the repository.
 - **Research basis:** Live web searches conducted September 16, 2026 covering GymScan, Gymeo, Fitbod, JEFIT, Ladder, MyFitnessPal, Sleet, Apple Fitness, gymtimidation content trends, and September 2026 Instagram/TikTok hook and format performance data
 - **Continuity:** Brief builds on September 15 context (Arvo entrant, Whoop AI Coach, Lock In September trend established)
