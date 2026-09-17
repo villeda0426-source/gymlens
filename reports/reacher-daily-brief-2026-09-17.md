@@ -259,6 +259,6 @@ The "I Try to Act Normal" audio trend is the strongest new signal today — it's
 ## Delivery And Sync Notes
 
 - **File:** `reports/reacher-daily-brief-2026-09-17.md` — saved to repository, committed and pushed to `main`
-- **Email:** Sent via Gmail MCP to vd@villedasdelight.com — Subject: `Reacher Daily Brief - 2026-09-17 | CoachLift`
+- **Email:** Gmail MCP send scope not authorized in this environment — email not delivered. Brief is accessible at `reports/reacher-daily-brief-2026-09-17.md` in the repository.
 - **Research basis:** Live web searches conducted September 17, 2026 covering GymScan, FitScan (new GitHub entrant), FitnessScan, Fitbod, JEFIT, Ladder, MyFitnessPal, Sleet, September 2026 TikTok/Instagram trend reports (Pepper Agency, SocialBee, NewEngen, Ramdam), Instagram Reels algorithm updates (hook retention benchmarks, 1.7-second decision window), gym anxiety and beginner content trends, and shy girl workout community signals
 - **Continuity:** Brief builds on September 16 context (LockInSeptember drop-off window, MFP AI Coach third week, GymScan fragmentation, Sleet Android-only status); adds new signal on FitScan open-source entrant, Pattern Interrupt hook benchmarks, "I Try to Act Normal" TikTok audio trend, and early autumn content pivot
