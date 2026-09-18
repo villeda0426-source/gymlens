@@ -1,6 +1,7 @@
 import { apiFetch } from "@/lib/api";
 
 export type Units = "kg" | "lbs";
+export type CoachLanguage = "en" | "es";
 export type CoachMode = "intake" | "adapt" | "update_goals" | "chat";
 export type CoachMessage = { role: "user" | "assistant"; content: string };
 
@@ -52,10 +53,10 @@ export type CoachResponse =
   | { status: "plan_updated"; summary: string; changes: string[]; plan: CoachPlan };
 
 type TrainerRequest =
-  | { mode: "intake"; units: Units; history: CoachMessage[]; userMessage: string }
-  | { mode: "adapt"; units: Units; currentPlan: CoachPlan; logs: unknown[] }
-  | { mode: "update_goals"; units: Units; currentPlan: CoachPlan; newGoal: string }
-  | { mode: "chat"; units: Units; currentPlan?: CoachPlan | null; question: string };
+  | { mode: "intake"; units: Units; language?: CoachLanguage; history: CoachMessage[]; userMessage: string }
+  | { mode: "adapt"; units: Units; language?: CoachLanguage; currentPlan: CoachPlan; logs: unknown[] }
+  | { mode: "update_goals"; units: Units; language?: CoachLanguage; currentPlan: CoachPlan; newGoal: string }
+  | { mode: "chat"; units: Units; language?: CoachLanguage; currentPlan?: CoachPlan | null; question: string };
 
 type CoachTrainerRequestOptions = {
   authToken?: string;

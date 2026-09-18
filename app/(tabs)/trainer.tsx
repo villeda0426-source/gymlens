@@ -29,7 +29,14 @@ import {
 } from "@/lib/coachTrainer";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { useAuthStore } from "@/store/authStore";
-import { buildReliableStarterPlan, hasCoachMedicalRedFlag } from "@/shared/reliableCoach";
+import {
+  adjustSessionForToday,
+  buildReliableStarterPlan,
+  hasCoachMedicalRedFlag,
+  ReliableSession,
+  SessionChange,
+  TodayContext,
+} from "@/shared/reliableCoach";
 
 const QUICK_ACTIONS = [
   "trainer.quick_actions.create_plan",
@@ -149,6 +156,11 @@ export default function TrainerScreen() {
   const coachLanguage = i18n.language?.startsWith("es") ? "es" : "en";
 
   const [draft, setDraft] = useState("");
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [adjustReadiness, setAdjustReadiness] = useState<TodayContext["readiness"]>("good");
+  const [adjustPain, setAdjustPain] = useState(false);
+  const [adjustMinutes, setAdjustMinutes] = useState<number | null>(null);
+  const [adjustUnavailable, setAdjustUnavailable] = useState("");
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [listening, setListening] = useState(false);
@@ -227,6 +239,76 @@ export default function TrainerScreen() {
       },
     ];
   }, [conversation, t]);
+
+  const todayBaseSession = (plan?.sessions?.[0] as ReliableSession | undefined) ?? null;
+
+  // Rule-based only: this preview never calls Coach or any provider.
+  const adjustPreview = useMemo(() => {
+    if (!adjustOpen || !todayBaseSession) return null;
+    return adjustSessionForToday(todayBaseSession, {
+      readiness: adjustReadiness,
+      pain: adjustPain,
+      availableMinutes: adjustMinutes,
+      unavailableEquipment: adjustUnavailable
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 2),
+    });
+  }, [adjustOpen, todayBaseSession, adjustReadiness, adjustPain, adjustMinutes, adjustUnavailable]);
+
+  const exerciseName = (exerciseId: string): string =>
+    todayBaseSession?.exercises.find((item) => item.exercise_id === exerciseId)?.name ?? exerciseId;
+
+  const describeChange = (change: SessionChange): string => {
+    switch (change.code) {
+      case "sets_reduced":
+        return t("trainer.coach_adjust_sets_reduced", { exercise: exerciseName(change.exercise_id) });
+      case "effort_capped":
+        return t("trainer.coach_adjust_effort_capped", { exercise: exerciseName(change.exercise_id) });
+      case "exercise_substituted":
+        return t("trainer.coach_adjust_substituted", {
+          exercise: exerciseName(change.exercise_id),
+          replacement: change.to,
+        });
+      case "exercise_removed":
+        return change.reason === "equipment"
+          ? t("trainer.coach_adjust_removed_equipment", { exercise: exerciseName(change.exercise_id) })
+          : t("trainer.coach_adjust_removed_time", { exercise: exerciseName(change.exercise_id) });
+      case "pain_guardrail":
+      default:
+        return t("trainer.coach_adjust_pain_guardrail");
+    }
+  };
+
+  const adjustSummary = (): string => {
+    if (!adjustPreview) return "";
+    const lines = adjustPreview.changes.map((change) => `- ${describeChange(change)}`);
+    const body = lines.length > 0 ? lines.join("\n") : t("trainer.coach_adjust_no_changes");
+    const listed = adjustPreview.session.exercises
+      .map((item) => `- ${item.name}: ${item.sets} x ${item.rep_range.min}-${item.rep_range.max}`)
+      .join("\n");
+    const warning =
+      adjustPreview.outcome === "insufficient_equipment" ? `\n\n${t("trainer.coach_adjust_insufficient")}` : "";
+    return `${t("trainer.coach_adjust_heading", {
+      minutes: adjustPreview.session.estimated_minutes,
+    })}\n\n${body}\n\n${listed}${warning}`;
+  };
+
+  const applyAdjustmentForToday = () => {
+    if (!adjustPreview) return;
+    addConversationMessage({ role: "assistant", content: adjustSummary() });
+    setNotice(t("trainer.coach_adjust_applied_today"));
+    setAdjustOpen(false);
+  };
+
+  const keepAdjustmentInPlan = () => {
+    if (!adjustPreview || !plan) return;
+    // Only an explicit choice edits the saved plan.
+    updatePlan({ ...plan, sessions: [adjustPreview.session, ...plan.sessions.slice(1)] } as typeof plan);
+    addConversationMessage({ role: "assistant", content: adjustSummary() });
+    setNotice(t("trainer.coach_adjust_kept"));
+    setAdjustOpen(false);
+  };
 
   const handleResponse = (response: CoachResponse, nextIntakeHistory?: CoachMessage[]) => {
     const assistantJson = stringifyCoachResponse(response);
@@ -353,6 +435,7 @@ export default function TrainerScreen() {
         const response = await runCoachJob({
           mode: "intake",
           units,
+          language: coachLanguage,
           history: intakeHistory,
           userMessage: text,
         }, session.access_token, idempotencyKey, controller.signal);
@@ -364,6 +447,7 @@ export default function TrainerScreen() {
         const response = await runCoachJob({
           mode: "update_goals",
           units,
+          language: coachLanguage,
           currentPlan: plan,
           newGoal: text,
         }, session.access_token, idempotencyKey, controller.signal);
@@ -374,6 +458,7 @@ export default function TrainerScreen() {
         const response = await runCoachJob({
           mode: "adapt",
           units,
+          language: coachLanguage,
           currentPlan: plan,
           logs: makeFreeformWorkoutLog(text),
         }, session.access_token, idempotencyKey, controller.signal);
@@ -383,6 +468,7 @@ export default function TrainerScreen() {
         const response = await callCoachTrainer({
           mode: "chat",
           units,
+          language: coachLanguage,
           currentPlan: plan,
           question: text,
         }, { authToken: session.access_token, signal: controller.signal });
@@ -578,10 +664,104 @@ export default function TrainerScreen() {
           ) : null}
         </ScrollView>
 
+        {adjustOpen ? (
+          <View style={styles.adjustPanel}>
+            <Text style={styles.adjustTitle}>{t("trainer.coach_adjust_title")}</Text>
+            {todayBaseSession ? (
+              <>
+                <Text style={styles.adjustLabel}>{t("trainer.coach_adjust_readiness")}</Text>
+                <View style={styles.adjustRow}>
+                  {(["good", "okay", "poor"] as const).map((level) => (
+                    <TouchableOpacity
+                      key={level}
+                      style={[styles.adjustChip, adjustReadiness === level && styles.adjustChipActive]}
+                      onPress={() => setAdjustReadiness(level)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: adjustReadiness === level }}
+                    >
+                      <Text style={[styles.adjustChipText, adjustReadiness === level && styles.adjustChipTextActive]}>
+                        {t(`trainer.coach_adjust_readiness_${level}`)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.adjustLabel}>{t("trainer.coach_adjust_time")}</Text>
+                <View style={styles.adjustRow}>
+                  {([null, 30, 20] as const).map((minutes) => (
+                    <TouchableOpacity
+                      key={String(minutes)}
+                      style={[styles.adjustChip, adjustMinutes === minutes && styles.adjustChipActive]}
+                      onPress={() => setAdjustMinutes(minutes)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: adjustMinutes === minutes }}
+                    >
+                      <Text style={[styles.adjustChipText, adjustMinutes === minutes && styles.adjustChipTextActive]}>
+                        {minutes === null ? t("trainer.coach_adjust_time_full") : t("trainer.coach_adjust_time_minutes", { minutes })}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.adjustChip, adjustPain && styles.adjustChipActive, styles.adjustPainChip]}
+                  onPress={() => setAdjustPain((value) => !value)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: adjustPain }}
+                >
+                  <Text style={[styles.adjustChipText, adjustPain && styles.adjustChipTextActive]}>
+                    {t("trainer.coach_adjust_pain")}
+                  </Text>
+                </TouchableOpacity>
+
+                <Text style={styles.adjustLabel}>{t("trainer.coach_adjust_unavailable")}</Text>
+                <TextInput
+                  style={styles.adjustInput}
+                  value={adjustUnavailable}
+                  onChangeText={setAdjustUnavailable}
+                  placeholder={t("trainer.coach_adjust_unavailable_placeholder")}
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="none"
+                  accessibilityLabel={t("trainer.coach_adjust_unavailable")}
+                />
+
+                {adjustPreview ? (
+                  <View style={styles.adjustPreview}>
+                    <Text style={styles.adjustPreviewText}>{adjustSummary()}</Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.adjustRow}>
+                  <TouchableOpacity style={styles.adjustPrimary} onPress={applyAdjustmentForToday}>
+                    <Text style={styles.adjustPrimaryText}>{t("trainer.coach_adjust_use_today")}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.adjustSecondary} onPress={keepAdjustmentInPlan}>
+                    <Text style={styles.adjustSecondaryText}>{t("trainer.coach_adjust_keep")}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.adjustSecondary} onPress={() => setAdjustOpen(false)}>
+                    <Text style={styles.adjustSecondaryText}>{t("trainer.coach_adjust_cancel")}</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.adjustFootnote}>{t("trainer.coach_adjust_no_ai")}</Text>
+              </>
+            ) : (
+              <Text style={styles.adjustPreviewText}>{t("trainer.coach_adjust_needs_plan")}</Text>
+            )}
+          </View>
+        ) : null}
+
         <View style={styles.quickActions}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickActionsInner}>
             {QUICK_ACTIONS.map((action) => (
-              <TouchableOpacity key={action} style={styles.quickChip} onPress={() => submitMessage(t(action))}>
+              <TouchableOpacity
+                key={action}
+                style={styles.quickChip}
+                onPress={() =>
+                  action === "trainer.quick_actions.adjust_today"
+                    ? setAdjustOpen((open) => !open)
+                    : submitMessage(t(action))
+                }
+              >
                 <Text style={styles.quickChipText}>{t(action)}</Text>
               </TouchableOpacity>
             ))}
@@ -793,6 +973,58 @@ const styles = StyleSheet.create({
   },
   resendText: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 12 },
   quickActions: { borderTopWidth: 1, borderTopColor: colors.cardBorder, paddingTop: 10 },
+  adjustPanel: {
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorder,
+    paddingTop: 12,
+    paddingHorizontal: 4,
+    gap: 8,
+  },
+  adjustTitle: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 15 },
+  adjustLabel: { color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12, textTransform: "uppercase" },
+  adjustRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  adjustChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+  },
+  adjustChipActive: { backgroundColor: colors.coral, borderColor: colors.coral },
+  adjustChipText: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 13 },
+  adjustChipTextActive: { color: colors.white },
+  adjustPainChip: { alignSelf: "flex-start" },
+  adjustPreview: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: 10,
+  },
+  adjustPreviewText: { color: colors.text, fontFamily: fonts.body, fontSize: 13, lineHeight: 19 },
+  adjustPrimary: { backgroundColor: colors.coral, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 10 },
+  adjustPrimaryText: { color: colors.white, fontFamily: fonts.semiBold, fontSize: 13 },
+  adjustSecondary: {
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  adjustSecondaryText: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 13 },
+  adjustFootnote: { color: colors.textMuted, fontFamily: fonts.body, fontSize: 11 },
+  adjustInput: {
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: colors.text,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    backgroundColor: colors.card,
+  },
   quickActionsInner: { paddingHorizontal: 20, gap: 8, paddingBottom: 10 },
   quickChip: {
     minHeight: 36,

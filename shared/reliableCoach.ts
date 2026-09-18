@@ -404,7 +404,7 @@ export type SessionChange =
   | { code: "sets_reduced"; exercise_id: string; from: number; to: number }
   | { code: "effort_capped"; exercise_id: string; from: number; to: number }
   | { code: "exercise_substituted"; exercise_id: string; to: string }
-  | { code: "exercise_removed"; exercise_id: string };
+  | { code: "exercise_removed"; exercise_id: string; reason: "equipment" | "time" };
 
 const MIN_EXERCISES = 2;
 const WORK_SECONDS_PER_SET = 45;
@@ -434,11 +434,14 @@ function matchesEquipment(text: string, unavailable: string[]): boolean {
   });
 }
 
+export type AdjustOutcome = "ok" | "insufficient_equipment";
+
 export function adjustSessionForToday(
   session: ReliableSession,
   context: TodayContext
-): { session: ReliableSession; changes: SessionChange[] } {
+): { session: ReliableSession; changes: SessionChange[]; outcome: AdjustOutcome } {
   const changes: SessionChange[] = [];
+  let outcome: AdjustOutcome = "ok";
   const unavailable = context.unavailableEquipment ?? [];
   let exercises = session.exercises.map((item) => ({ ...item }));
 
@@ -467,28 +470,23 @@ export function adjustSessionForToday(
       return { item, blocked: true, substituted: false, originalId: item.exercise_id };
     });
 
-    // Decide drops against the movements that stay viable overall, not against
-    // the order they happen to appear in, so a blocked first exercise is not
-    // kept just because later safe movements had not been counted yet.
-    const viableCount = resolved.filter((entry) => !entry.blocked).length;
-    let keptBlocked = Math.max(0, MIN_EXERCISES - viableCount);
+    // Availability wins over the movement floor: never hand back a movement the
+    // user cannot perform today. A short session is honest; an impossible one is not.
     const kept: ReliableExercise[] = [];
     for (const entry of resolved) {
-      if (!entry.blocked) {
-        if (entry.substituted) {
-          changes.push({ code: "exercise_substituted", exercise_id: entry.originalId, to: entry.item.name });
-        }
-        kept.push(entry.item);
+      if (entry.blocked) {
+        changes.push({ code: "exercise_removed", exercise_id: entry.originalId, reason: "equipment" });
         continue;
       }
-      if (keptBlocked > 0) {
-        keptBlocked -= 1;
-        kept.push(entry.item);
-        continue;
+      if (entry.substituted) {
+        changes.push({ code: "exercise_substituted", exercise_id: entry.originalId, to: entry.item.name });
       }
-      changes.push({ code: "exercise_removed", exercise_id: entry.originalId });
+      kept.push(entry.item);
     }
     exercises = kept;
+    if (exercises.length < MIN_EXERCISES) {
+      outcome = "insufficient_equipment";
+    }
   }
 
   // 2. Readiness and pain lower the dose; they never raise it.
@@ -523,9 +521,10 @@ export function adjustSessionForToday(
     let guard = 0;
     while (estimateMinutes({ ...session, exercises }) > available && guard < 40) {
       guard += 1;
+      const floor = Math.min(MIN_EXERCISES, exercises.length);
       const accessoryIndex = exercises.map((item) => item.category).lastIndexOf("accessory");
-      if (accessoryIndex >= 0 && exercises.length > MIN_EXERCISES) {
-        changes.push({ code: "exercise_removed", exercise_id: exercises[accessoryIndex].exercise_id });
+      if (accessoryIndex >= 0 && exercises.length > floor) {
+        changes.push({ code: "exercise_removed", exercise_id: exercises[accessoryIndex].exercise_id, reason: "time" });
         exercises = exercises.filter((_, index) => index !== accessoryIndex);
         continue;
       }
@@ -542,5 +541,5 @@ export function adjustSessionForToday(
     exercises,
     estimated_minutes: estimateMinutes({ ...session, exercises }),
   };
-  return { session: adjusted, changes };
+  return { session: adjusted, changes, outcome };
 }

@@ -1,3 +1,4 @@
+import { normalizePlanTimeline } from "@/shared/planTimeline";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { CoachMessage, CoachPlan, Units } from "@/lib/coachTrainer";
@@ -56,40 +57,7 @@ function slugify(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-function normalizePlanTimeline(plan: CoachPlan | null): CoachPlan | null {
-  if (!plan) return null;
 
-  const daysPerWeek = Math.max(1, Math.round(plan.days_per_week || 1));
-  const weeks = Math.max(1, Math.round(plan.timeline_weeks || 1));
-  const expectedSessions = daysPerWeek * weeks;
-
-  if (plan.sessions.length >= expectedSessions || plan.sessions.length === 0) {
-    return plan;
-  }
-
-  const weeklyTemplate = plan.sessions.slice(0, Math.min(daysPerWeek, plan.sessions.length));
-  if (weeklyTemplate.length === 0) return plan;
-
-  const sessions = Array.from({ length: expectedSessions }, (_, index) => {
-    const template = weeklyTemplate[index % weeklyTemplate.length];
-    const week = Math.floor(index / daysPerWeek) + 1;
-    const dayInWeek = (index % daysPerWeek) + 1;
-    const baseLabel = template.day_label.replace(/^Day\s*\d+\s*[-–]\s*/i, "");
-
-    return {
-      ...template,
-      day_label: `Week ${week} Day ${dayInWeek} - ${baseLabel}`,
-      exercises: template.exercises.map((exercise) => ({
-        ...exercise,
-        exercise_id: week === 1
-          ? exercise.exercise_id
-          : `${exercise.exercise_id || slugify(exercise.name)}-w${week}`,
-      })),
-    };
-  });
-
-  return { ...plan, sessions };
-}
 
 async function persist(
   state: Pick<

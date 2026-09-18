@@ -86,9 +86,11 @@ async function getAuthenticatedUserId(req: Request): Promise<string | null> {
   return data.user.id;
 }
 
-async function runCoachRequest(req: Request, coachOptions = getCoachOptions(req)) {
+/** Exported so regressions can drive the real request body end to end. */
+export async function runCoachRequest(req: Request, coachOptions = getCoachOptions(req)) {
   const mode = req.body?.mode;
   const units = req.body?.units;
+  const language = req.body?.language === "es" ? "es" : req.body?.language === "en" ? "en" : undefined;
 
   if (!isMode(mode)) {
     throw new CoachRequestError("mode must be intake, adapt, update_goals, or chat.");
@@ -104,11 +106,11 @@ async function runCoachRequest(req: Request, coachOptions = getCoachOptions(req)
       throw new CoachRequestError("userMessage is required for intake.");
     }
 
-    return intakeTurn(units, getHistory(req.body?.history), userMessage, coachOptions);
+    return intakeTurn(units, getHistory(req.body?.history), userMessage, coachOptions, language);
   }
 
   if (mode === "adapt") {
-    return adaptPlan(units, getPlan(req.body?.currentPlan), req.body?.logs ?? [], coachOptions);
+    return adaptPlan(units, getPlan(req.body?.currentPlan), req.body?.logs ?? [], coachOptions, language);
   }
 
   if (mode === "update_goals") {
@@ -117,7 +119,7 @@ async function runCoachRequest(req: Request, coachOptions = getCoachOptions(req)
       throw new CoachRequestError("newGoal is required for update_goals.");
     }
 
-    return updateGoals(units, getPlan(req.body?.currentPlan), newGoal, coachOptions);
+    return updateGoals(units, getPlan(req.body?.currentPlan), newGoal, coachOptions, language);
   }
 
   const question = typeof req.body?.question === "string" ? req.body.question.trim() : "";
@@ -128,7 +130,7 @@ async function runCoachRequest(req: Request, coachOptions = getCoachOptions(req)
   const currentPlan = req.body?.currentPlan === undefined || req.body?.currentPlan === null
     ? null
     : getPlan(req.body.currentPlan);
-  return chatWithCoach(units, question, currentPlan, coachOptions);
+  return chatWithCoach(units, question, currentPlan, coachOptions, language);
 }
 
 async function processCoachJob(jobId: string, payload: unknown) {

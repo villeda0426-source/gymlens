@@ -1,13 +1,24 @@
 import assert from "node:assert/strict";
+
+type CoachResponseLike =
+  | { status: "gathering"; message: string }
+  | { status: "plan_ready"; summary: string; plan: { sessions: Array<{ day_label: string }> } }
+  | { status: "plan_updated" | "reply"; message?: string };
 import {
+  buildIntakeMessages,
+  CoachClient,
   compactPlanForCoach,
   fallbackCoachResponse,
   getCoachTimeoutsForBuild,
+  intakeTurn,
+  isCoachFallbackEligibleError,
   Plan,
   Session,
+  setCoachClientForTests,
 } from "../server/services/coachTrainerService";
 import {
   adjustSessionForToday,
+  AdjustOutcome,
   buildReliableStarterPlan,
   canBuildReliablePlan,
   detectReliableLanguage,
@@ -256,8 +267,21 @@ assert.equal(
 );
 assert.equal(blockedResult.session.exercises.length, 2);
 assert.equal(
-  blockedResult.changes.some((change) => change.code === "exercise_removed" && change.exercise_id === "machine-only-press"),
-  true
+  blockedResult.changes.some(
+    (change) => change.code === "exercise_removed" && change.exercise_id === "machine-only-press" && change.reason === "equipment"
+  ),
+  true,
+  "Equipment removals must be explained as equipment, not time."
+);
+assert.equal(
+  short.changes.every((change) => change.code !== "exercise_removed" || change.reason === "time"),
+  true,
+  "Time trimming must be explained as time."
+);
+assert.equal(
+  short.changes.some((change) => change.code === "exercise_removed" && change.reason === "time"),
+  true,
+  "The 20-minute case must report at least one time-driven removal."
 );
 
 // When dropping would fall below the floor, the blocked movement is kept
@@ -268,4 +292,317 @@ const blockedMost = adjustSessionForToday(
 );
 assert.equal(blockedMost.session.exercises.length >= 1, true);
 
-console.log("Coach update regression checks passed.");
+// Availability outranks the movement floor: a session must never hand back a
+// movement the user cannot do today.
+const twoBlocked = adjustSessionForToday(blockedFirst, {
+  readiness: "good",
+  pain: false,
+  // "squat" also blocks the Chair Squat substitution, leaving one viable movement.
+  unavailableEquipment: ["machine", "squat"],
+});
+assert.equal(twoBlocked.session.exercises.length, 1, "Only viable movements may be returned.");
+assert.equal(twoBlocked.session.exercises.every((item) => !/machine|squat/i.test(item.name)), true);
+assert.equal(twoBlocked.outcome, "insufficient_equipment" as AdjustOutcome);
+
+const allBlocked = adjustSessionForToday(blockedFirst, {
+  readiness: "good",
+  pain: false,
+  unavailableEquipment: ["machine", "squat", "towel", "bird dog"],
+});
+assert.equal(allBlocked.session.exercises.length, 0, "Zero viable movements must return an empty session.");
+assert.equal(allBlocked.outcome, "insufficient_equipment" as AdjustOutcome);
+assert.equal(allBlocked.changes.filter((change) => change.code === "exercise_removed").length, 3);
+assert.equal(blockedFirst.exercises.length, 3, "Adjustment must not mutate the source session.");
+assert.equal(
+  adjustSessionForToday(blockedFirst, { readiness: "good", pain: false, unavailableEquipment: ["machine"] }).outcome,
+  "ok" as AdjustOutcome
+);
+
+// End-to-end payload: the real client fields must survive into the server
+// fallback, including on an ambiguous short Spanish request.
+const clientIntakeMessages = buildIntakeMessages("kg", [], "quiero más", "es");
+assert.equal(clientIntakeMessages.length, 1);
+assert.equal(clientIntakeMessages[0].content.includes('"language":"es"'), true, "The intake payload must carry the language.");
+const ambiguousSpanishFallback = fallbackCoachResponse(clientIntakeMessages);
+assert.equal(ambiguousSpanishFallback.status, "gathering");
+if (ambiguousSpanishFallback.status === "gathering") {
+  assert.equal(
+    ambiguousSpanishFallback.message.includes("Cuéntame tu objetivo"),
+    true,
+    "An ambiguous Spanish request must get the Spanish gathering reply, not English."
+  );
+}
+
+const englishIntakeMessages = buildIntakeMessages("lbs", [], "i want more", "en");
+const ambiguousEnglishFallback = fallbackCoachResponse(englishIntakeMessages);
+assert.equal(ambiguousEnglishFallback.status, "gathering");
+if (ambiguousEnglishFallback.status === "gathering") {
+  assert.equal(ambiguousEnglishFallback.message.includes("Tell me your goal"), true);
+}
+
+// Provider failures the user must survive: timeout, malformed output, 5xx/429.
+const providerError = (init: { status?: number; name?: string; message: string }) => {
+  const error = new Error(init.message);
+  if (init.name) error.name = init.name;
+  if (init.status) (error as Error & { status?: number }).status = init.status;
+  return error;
+};
+for (const error of [
+  providerError({ message: "Coach response timed out for claude-sonnet-4-6." }),
+  providerError({ message: "Unexpected token < in JSON at position 0" }),
+  new SyntaxError("Unexpected end of JSON input"),
+  providerError({ status: 500, message: "Internal server error" }),
+  providerError({ status: 529, message: "Overloaded" }),
+  providerError({ status: 429, message: "Rate limit" }),
+  providerError({ name: "APIConnectionError", message: "fetch failed" }),
+  providerError({ message: "ANTHROPIC_API_KEY is not configured on the server." }),
+]) {
+  assert.equal(isCoachFallbackEligibleError(error), true, `Must fall back for: ${error.message}`);
+}
+assert.equal(isCoachFallbackEligibleError(providerError({ status: 401, message: "invalid x-api-key" })), false);
+assert.equal(isCoachFallbackEligibleError(providerError({ status: 400, message: "bad request" })), false);
+
+// A timed-out attempt must abort the paid request and must not retry silently.
+async function assertTimeoutAbortsWithoutRetries() {
+  const attempts: Array<{ model: string; maxRetries?: number; aborted: boolean }> = [];
+  const hangingClient: CoachClient = {
+    messages: {
+      create: (params, options) =>
+        new Promise((_resolve, reject) => {
+          const attempt = { model: String(params.model), maxRetries: options?.maxRetries, aborted: false };
+          attempts.push(attempt);
+          options?.signal?.addEventListener("abort", () => {
+            attempt.aborted = true;
+            reject(providerError({ name: "AbortError", message: "Request was aborted." }));
+          });
+        }),
+    },
+  };
+
+  setCoachClientForTests(hangingClient);
+  try {
+    const response = await intakeTurn(
+      "kg",
+      [],
+      "Soy principiante y quiero ganar músculo 3 días a la semana con mancuernas en casa",
+      { primaryTimeoutMs: 20, fallbackTimeoutMs: 20 },
+      "es"
+    );
+    assert.equal(response.status, "plan_ready", "A hung provider must still return the deterministic plan.");
+    if (response.status === "plan_ready") {
+      assert.equal(response.plan.sessions[0].day_label.startsWith("Semana 1 Día 1"), true, "The survival plan must stay in Spanish.");
+    }
+  } finally {
+    setCoachClientForTests(null);
+  }
+
+  assert.equal(attempts.length, 2, `Expected one primary attempt and one fallback attempt, saw ${attempts.length}.`);
+  assert.equal(attempts.every((attempt) => attempt.aborted), true, "Every timed-out attempt must abort its request.");
+  assert.equal(attempts.every((attempt) => attempt.maxRetries === 0), true, "Attempts must disable hidden SDK retries.");
+  assert.notEqual(attempts[0].model, attempts[1].model, "The fallback attempt must use the cheaper fallback model.");
+}
+
+// Malformed output must also cost at most two paid attempts.
+async function assertMalformedCostsAtMostTwoAttempts() {
+  const models: string[] = [];
+  const malformedClient: CoachClient = {
+    messages: {
+      create: async (params) => {
+        models.push(String(params.model));
+        return { content: [{ type: "text", text: "not json at all" }] } as never;
+      },
+    },
+  };
+
+  setCoachClientForTests(malformedClient);
+  try {
+    const response = await intakeTurn(
+      "lbs",
+      [],
+      "I am a beginner and want to build muscle 3 days a week with dumbbells at home",
+      { primaryTimeoutMs: 200, fallbackTimeoutMs: 200 },
+      "en"
+    );
+    assert.equal(response.status, "plan_ready", "Malformed output must still return the deterministic plan.");
+  } finally {
+    setCoachClientForTests(null);
+  }
+
+  assert.equal(models.length, 2, `Malformed output must cost at most two attempts, saw ${models.length}.`);
+  assert.notEqual(models[0], models[1], "The single retry must use the cheaper fallback model.");
+}
+
+// Every change reason and Adjust Today control must exist in both languages,
+// so the no-AI path can never render a raw key.
+const en = require("../locales/en.json") as { trainer: Record<string, unknown> };
+const es = require("../locales/es.json") as { trainer: Record<string, unknown> };
+const requiredCoachKeys = [
+  "coach_adjust_sets_reduced",
+  "coach_adjust_effort_capped",
+  "coach_adjust_substituted",
+  "coach_adjust_removed_time",
+  "coach_adjust_removed_equipment",
+  "coach_adjust_pain_guardrail",
+  "coach_adjust_title",
+  "coach_adjust_readiness",
+  "coach_adjust_readiness_good",
+  "coach_adjust_readiness_okay",
+  "coach_adjust_readiness_poor",
+  "coach_adjust_time",
+  "coach_adjust_time_full",
+  "coach_adjust_time_minutes",
+  "coach_adjust_pain",
+  "coach_adjust_heading",
+  "coach_adjust_no_changes",
+  "coach_adjust_insufficient",
+  "coach_adjust_unavailable",
+  "coach_adjust_unavailable_placeholder",
+  "coach_adjust_use_today",
+  "coach_adjust_keep",
+  "coach_adjust_cancel",
+  "coach_adjust_applied_today",
+  "coach_adjust_kept",
+  "coach_adjust_no_ai",
+  "coach_adjust_needs_plan",
+  "coach_medical_stop",
+  "coach_medical_notice",
+];
+// "{{minutes}} min" is identical in both languages; everything else must differ.
+const identicalByDesign = new Set(["coach_adjust_time_minutes"]);
+for (const key of requiredCoachKeys) {
+  assert.equal(typeof en.trainer[key], "string", `Missing English string: trainer.${key}`);
+  assert.equal(typeof es.trainer[key], "string", `Missing Spanish string: trainer.${key}`);
+  if (!identicalByDesign.has(key)) {
+    assert.notEqual(en.trainer[key], es.trainer[key], `trainer.${key} is not translated.`);
+  }
+}
+
+// Storage must not mix languages when a 3-week Spanish plan is expanded.
+import { normalizePlanTimeline } from "../shared/planTimeline";
+
+const spanishStored = normalizePlanTimeline(spanishPlan.plan as never) as unknown as Plan;
+assert.equal(spanishStored.sessions.length, spanishPlan.plan.days_per_week * spanishPlan.plan.timeline_weeks);
+assert.equal(
+  spanishStored.sessions.every((session) => /^Semana \d+ Día \d+ - /.test(session.day_label)),
+  true,
+  "Expanded Spanish weeks must use Spanish labels."
+);
+assert.equal(
+  spanishStored.sessions.some((session) => /week|day/i.test(session.day_label)),
+  false,
+  "No English week or day prefix may survive storage."
+);
+assert.equal(
+  spanishStored.sessions.some((session) => /Semana \d+ Día \d+ - Semana/i.test(session.day_label)),
+  false,
+  "Labels must not be double-prefixed."
+);
+assert.deepEqual(
+  spanishStored.sessions[0].exercises.map((item) => item.exercise_id),
+  spanishPlan.plan.sessions[0].exercises.map((item) => item.exercise_id),
+  "Week 1 exercise IDs must stay stable."
+);
+// IDs repeat across days by design (the same movement appears twice a week),
+// so uniqueness is asserted within a session, and week suffixes must separate weeks.
+for (const session of spanishStored.sessions) {
+  const ids = session.exercises.map((item) => item.exercise_id);
+  assert.equal(new Set(ids).size, ids.length, `Duplicate exercise IDs inside ${session.day_label}`);
+}
+// Stable-ID contract: week 1 keeps the template IDs; later weeks are exactly
+// the template ID plus "-wN", so a repeated movement stays consistent.
+const templateIds = spanishPlan.plan.sessions.map((session) => session.exercises.map((item) => item.exercise_id));
+spanishStored.sessions.forEach((session, index) => {
+  const week = Math.floor(index / spanishPlan.plan.days_per_week) + 1;
+  const template = templateIds[index % spanishPlan.plan.days_per_week];
+  const expected = week === 1 ? template : template.map((id) => `${id}-w${week}`);
+  assert.deepEqual(
+    session.exercises.map((item) => item.exercise_id),
+    expected,
+    `Unexpected IDs in ${session.day_label}`
+  );
+});
+
+const englishStored = normalizePlanTimeline(englishPlan.plan as never) as unknown as Plan;
+assert.equal(
+  englishStored.sessions.every((session) => /^Week \d+ Day \d+ - /.test(session.day_label)),
+  true,
+  "English plans must keep English labels."
+);
+
+// Route boundary: the exact body the client sends must produce a Spanish
+// fallback when the provider fails. This covers the trainer.tsx -> route gap.
+async function assertRouteBoundaryKeepsSpanish() {
+  // The route module builds a Supabase client at import time; these placeholders
+  // keep the boundary test offline and never reach the network.
+  process.env.SUPABASE_URL = process.env.SUPABASE_URL || "http://localhost:54321";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "regression-placeholder";
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { runCoachRequest } = require("../server/routes/coach-trainer") as {
+    runCoachRequest: (req: unknown, options?: { primaryTimeoutMs: number; fallbackTimeoutMs: number }) => Promise<CoachResponseLike>;
+  };
+  const failingClient: CoachClient = {
+    messages: {
+      create: async () => {
+        throw Object.assign(new Error("Overloaded"), { status: 529 });
+      },
+    },
+  };
+
+  setCoachClientForTests(failingClient);
+  try {
+    const spanish = await runCoachRequest(
+      { body: { mode: "intake", units: "kg", language: "es", history: [], userMessage: "quiero más" } } as never,
+      { primaryTimeoutMs: 200, fallbackTimeoutMs: 200 }
+    );
+    assert.equal(spanish.status, "gathering");
+    if (spanish.status === "gathering") {
+      assert.equal(
+        spanish.message.includes("Cuéntame tu objetivo"),
+        true,
+        "A Spanish request that fails at the provider must answer in Spanish."
+      );
+    }
+
+    const english = await runCoachRequest(
+      { body: { mode: "intake", units: "lbs", language: "en", history: [], userMessage: "i want more" } } as never,
+      { primaryTimeoutMs: 200, fallbackTimeoutMs: 200 }
+    );
+    assert.equal(english.status, "gathering");
+    if (english.status === "gathering") {
+      assert.equal(english.message.includes("Tell me your goal"), true);
+    }
+
+    const spanishPlanRequest = await runCoachRequest(
+      {
+        body: {
+          mode: "intake",
+          units: "kg",
+          language: "es",
+          history: [],
+          userMessage: "Soy principiante y quiero ganar músculo 3 días a la semana con mancuernas en casa",
+        },
+      } as never,
+      { primaryTimeoutMs: 200, fallbackTimeoutMs: 200 }
+    );
+    assert.equal(spanishPlanRequest.status, "plan_ready");
+    if (spanishPlanRequest.status === "plan_ready") {
+      assert.equal(spanishPlanRequest.plan.sessions[0].day_label.startsWith("Semana 1 Día 1"), true);
+    }
+  } finally {
+    setCoachClientForTests(null);
+  }
+}
+
+// Sequential: both tests share the injected provider client.
+(async () => {
+  await assertTimeoutAbortsWithoutRetries();
+  await assertMalformedCostsAtMostTwoAttempts();
+  await assertRouteBoundaryKeepsSpanish();
+})()
+  .then(() => {
+    console.log("Coach update regression checks passed.");
+  })
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

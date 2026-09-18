@@ -4,9 +4,41 @@ import {
   buildReliableStarterPlan,
   detectReliableLanguage,
   hasCoachMedicalRedFlag,
+  ReliableLanguage,
 } from "../../shared/reliableCoach";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+export type CoachClient = {
+  messages: {
+    create: (
+      params: Anthropic.MessageCreateParamsNonStreaming,
+      options?: { signal?: AbortSignal; timeout?: number; maxRetries?: number }
+    ) => Promise<Anthropic.Message>;
+  };
+};
+
+let cachedClient: CoachClient | null = null;
+let injectedClient: CoachClient | null = null;
+
+/** Test seam: lets regressions drive the provider without network access. */
+export function setCoachClientForTests(client: CoachClient | null): void {
+  injectedClient = client;
+}
+
+export class CoachConfigurationError extends Error {}
+
+function getCoachClient(): CoachClient {
+  if (injectedClient) return injectedClient;
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    // Fail immediately instead of paying for a request that cannot succeed.
+    throw new CoachConfigurationError("ANTHROPIC_API_KEY is not configured on the server.");
+  }
+
+  // maxRetries: 0 keeps cost bounded; this service does its own single fallback.
+  cachedClient ??= new Anthropic({ apiKey, maxRetries: 0 });
+  return cachedClient;
+}
 
 export const COACH_TRAINER_MODEL =
   process.env.COACH_TRAINER_MODEL || "claude-sonnet-4-6";
@@ -184,7 +216,8 @@ export function getCoachTimeoutsForBuild(
 }
 
 function context(obj: Record<string, unknown>): string {
-  return `CONTEXT: ${JSON.stringify(obj)}`;
+  const entries = Object.entries(obj).filter(([, value]) => value !== undefined);
+  return `CONTEXT: ${JSON.stringify(Object.fromEntries(entries))}`;
 }
 
 export function compactPlanForCoach(plan: Plan): Plan {
@@ -382,6 +415,35 @@ function canUseStaticFallback(messages: CoachMessage[]): boolean {
   return rawContext.includes('"mode":"intake"') || rawContext.includes('"mode":"chat"');
 }
 
+const RECOVERABLE_PROVIDER_STATUSES = new Set([408, 409, 425, 429, 500, 502, 503, 504, 529]);
+
+/** Errors after which the deterministic plan should be served instead of an
+ *  error screen: bad/late model output and provider availability failures. */
+export function isCoachFallbackEligibleError(error: unknown): boolean {
+  if (error instanceof CoachConfigurationError) return true;
+  if (error instanceof SyntaxError) return true;
+  if (!(error instanceof Error)) return false;
+
+  const status = (error as { status?: unknown }).status;
+  if (typeof status === "number" && RECOVERABLE_PROVIDER_STATUSES.has(status)) return true;
+
+  const name = error.name.toLowerCase();
+  if (name.includes("abort") || name.includes("apiconnection") || name.includes("timeout")) return true;
+
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("expected schema") ||
+    message.includes("timed out") ||
+    message.includes("json") ||
+    message.includes("array element") ||
+    message.includes("overloaded") ||
+    message.includes("fetch failed") ||
+    message.includes("econnreset") ||
+    message.includes("socket hang up") ||
+    message.includes("not configured")
+  );
+}
+
 async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {}): Promise<CoachResponse> {
   const fallbackResponse = fallbackCoachResponse(messages);
   const allowStaticFallback = canUseStaticFallback(messages);
@@ -392,29 +454,35 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
   const temperature = options.temperature ?? 0.5;
 
   async function run(nextMessages: CoachMessage[], model: string, timeoutMs: number): Promise<CoachResponse> {
-    const response = await Promise.race([
-      client.messages.create({
-        model,
-        max_tokens: Number.isFinite(maxTokens) ? maxTokens : 5000,
-        temperature,
-        system: COACH_TRAINER_SYSTEM_PROMPT,
-        messages: nextMessages,
-      }),
-      new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error(`Coach response timed out for ${model}.`)), timeoutMs);
-      }),
-    ]);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    return parseCoachResponse(extractText(response));
+    try {
+      const response = await getCoachClient().messages.create(
+        {
+          model,
+          max_tokens: Number.isFinite(maxTokens) ? maxTokens : 5000,
+          temperature,
+          system: COACH_TRAINER_SYSTEM_PROMPT,
+          messages: nextMessages,
+        },
+        // Abort the paid request itself on timeout, and never let the SDK
+        // retry behind our back.
+        { signal: controller.signal, timeout: timeoutMs, maxRetries: 0 }
+      );
+
+      return parseCoachResponse(extractText(response));
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new Error(`Coach response timed out for ${model}.`);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
-  const isRecoverableFormatError = (error: unknown) =>
-    error instanceof SyntaxError ||
-    (error instanceof Error &&
-      (error.message.includes("expected schema") ||
-        error.message.includes("timed out") ||
-        error.message.toLowerCase().includes("json") ||
-        error.message.toLowerCase().includes("array element")));
+  const isRecoverableFormatError = isCoachFallbackEligibleError;
 
   try {
     return await run(messages, primaryModel, primaryTimeoutMs);
@@ -422,71 +490,63 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
     if (!isRecoverableFormatError(error)) {
       throw error;
     }
+    console.error("[coach-trainer] primary attempt failed:", error instanceof Error ? error.message : error);
 
-    if (error instanceof Error && error.message.includes("timed out")) {
-      console.error("[coach-trainer] primary response timed out:", error.message);
-      try {
-        return await run(messages, COACH_TRAINER_FALLBACK_MODEL, fallbackTimeoutMs);
-      } catch (fallbackError) {
-        if (isRecoverableFormatError(fallbackError)) {
-          console.error("[coach-trainer] fallback response failed:", fallbackError);
-          if (allowStaticFallback) return fallbackResponse;
-        }
-        throw fallbackError;
-      }
-    }
-
+    // Cost bound: one primary attempt plus at most one fallback attempt. A
+    // malformed response is not worth re-asking the expensive model for.
     try {
-      return await run([
-      ...messages,
-      {
-        role: "user",
-        content:
-            "Your previous response was not valid JSON for the schema. Reply again with ONE valid JSON object only. Keep the plan concise: 3 weeks, no more than 4 exercises per session, no markdown, no comments.",
-      },
-      ], primaryModel, primaryTimeoutMs);
-    } catch (retryError) {
-      if (isRecoverableFormatError(retryError)) {
-        console.error("[coach-trainer] primary JSON formatting failed after retry:", retryError);
-        try {
-          return await run(messages, COACH_TRAINER_FALLBACK_MODEL, fallbackTimeoutMs);
-        } catch (fallbackError) {
-          if (isRecoverableFormatError(fallbackError)) {
-            console.error("[coach-trainer] fallback response failed:", fallbackError);
-            if (allowStaticFallback) return fallbackResponse;
-          }
-          throw fallbackError;
-        }
+      const strictMessages: CoachMessage[] = [
+        ...messages,
+        {
+          role: "user",
+          content:
+            "Reply with ONE valid JSON object only, matching the schema. Keep the plan concise: 3 weeks, no more than 4 exercises per session, no markdown, no comments.",
+        },
+      ];
+      return await run(strictMessages, COACH_TRAINER_FALLBACK_MODEL, fallbackTimeoutMs);
+    } catch (fallbackError) {
+      if (isRecoverableFormatError(fallbackError)) {
+        console.error("[coach-trainer] fallback attempt failed:", fallbackError instanceof Error ? fallbackError.message : fallbackError);
+        if (allowStaticFallback) return fallbackResponse;
       }
-      throw retryError;
+      throw fallbackError;
     }
   }
+}
+
+/** Exported so regressions can assert the exact payload the client produces. */
+export function buildIntakeMessages(
+  units: Units,
+  history: CoachMessage[],
+  userMessage: string,
+  language?: ReliableLanguage
+): CoachMessage[] {
+  return history.length === 0
+    ? [{ role: "user", content: `${context({ mode: "intake", units, language })}\n\n${userMessage}` }]
+    : [...history, { role: "user", content: userMessage }];
 }
 
 export async function intakeTurn(
   units: Units,
   history: CoachMessage[],
   userMessage: string,
-  options?: CoachCallOptions
+  options?: CoachCallOptions,
+  language?: ReliableLanguage
 ): Promise<CoachResponse> {
-  const messages: CoachMessage[] =
-    history.length === 0
-      ? [{ role: "user", content: `${context({ mode: "intake", units })}\n\n${userMessage}` }]
-      : [...history, { role: "user", content: userMessage }];
-
-  return callCoach(messages, options);
+  return callCoach(buildIntakeMessages(units, history, userMessage, language), options);
 }
 
 export async function adaptPlan(
   units: Units,
   currentPlan: Plan,
   logs: unknown,
-  options?: CoachCallOptions
+  options?: CoachCallOptions,
+  language?: ReliableLanguage
 ): Promise<CoachResponse> {
   return callCoach([
     {
       role: "user",
-      content: context({ mode: "adapt", units, current_plan: compactPlanForCoach(currentPlan), logs }),
+      content: context({ mode: "adapt", units, language, current_plan: compactPlanForCoach(currentPlan), logs }),
     },
   ], options);
 }
@@ -495,7 +555,8 @@ export async function updateGoals(
   units: Units,
   currentPlan: Plan,
   newGoal: string,
-  options?: CoachCallOptions
+  options?: CoachCallOptions,
+  language?: ReliableLanguage
 ): Promise<CoachResponse> {
   return callCoach([
     {
@@ -503,6 +564,7 @@ export async function updateGoals(
       content: context({
         mode: "update_goals",
         units,
+        language,
         current_plan: compactPlanForCoach(currentPlan),
         new_goal: newGoal,
       }),
@@ -514,7 +576,8 @@ export async function chatWithCoach(
   units: Units,
   question: string,
   currentPlan?: Plan | null,
-  options?: CoachCallOptions
+  options?: CoachCallOptions,
+  language?: ReliableLanguage
 ): Promise<CoachResponse> {
   return callCoach([
     {
@@ -522,6 +585,7 @@ export async function chatWithCoach(
       content: context({
         mode: "chat",
         units,
+        language,
         question,
         current_plan: currentPlan ? compactPlanForCoach(currentPlan) : null,
       }),
