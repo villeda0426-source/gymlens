@@ -259,6 +259,6 @@ This week's content plan targets September's peak beginner drop-off window (days
 - **Brief generated:** September 18, 2026
 - **File saved:** `reports/reacher-daily-brief-2026-09-18.md`
 - **Git:** Committed and pushed to `main` branch of `villeda0426-source/gymlens`
-- **Email delivery:** Sent via Gmail MCP to vd@villedasdelight.com with subject `Reacher Daily Brief - 2026-09-18 | CoachLift`
+- **Email delivery:** ⚠️ Email not sent — Gmail MCP lacks `gmail.send` scope in this session. To enable automated email delivery, reconnect the Gmail integration at https://claude.ai/connect-github and ensure the `gmail.send` scope is granted.
 - **Research sources:** 8 parallel web searches covering competitor signals (GymScan, Gymeo, Fitbod, JEFIT, Ladder, MyFitnessPal, Apple Health+, Echelon), social media trends (Instagram Reels, TikTok gym content), and new AI fitness app announcements.
 - **New entrant flagged:** Gymeo (direct scan-to-workout competitor, iOS, last updated June 2026) elevated to primary watchlist.
