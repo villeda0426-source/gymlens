@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { jsonrepair } from "jsonrepair";
 import {
   buildReliableStarterPlan,
+  detectReliableLanguage,
   hasCoachMedicalRedFlag,
 } from "../../shared/reliableCoach";
 
@@ -327,21 +328,42 @@ function parseCoachResponse(rawText: string): CoachResponse {
   return parsed;
 }
 
+const FALLBACK_COPY = {
+  en: {
+    medical:
+      "Before I build a workout, stop and get medical clearance for the symptom or condition you mentioned. You can still use the rest of SpotLift while we keep training recommendations paused.",
+    gathering:
+      "Tell me your goal, how many days you can train, what equipment you have, your experience level, and any pain or limitations. I can build a reliable starter workout from those details even if advanced personalization is unavailable.",
+    retry:
+      "Coach took too long to answer cleanly. Try the same request again in a moment, or ask for a shorter adjustment.",
+  },
+  es: {
+    medical:
+      "Antes de armar un entrenamiento, detente y consigue autorización médica por el síntoma o la condición que mencionaste. Puedes seguir usando el resto de SpotLift mientras mantenemos en pausa las recomendaciones de entrenamiento.",
+    gathering:
+      "Cuéntame tu objetivo, cuántos días puedes entrenar, qué equipo tienes, tu nivel de experiencia y cualquier dolor o limitación. Con esos datos puedo armar un entrenamiento inicial confiable aunque la personalización avanzada no esté disponible.",
+    retry:
+      "Coach tardó demasiado en responder con claridad. Intenta la misma solicitud en un momento o pide un ajuste más corto.",
+  },
+} as const;
+
 function fallbackIntakePlan(units: Units, rawContext: string): CoachResponse {
+  // Answer in the language the conversation is already using; an English
+  // fallback must never replace a Spanish starter plan the user can see.
+  const language = detectReliableLanguage(rawContext);
+  const copy = FALLBACK_COPY[language];
+
   if (hasCoachMedicalRedFlag(rawContext)) {
-    return {
-      status: "gathering",
-      message: "Before I build a workout, stop and get medical clearance for the symptom or condition you mentioned. You can still use the rest of SpotLift while we keep training recommendations paused.",
-    };
+    return { status: "gathering", message: copy.medical };
   }
 
-  return buildReliableStarterPlan(rawContext, units) ?? {
+  return buildReliableStarterPlan(rawContext, units, language) ?? {
     status: "gathering",
-    message: "Tell me your goal, how many days you can train, what equipment you have, your experience level, and any pain or limitations. I can build a reliable starter workout from those details even if advanced personalization is unavailable.",
+    message: copy.gathering,
   };
 }
 
-function fallbackCoachResponse(messages: CoachMessage[]): CoachResponse {
+export function fallbackCoachResponse(messages: CoachMessage[]): CoachResponse {
   const rawContext = messages.map((message) => message.content).join("\n");
   const units: Units = rawContext.includes('"units":"kg"') ? "kg" : "lbs";
 
@@ -351,8 +373,7 @@ function fallbackCoachResponse(messages: CoachMessage[]): CoachResponse {
 
   return {
     status: "reply",
-    message:
-      "Coach took too long to answer cleanly. Try the same request again in a moment, or ask for a shorter adjustment.",
+    message: FALLBACK_COPY[detectReliableLanguage(rawContext)].retry,
   };
 }
 

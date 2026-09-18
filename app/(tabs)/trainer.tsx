@@ -146,6 +146,8 @@ export default function TrainerScreen() {
     loadTrainer,
   } = useCoachTrainerStore();
 
+  const coachLanguage = i18n.language?.startsWith("es") ? "es" : "en";
+
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
@@ -328,13 +330,18 @@ export default function TrainerScreen() {
       if (!plan) {
         const nextHistory =
           intakeHistory.length === 0
-            ? [{ role: "user" as const, content: `CONTEXT: ${JSON.stringify({ mode: "intake", units })}\n\n${text}` }]
+            ? [
+                {
+                  role: "user" as const,
+                  content: `CONTEXT: ${JSON.stringify({ mode: "intake", units, language: coachLanguage })}\n\n${text}`,
+                },
+              ]
             : [...intakeHistory, { role: "user" as const, content: text }];
 
         const reliablePlan = buildReliableStarterPlan(
           nextHistory.map((message) => message.content).join("\n"),
           units,
-          i18n.language?.startsWith("es") ? "es" : "en"
+          coachLanguage
         );
         if (reliablePlan) {
           setPlan(reliablePlan.plan);

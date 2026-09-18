@@ -51,6 +51,19 @@ const DETAIL_SIGNAL =
 const MEDICAL_RED_FLAG =
   /\b(chest pain|faint(?:ed|ing)?|dizz(?:y|iness)|recent surgery|pregnan(?:t|cy)|uncontrolled (?:heart|cardiac|blood pressure|diabetes)|dolor (?:en el|de) pecho|dolor tor[aá]cico|desmay(?:o|os|ar|arme|é)|mareo|mareos|mare(?:ado|ada)|cirug[ií]a reciente|operaci[oó]n reciente|embaraz(?:o|ada)|(?:presi[oó]n|diabetes|coraz[oó]n|problema card[ií]aco)[^.]{0,20}(?:descontrolad[oa]|sin control|no controlad[oa]))\b/i;
 
+const SPANISH_MARKER = /"language"\s*:\s*"es(?:-[A-Za-z]{2})?"/i;
+const SPANISH_SIGNAL =
+  /\b(quiero|necesito|puedo|entrenar|entrenamiento|d[ií]as?|semana|mancuernas|gimnasio|casa|peso corporal|m[uú]sculo|fuerza|principiante|intermedio|avanzad[oa]|dolor|lesi[oó]n|rutina|plan de entrenamiento|hola|gracias)\b/i;
+
+/** Pick the language for deterministic Coach copy. Explicit context wins; the
+ *  Spanish signal is the fallback so a server-side retry cannot answer a
+ *  Spanish conversation in English. */
+export function detectReliableLanguage(text: string): ReliableLanguage {
+  if (SPANISH_MARKER.test(text)) return "es";
+  if (/"language"\s*:\s*"en(?:-[A-Za-z]{2})?"/i.test(text)) return "en";
+  return SPANISH_SIGNAL.test(text) ? "es" : "en";
+}
+
 export function canBuildReliablePlan(text: string): boolean {
   return PLANNING_SIGNAL.test(text) && DETAIL_SIGNAL.test(text) && !MEDICAL_RED_FLAG.test(text);
 }
@@ -432,28 +445,50 @@ export function adjustSessionForToday(
   // 1. Equipment the user cannot reach today: substitute from the reviewed list,
   //    and only drop a movement when a safe substitute is unavailable.
   if (unavailable.length > 0) {
-    const kept: ReliableExercise[] = [];
-    for (const item of exercises) {
+    type Resolved = { item: ReliableExercise; blocked: boolean; substituted: boolean; originalId: string };
+    const resolved: Resolved[] = exercises.map((item) => {
       if (!matchesEquipment(`${item.name} ${item.primary_muscles.join(" ")}`, unavailable)) {
-        kept.push(item);
-        continue;
+        return { item, blocked: false, substituted: false, originalId: item.exercise_id };
       }
       const replacement = item.substitutions.find((name) => !matchesEquipment(name, unavailable));
       if (replacement) {
-        kept.push({
-          ...item,
-          exercise_id: slugify(replacement),
-          name: replacement,
-          substitutions: [item.name, ...item.substitutions.filter((name) => name !== replacement)],
-        });
-        changes.push({ code: "exercise_substituted", exercise_id: item.exercise_id, to: replacement });
-      } else if (kept.length + 1 > MIN_EXERCISES) {
-        changes.push({ code: "exercise_removed", exercise_id: item.exercise_id });
-      } else {
-        kept.push(item);
+        return {
+          item: {
+            ...item,
+            exercise_id: slugify(replacement),
+            name: replacement,
+            substitutions: [item.name, ...item.substitutions.filter((name) => name !== replacement)],
+          },
+          blocked: false,
+          substituted: true,
+          originalId: item.exercise_id,
+        };
       }
+      return { item, blocked: true, substituted: false, originalId: item.exercise_id };
+    });
+
+    // Decide drops against the movements that stay viable overall, not against
+    // the order they happen to appear in, so a blocked first exercise is not
+    // kept just because later safe movements had not been counted yet.
+    const viableCount = resolved.filter((entry) => !entry.blocked).length;
+    let keptBlocked = Math.max(0, MIN_EXERCISES - viableCount);
+    const kept: ReliableExercise[] = [];
+    for (const entry of resolved) {
+      if (!entry.blocked) {
+        if (entry.substituted) {
+          changes.push({ code: "exercise_substituted", exercise_id: entry.originalId, to: entry.item.name });
+        }
+        kept.push(entry.item);
+        continue;
+      }
+      if (keptBlocked > 0) {
+        keptBlocked -= 1;
+        kept.push(entry.item);
+        continue;
+      }
+      changes.push({ code: "exercise_removed", exercise_id: entry.originalId });
     }
-    exercises = kept.length >= MIN_EXERCISES ? kept : exercises;
+    exercises = kept;
   }
 
   // 2. Readiness and pain lower the dose; they never raise it.

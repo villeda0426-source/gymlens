@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   compactPlanForCoach,
+  fallbackCoachResponse,
   getCoachTimeoutsForBuild,
   Plan,
   Session,
@@ -9,7 +10,9 @@ import {
   adjustSessionForToday,
   buildReliableStarterPlan,
   canBuildReliablePlan,
+  detectReliableLanguage,
   hasCoachMedicalRedFlag,
+  ReliableExercise,
   ReliableSession,
 } from "../shared/reliableCoach";
 
@@ -174,5 +177,95 @@ assert.deepEqual(
   "Adjustments must be deterministic for identical input."
 );
 assert.equal(baseSession.exercises[0].sets, englishPlan.plan.sessions[0].exercises[0].sets, "Adjustment must not mutate the stored plan.");
+
+// Provider failure must answer in the conversation's language, so a server
+// fallback cannot replace a visible Spanish plan with an English one.
+assert.equal(detectReliableLanguage('CONTEXT: {"mode":"intake","units":"kg","language":"es"}'), "es");
+assert.equal(detectReliableLanguage('CONTEXT: {"mode":"intake","units":"lbs","language":"en"}\n\nbuild muscle'), "en");
+assert.equal(detectReliableLanguage("Quiero entrenar tres días con mancuernas"), "es");
+assert.equal(detectReliableLanguage("I want to train three days with dumbbells"), "en");
+
+const spanishFallback = fallbackCoachResponse([
+  {
+    role: "user",
+    content:
+      'CONTEXT: {"mode":"intake","units":"kg","language":"es"}\n\nSoy principiante y quiero ganar músculo 3 días a la semana con mancuernas en casa',
+  },
+]);
+assert.equal(spanishFallback.status, "plan_ready");
+if (spanishFallback.status === "plan_ready") {
+  assert.equal(spanishFallback.plan.units, "kg");
+  assert.equal(spanishFallback.plan.sessions[0].day_label.startsWith("Semana 1 Día 1"), true);
+  const text = JSON.stringify(spanishFallback);
+  for (const englishOnly of ["Goblet Squat", "reps in reserve", "Week 1 Day", "Full Body"]) {
+    assert.equal(text.includes(englishOnly), false, `Spanish provider fallback must not contain "${englishOnly}".`);
+  }
+}
+
+const spanishRedFlagFallback = fallbackCoachResponse([
+  { role: "user", content: 'CONTEXT: {"mode":"intake","units":"kg","language":"es"}\n\nTengo dolor de pecho al entrenar' },
+]);
+assert.equal(spanishRedFlagFallback.status, "gathering");
+if (spanishRedFlagFallback.status === "gathering") {
+  assert.equal(spanishRedFlagFallback.message.includes("autorización médica"), true);
+}
+
+const spanishInferredFallback = fallbackCoachResponse([
+  { role: "user", content: 'CONTEXT: {"mode":"intake","units":"kg"}\n\nQuiero ganar músculo 3 días a la semana con mancuernas en casa' },
+]);
+assert.equal(spanishInferredFallback.status, "plan_ready", "Spanish must be inferred when no language marker is present.");
+
+const englishFallback = fallbackCoachResponse([
+  {
+    role: "user",
+    content: 'CONTEXT: {"mode":"intake","units":"lbs","language":"en"}\n\nI am a beginner and want to build muscle 3 days a week with dumbbells at home',
+  },
+]);
+assert.equal(englishFallback.status, "plan_ready");
+if (englishFallback.status === "plan_ready") {
+  assert.equal(englishFallback.plan.sessions[0].day_label.startsWith("Week 1 Day 1"), true);
+}
+
+// A blocked first movement with no safe substitution must be dropped when the
+// remaining movements already satisfy the floor.
+const blockedFirst: ReliableSession = {
+  day_label: "Test Day",
+  focus: "Test",
+  estimated_minutes: 40,
+  exercises: [
+    {
+      ...(baseSession.exercises[0] as ReliableExercise),
+      exercise_id: "machine-only-press",
+      name: "Machine Only Press",
+      category: "compound",
+      substitutions: ["Machine Alternate Press"],
+    },
+    { ...(baseSession.exercises[1] as ReliableExercise), exercise_id: "safe-a", name: "Bodyweight Squat", substitutions: ["Chair Squat"] },
+    { ...(baseSession.exercises[2] as ReliableExercise), exercise_id: "safe-b", name: "Towel Isometric Row", substitutions: ["Bird Dog"] },
+  ],
+};
+const blockedResult = adjustSessionForToday(blockedFirst, {
+  readiness: "good",
+  pain: false,
+  unavailableEquipment: ["machine"],
+});
+assert.equal(
+  blockedResult.session.exercises.some((item) => /machine/i.test(item.name)),
+  false,
+  "A blocked first movement with no safe substitution must be dropped."
+);
+assert.equal(blockedResult.session.exercises.length, 2);
+assert.equal(
+  blockedResult.changes.some((change) => change.code === "exercise_removed" && change.exercise_id === "machine-only-press"),
+  true
+);
+
+// When dropping would fall below the floor, the blocked movement is kept
+// rather than leaving the user with no session at all.
+const blockedMost = adjustSessionForToday(
+  { ...blockedFirst, exercises: blockedFirst.exercises.slice(0, 2) },
+  { readiness: "good", pain: false, unavailableEquipment: ["machine", "bodyweight squat"] }
+);
+assert.equal(blockedMost.session.exercises.length >= 1, true);
 
 console.log("Coach update regression checks passed.");
