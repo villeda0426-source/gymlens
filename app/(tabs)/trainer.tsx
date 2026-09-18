@@ -29,7 +29,7 @@ import {
 } from "@/lib/coachTrainer";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { useAuthStore } from "@/store/authStore";
-import { buildReliableStarterPlan } from "@/shared/reliableCoach";
+import { buildReliableStarterPlan, hasCoachMedicalRedFlag } from "@/shared/reliableCoach";
 
 const QUICK_ACTIONS = [
   "trainer.quick_actions.create_plan",
@@ -305,6 +305,15 @@ export default function TrainerScreen() {
       return;
     }
 
+    if (hasCoachMedicalRedFlag(text)) {
+      addConversationMessage({ role: "user", content: text });
+      addConversationMessage({ role: "assistant", content: t("trainer.coach_medical_stop") });
+      setNotice(t("trainer.coach_medical_notice"));
+      setDraft("");
+      setFailedPrompt(null);
+      return;
+    }
+
     const controller = new AbortController();
     abortRef.current?.abort();
     abortRef.current = controller;
@@ -324,7 +333,8 @@ export default function TrainerScreen() {
 
         const reliablePlan = buildReliableStarterPlan(
           nextHistory.map((message) => message.content).join("\n"),
-          units
+          units,
+          i18n.language?.startsWith("es") ? "es" : "en"
         );
         if (reliablePlan) {
           setPlan(reliablePlan.plan);
