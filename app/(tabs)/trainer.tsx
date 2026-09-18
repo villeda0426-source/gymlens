@@ -29,6 +29,7 @@ import {
 } from "@/lib/coachTrainer";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { useAuthStore } from "@/store/authStore";
+import { buildReliableStarterPlan } from "@/shared/reliableCoach";
 
 const QUICK_ACTIONS = [
   "trainer.quick_actions.create_plan",
@@ -321,7 +322,17 @@ export default function TrainerScreen() {
             ? [{ role: "user" as const, content: `CONTEXT: ${JSON.stringify({ mode: "intake", units })}\n\n${text}` }]
             : [...intakeHistory, { role: "user" as const, content: text }];
 
-        setNotice(t("trainer.coach_building_plan"));
+        const reliablePlan = buildReliableStarterPlan(
+          nextHistory.map((message) => message.content).join("\n"),
+          units
+        );
+        if (reliablePlan) {
+          setPlan(reliablePlan.plan);
+          addConversationMessage({ role: "assistant", content: reliablePlan.summary });
+          setNotice(t("trainer.reliable_plan_enhancing"));
+        } else {
+          setNotice(t("trainer.coach_building_plan"));
+        }
         const response = await runCoachJob({
           mode: "intake",
           units,
@@ -366,9 +377,18 @@ export default function TrainerScreen() {
         setDraft(text);
         setNotice(t("trainer.chat_interrupted"));
       } else {
-        setFailedPrompt(text);
-        setDraft(text);
-        setNotice(t("trainer.coach_connect_error"));
+        if (!plan && buildReliableStarterPlan(
+          [...intakeHistory.map((message) => message.content), text].join("\n"),
+          units
+        )) {
+          setFailedPrompt(null);
+          setDraft("");
+          setNotice(t("trainer.reliable_plan_fallback"));
+        } else {
+          setFailedPrompt(text);
+          setDraft(text);
+          setNotice(t("trainer.coach_connect_error"));
+        }
       }
     } finally {
       setLoading(false);
@@ -532,7 +552,7 @@ export default function TrainerScreen() {
                 <TouchableOpacity style={styles.resendButton} onPress={() => submitMessage(failedPrompt)} disabled={loading}>
                   <Text style={styles.resendText}>{t("trainer.resend")}</Text>
                 </TouchableOpacity>
-              ) : notice === t("trainer.plan_ready_notice") ? (
+              ) : plan ? (
                 <TouchableOpacity style={styles.resendButton} onPress={() => router.push("/plan")}>
                   <Text style={styles.resendText}>{t("trainer.open")}</Text>
                 </TouchableOpacity>

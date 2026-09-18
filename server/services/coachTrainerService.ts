@@ -1,5 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { jsonrepair } from "jsonrepair";
+import {
+  buildReliableStarterPlan,
+  hasCoachMedicalRedFlag,
+} from "../../shared/reliableCoach";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -323,112 +327,17 @@ function parseCoachResponse(rawText: string): CoachResponse {
   return parsed;
 }
 
-function slugify(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
-
-function makeExercise(
-  name: string,
-  category: Exercise["category"],
-  primaryMuscles: string[],
-  sets: number,
-  minReps: number,
-  maxReps: number,
-  targetRpe: number | null,
-  targetLoad: string,
-  restSeconds: number,
-  coachNotes: string
-): Exercise {
-  return {
-    exercise_id: slugify(name),
-    name,
-    category,
-    primary_muscles: primaryMuscles,
-    sets,
-    rep_range: { min: minReps, max: maxReps },
-    target_rpe: targetRpe,
-    target_load: targetLoad,
-    rest_seconds: restSeconds,
-    tempo: null,
-    progression_rule: "When all sets hit the top of the rep range at or below target RPE, add 5 lb next time.",
-    substitutions: ["Machine variation", "Dumbbell variation"],
-    coach_notes: coachNotes,
-  };
-}
-
 function fallbackIntakePlan(units: Units, rawContext: string): CoachResponse {
-  const wantsFourDays = /4\s*day|four\s*day|3-4|3 to 4/i.test(rawContext);
-  const daysPerWeek = wantsFourDays ? 4 : 3;
-  const load = units === "kg" ? "Use a controlled load with 2.5 kg jumps available." : "Use a controlled load with 5 lb jumps available.";
+  if (hasCoachMedicalRedFlag(rawContext)) {
+    return {
+      status: "gathering",
+      message: "Before I build a workout, stop and get medical clearance for the symptom or condition you mentioned. You can still use the rest of SpotLift while we keep training recommendations paused.",
+    };
+  }
 
-  const sessions: Session[] = [
-    {
-      day_label: "Week 1 Day 1 - Push Strength",
-      focus: "Chest, shoulders, triceps",
-      estimated_minutes: 60,
-      exercises: [
-        makeExercise("Barbell Bench Press", "compound", ["chest", "triceps", "shoulders"], 4, 4, 6, 8, load, 150, "Shoulder blades pinned; drive evenly through both feet."),
-        makeExercise("Incline Dumbbell Press", "compound", ["chest", "shoulders"], 3, 8, 10, 8, load, 90, "Lower under control and stop just short of shoulder discomfort."),
-        makeExercise("Seated Dumbbell Shoulder Press", "compound", ["shoulders", "triceps"], 3, 6, 8, 8, load, 120, "Keep ribs down and avoid leaning back."),
-        makeExercise("Cable Triceps Pressdown", "accessory", ["triceps"], 3, 10, 14, 8, load, 60, "Lock elbows by your sides and finish each rep fully."),
-      ],
-    },
-    {
-      day_label: "Week 1 Day 2 - Lower Strength + Easy Swim",
-      focus: "Leg strength and pool technique",
-      estimated_minutes: 70,
-      exercises: [
-        makeExercise("Back Squat", "compound", ["quads", "glutes", "core"], 4, 4, 6, 8, load, 180, "Brace hard before every rep and keep depth consistent."),
-        makeExercise("Romanian Deadlift", "compound", ["hamstrings", "glutes", "back"], 3, 6, 8, 8, load, 150, "Hinge until hamstrings load; keep the bar close."),
-        makeExercise("Walking Lunge", "accessory", ["quads", "glutes"], 3, 8, 10, 8, load, 90, "Smooth steps, tall torso, full-foot pressure."),
-        makeExercise("Technique Swim", "cardio", ["core"], 1, 20, 25, null, "25m pool: easy repeats, nasal/exhale focus, no race pace.", 30, "Leave the pool feeling sharper, not crushed."),
-      ],
-    },
-    {
-      day_label: "Week 1 Day 3 - Pull Strength",
-      focus: "Back, biceps, posterior chain",
-      estimated_minutes: 60,
-      exercises: [
-        makeExercise("Pull-Up or Assisted Pull-Up", "compound", ["back", "biceps"], 4, 5, 8, 8, load, 120, "Start each rep by pulling shoulders down, then elbows."),
-        makeExercise("Barbell Row", "compound", ["back", "biceps"], 4, 6, 8, 8, load, 150, "Keep torso locked and row toward lower ribs."),
-        makeExercise("Lat Pulldown", "accessory", ["back", "biceps"], 3, 8, 12, 8, load, 90, "Pause briefly with elbows tight to your sides."),
-        makeExercise("Dumbbell Curl", "accessory", ["biceps"], 3, 10, 12, 8, load, 60, "No swinging; own the lowering phase."),
-      ],
-    },
-    {
-      day_label: "Week 1 Day 4 - Conditioning + Arms",
-      focus: "Engine, swim weakness, arms",
-      estimated_minutes: 65,
-      exercises: [
-        makeExercise("Zone 2 Bike", "cardio", ["quads", "calves"], 1, 25, 35, null, "Conversational pace.", 0, "Steady breathing; this should build capacity, not bury you."),
-        makeExercise("Swim Intervals", "cardio", ["core", "shoulders"], 1, 12, 16, null, "25m pool: 8-12 x 25m controlled repeats.", 30, "Prioritize relaxed breathing and clean turns."),
-        makeExercise("Cable Lateral Raise", "accessory", ["shoulders"], 3, 12, 15, 8, load, 45, "Lead with elbows and keep traps quiet."),
-        makeExercise("Superset: Rope Curl + Overhead Triceps Extension", "accessory", ["biceps", "triceps"], 3, 10, 14, 8, load, 45, "Smooth reps; chase tension, not momentum."),
-      ],
-    },
-  ].slice(0, daysPerWeek);
-
-  return {
-    status: "plan_ready",
-    summary:
-      "You gave enough detail to start: early-intermediate training age, full gym and pool access, no injuries, a 4-day preference, and a goal of getting stronger while improving conditioning and swimming. I built week 1 as a push/lower/pull/conditioning split with swimming practice baked in. Run this first week, then repeat the structure for weeks 2 and 3 with small load or rep progressions.",
-    plan: {
-      goal: "Get stronger while improving conditioning and swimming",
-      goal_type: "general_fitness",
-      experience_level: "intermediate",
-      units,
-      timeline_weeks: 3,
-      days_per_week: daysPerWeek,
-      split: daysPerWeek === 4 ? "Push / Lower / Pull / Conditioning" : "Push / Pull / Lower + Conditioning",
-      equipment: ["Full gym", "25m pool", "bike"],
-      constraints: ["No reported injuries", "Swimming is the main conditioning weakness"],
-      progression_strategy:
-        "Weeks 2 and 3 repeat the same split. Add 5 lb or 1-2 reps when sets land at the top of the range at RPE 8 or lower; keep swim work technique-first and add 1-2 intervals per week.",
-      sessions,
-      weekly_notes:
-        "Place at least one rest or easy day after lower body. Keep endurance work mostly conversational so strength can progress. If fatigue spikes, hold loads steady and reduce swim intervals by 20%.",
-      safety_flags: [],
-    },
+  return buildReliableStarterPlan(rawContext, units) ?? {
+    status: "gathering",
+    message: "Tell me your goal, how many days you can train, what equipment you have, your experience level, and any pain or limitations. I can build a reliable starter workout from those details even if advanced personalization is unavailable.",
   };
 }
 

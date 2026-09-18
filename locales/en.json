@@ -259,6 +259,8 @@
     "coach_connect_error": "Coach had trouble connecting. Your message is saved — tap Resend to try again.",
     "coach_thinking": "Coach is thinking...",
     "coach_building_plan": "Coach is building your plan. This can take a minute for a higher-quality program.",
+    "reliable_plan_enhancing": "Your reliable starter plan is ready. Coach is adding extra personalization in the background.",
+    "reliable_plan_fallback": "Your workout is ready. Coach's extra personalization is temporarily unavailable.",
     "voice_start": "Start voice input",
     "voice_stop": "Stop voice input",
     "voice_listening": "Listening. Speak your message to Coach.",

@@ -5,6 +5,11 @@ import {
   Plan,
   Session,
 } from "../server/services/coachTrainerService";
+import {
+  buildReliableStarterPlan,
+  canBuildReliablePlan,
+  hasCoachMedicalRedFlag,
+} from "../shared/reliableCoach";
 
 function makeSession(index: number): Session {
   return {
@@ -44,5 +49,27 @@ const compactPlan = compactPlanForCoach(expandedPlan);
 assert.equal(compactPlan.sessions.length, 4);
 assert.deepEqual(compactPlan.sessions, expandedPlan.sessions.slice(0, 4));
 assert.equal(expandedPlan.sessions.length, 12, "Compaction must not mutate the stored plan.");
+
+assert.equal(canBuildReliablePlan("I want to build muscle 3 days a week with dumbbells at home"), true);
+assert.equal(canBuildReliablePlan("hello"), false);
+assert.equal(hasCoachMedicalRedFlag("I get chest pain when I train"), true);
+
+const reliablePlan = buildReliableStarterPlan(
+  "I am a beginner and want to build muscle 3 days a week with dumbbells at home",
+  "lbs"
+);
+assert.ok(reliablePlan);
+assert.equal(reliablePlan.plan.goal_type, "hypertrophy");
+assert.equal(reliablePlan.plan.days_per_week, 3);
+assert.deepEqual(reliablePlan.plan.equipment, ["Dumbbells", "Bench or stable surface"]);
+assert.equal(reliablePlan.plan.sessions.length, 3);
+assert.equal(reliablePlan.plan.sessions.every((session) => session.exercises.length === 4), true);
+assert.equal(reliablePlan.plan.sessions.flatMap((session) => session.exercises).some((item) => item.name.includes("Swim")), false);
+
+assert.equal(
+  buildReliableStarterPlan("I have chest pain and want a 3 day gym plan", "lbs"),
+  null,
+  "Medical red flags must not produce a workout."
+);
 
 console.log("Coach update regression checks passed.");

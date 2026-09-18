@@ -259,6 +259,8 @@
     "coach_connect_error": "Coach tuvo problemas para conectarse. Tu mensaje quedó guardado; toca Reenviar para intentarlo de nuevo.",
     "coach_thinking": "Coach esta pensando...",
     "coach_building_plan": "Coach está creando tu plan. Puede tardar un minuto para darte un programa de mayor calidad.",
+    "reliable_plan_enhancing": "Tu plan inicial confiable está listo. Coach está agregando personalización adicional en segundo plano.",
+    "reliable_plan_fallback": "Tu entrenamiento está listo. La personalización adicional de Coach no está disponible temporalmente.",
     "voice_start": "Iniciar entrada por voz",
     "voice_stop": "Detener entrada por voz",
     "voice_listening": "Escuchando. Dile tu mensaje a Coach.",

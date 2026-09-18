@@ -9,6 +9,6 @@
     "resolveJsonModule": true,
     "outDir": "../dist-server"
   },
-  "include": ["./**/*.ts", "../lib/anthropic.ts", "../lib/youtube.ts"],
+  "include": ["./**/*.ts", "../lib/anthropic.ts", "../lib/youtube.ts", "../shared/**/*.ts"],
   "exclude": ["../node_modules"]
 }
