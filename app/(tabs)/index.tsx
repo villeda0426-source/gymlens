@@ -31,7 +31,7 @@ function getTodaysTip(t: (key: string) => string): string {
 }
 
 export default function HomeScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { profile } = useAuthStore();
   const { setCurrentGuide } = useWorkoutGuideStore();
@@ -58,7 +58,7 @@ export default function HomeScreen() {
       const data = await apiFetch("/api/workout-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query, language: i18n.language?.startsWith("es") ? "es" : "en" }),
       }, 30000);
 
       setCurrentGuide(data);

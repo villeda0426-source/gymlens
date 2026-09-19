@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { createClient } from "@supabase/supabase-js";
-import Anthropic from "@anthropic-ai/sdk";
+import { callClaudeMessage } from "../services/claudeService";
 
 const router = Router();
 
@@ -8,8 +8,6 @@ const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 router.get("/:id", async (req: Request, res: Response) => {
   try {
@@ -59,8 +57,8 @@ router.get("/:id/weight-factor", async (req: Request, res: Response) => {
 
     // Call Claude once to get weight factor
     console.log(`[weight-factor] Asking Claude for: ${equipment.name}`);
-    const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
+    const response = await callClaudeMessage({
+      model: process.env.ANTHROPIC_VISION_FAST_MODEL || "claude-haiku-4-5-20251001",
       max_tokens: 16,
       messages: [
         {
@@ -68,7 +66,7 @@ router.get("/:id/weight-factor", async (req: Request, res: Response) => {
           content: `For the gym exercise ${equipment.name}, what percentage of a person's body weight is a reasonable starting weight for a complete beginner? Reply with ONLY a decimal between 0.05 and 1.5, nothing else.`,
         },
       ],
-    });
+    }, { timeoutMs: 10000 });
 
     const raw = response.content[0].type === "text" ? response.content[0].text.trim() : "0.3";
     const parsed = parseFloat(raw);
@@ -83,7 +81,7 @@ router.get("/:id/weight-factor", async (req: Request, res: Response) => {
     return res.json({ weight_factor: factor });
   } catch (error: any) {
     console.error("[weight-factor] error:", error.message);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: "Starting-weight guidance is temporarily unavailable." });
   }
 });
 

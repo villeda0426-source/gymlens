@@ -48,7 +48,7 @@ app.get("/api/dependency-health", async (_req, res) => {
     api: true,
     supabaseConfigured: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
     anthropicConfigured: Boolean(process.env.ANTHROPIC_API_KEY),
-    geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
+    openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
     youtubeConfigured: Boolean(process.env.YOUTUBE_API_KEY),
     supabaseReachable: false,
   };
@@ -71,7 +71,7 @@ app.get("/api/dependency-health", async (_req, res) => {
     checks.supabaseConfigured &&
     checks.supabaseReachable &&
     checks.anthropicConfigured &&
-    checks.geminiConfigured;
+    checks.openaiConfigured;
 
   res.status(ok ? 200 : 503).json({
     status: ok ? "ok" : "degraded",

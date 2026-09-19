@@ -10,6 +10,22 @@ Use this before every App Store submission and after every backend deploy.
 - AI features must fail gracefully with a useful message or a local fallback.
 - GET/HEAD requests may retry transient errors. AI POST requests should not retry automatically unless the route is explicitly idempotent.
 
+## AI Provider Map
+
+- Coach and equipment identification use Claude through `ANTHROPIC_API_KEY`.
+- Workout guide search uses OpenAI through `OPENAI_API_KEY` and `OPENAI_WORKOUT_MODEL`.
+- Catalog equipment search uses Supabase and does not call an AI provider.
+- No shipped runtime path requires Gemini.
+- Workout search makes one OpenAI request with a 25-second server timeout and no SDK retries,
+  leaving time to return its fallback before the shipped client's 30-second deadline.
+- Equipment scans use a 10-second quick-name call and, on cache miss, one 35-second
+  full-identification call. Claude SDK retries are disabled so a provider incident
+  cannot silently multiply latency or cost.
+
+Rollback a provider migration by reverting its application commit and redeploying
+the previous known-good commit. Keep both required keys in Railway during rollback
+so the unaffected provider paths remain available.
+
 ## Release Gate
 
 1. Confirm production API env vars are set:
@@ -18,7 +34,7 @@ Use this before every App Store submission and after every backend deploy.
    - `SUPABASE_URL`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `ANTHROPIC_API_KEY`
-   - `GEMINI_API_KEY`
+   - `OPENAI_API_KEY`
 2. Run:
 
    ```bash

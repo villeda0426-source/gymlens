@@ -1,7 +1,76 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { EquipmentIdentification, EQUIPMENT_SYSTEM_PROMPT } from "../../lib/anthropic";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let client: Anthropic | null = null;
+
+const FAST_VISION_MODEL =
+  process.env.ANTHROPIC_VISION_FAST_MODEL || "claude-haiku-4-5-20251001";
+const VISION_MODEL =
+  process.env.ANTHROPIC_VISION_MODEL || "claude-sonnet-4-6";
+const FAST_VISION_TIMEOUT_MS = Number.parseInt(
+  process.env.ANTHROPIC_VISION_FAST_TIMEOUT_MS || "10000",
+  10
+);
+const VISION_TIMEOUT_MS = Number.parseInt(
+  process.env.ANTHROPIC_VISION_TIMEOUT_MS || "35000",
+  10
+);
+
+type ClaudeMessageCreator = (
+  request: any,
+  options: Anthropic.RequestOptions
+) => Promise<Anthropic.Message>;
+
+export class ClaudeProviderTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`Claude provider timed out after ${timeoutMs}ms.`);
+    this.name = "ClaudeProviderTimeoutError";
+  }
+}
+
+function getClient(): Anthropic {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error("ANTHROPIC_API_KEY is not configured on the server.");
+  }
+  client ??= new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY,
+    maxRetries: 0,
+  });
+  return client;
+}
+
+export async function callClaudeMessage(
+  request: any,
+  options: {
+    timeoutMs: number;
+    createMessage?: ClaudeMessageCreator;
+  }
+): Promise<Anthropic.Message> {
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const createMessage = options.createMessage ??
+    ((body, requestOptions) => getClient().messages.create(body, requestOptions));
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => {
+      controller.abort();
+      reject(new ClaudeProviderTimeoutError(options.timeoutMs));
+    }, options.timeoutMs);
+  });
+
+  try {
+    return await Promise.race([
+      Promise.resolve().then(() => createMessage(request, {
+        signal: controller.signal,
+        timeout: options.timeoutMs,
+        maxRetries: 0,
+      })),
+      timeoutPromise,
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
 
 type SupportedMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
 
@@ -17,8 +86,8 @@ function detectMediaType(base64Image: string): SupportedMediaType {
 /** Cheap Haiku call — returns just the equipment name, nothing else. */
 export async function extractEquipmentName(base64Image: string): Promise<string> {
   const mediaType = detectMediaType(base64Image);
-  const response = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
+  const response = await callClaudeMessage({
+    model: FAST_VISION_MODEL,
     max_tokens: 32,
     messages: [
       {
@@ -35,7 +104,7 @@ export async function extractEquipmentName(base64Image: string): Promise<string>
         ],
       },
     ],
-  });
+  }, { timeoutMs: FAST_VISION_TIMEOUT_MS });
   const text = response.content[0].type === "text" ? response.content[0].text : "";
   return text.trim().replace(/[.!?,]/g, "");
 }
@@ -44,8 +113,8 @@ export async function identifyEquipment(base64Image: string): Promise<EquipmentI
   const mediaType = detectMediaType(base64Image);
   console.log("[claudeService] media_type:", mediaType, "| base64 length:", base64Image.length);
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
+  const response = await callClaudeMessage({
+    model: VISION_MODEL,
     max_tokens: 2048,
     system: EQUIPMENT_SYSTEM_PROMPT,
     messages: [
@@ -67,7 +136,7 @@ export async function identifyEquipment(base64Image: string): Promise<EquipmentI
         ],
       },
     ],
-  });
+  }, { timeoutMs: VISION_TIMEOUT_MS });
 
   const text = response.content[0].type === "text" ? response.content[0].text : "";
   console.log("[claudeService] raw response length:", text.length);

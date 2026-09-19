@@ -60,7 +60,7 @@ const checks: Check[] = [
       assert(data?.status === "ok", "Dependency health did not return { status: 'ok' }.");
       assert(data?.checks?.supabaseReachable === true, "Supabase dependency is not reachable.");
       assert(data?.checks?.anthropicConfigured === true, "Anthropic dependency is not configured.");
-      assert(data?.checks?.geminiConfigured === true, "Gemini dependency is not configured.");
+      assert(data?.checks?.openaiConfigured === true, "OpenAI dependency is not configured.");
     },
   },
   {

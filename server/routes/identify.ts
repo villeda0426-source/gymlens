@@ -268,7 +268,7 @@ router.post("/", async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("[identify] error:", error.message ?? error);
-    return res.status(500).json({ error: error.message || "Identification failed" });
+    return res.status(500).json({ error: "Equipment identification is temporarily unavailable." });
   }
 });
 

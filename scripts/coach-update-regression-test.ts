@@ -529,6 +529,72 @@ assert.equal(
   "English plans must keep English labels."
 );
 
+// Completion must be scoped to a session: the same movement appears on more
+// than one day, and finishing day 1 must not finish or unlock day 3.
+import {
+  completionKey,
+  countSessionCompleted,
+  isExerciseComplete,
+  isSessionComplete as isSessionCompleteScoped,
+  migrateCompletionIds,
+} from "../shared/completionKeys";
+
+const repeatedPlanSessions = englishPlan.plan.sessions;
+const repeatedId = repeatedPlanSessions[0].exercises[0].exercise_id;
+assert.equal(
+  repeatedPlanSessions.filter((session) => session.exercises.some((item) => item.exercise_id === repeatedId)).length >= 2,
+  true,
+  "This regression needs a movement that repeats across days."
+);
+
+const day1Keys = repeatedPlanSessions[0].exercises.map((item) =>
+  completionKey(repeatedPlanSessions[0].day_label, item.exercise_id)
+);
+assert.equal(isSessionCompleteScoped(day1Keys, repeatedPlanSessions[0]), true, "Day 1 must read as complete.");
+const laterSessionWithRepeat = repeatedPlanSessions
+  .slice(1)
+  .find((session) => session.exercises.some((item) => item.exercise_id === repeatedId));
+assert.ok(laterSessionWithRepeat);
+assert.equal(
+  isExerciseComplete(day1Keys, laterSessionWithRepeat.day_label, repeatedId),
+  false,
+  "Completing day 1 must not mark the repeated movement on a later day."
+);
+assert.equal(isSessionCompleteScoped(day1Keys, laterSessionWithRepeat), false, "A later day must stay incomplete.");
+assert.equal(countSessionCompleted(day1Keys, laterSessionWithRepeat), 0);
+
+// Unlocking counts leading complete sessions; day 1 alone must unlock nothing more.
+const leadingComplete = (() => {
+  let count = 0;
+  for (const session of repeatedPlanSessions) {
+    if (!isSessionCompleteScoped(day1Keys, session)) break;
+    count += 1;
+  }
+  return count;
+})();
+assert.equal(leadingComplete, 1, "Only day 1 may count as complete.");
+
+// Legacy bare IDs migrate to the first matching session only.
+const migrated = migrateCompletionIds(repeatedPlanSessions, [repeatedId]);
+assert.deepEqual(migrated, [completionKey(repeatedPlanSessions[0].day_label, repeatedId)]);
+assert.equal(
+  repeatedPlanSessions.slice(1).some((session) => isExerciseComplete(migrated, session.day_label, repeatedId)),
+  false,
+  "A legacy completion must not fan out to later days."
+);
+const migratedTwo = migrateCompletionIds(repeatedPlanSessions, [
+  repeatedPlanSessions[0].exercises[0].exercise_id,
+  repeatedPlanSessions[0].exercises[1].exercise_id,
+]);
+assert.equal(migratedTwo.length, 2, "Two legacy completions in one session must both survive.");
+assert.deepEqual(
+  migrateCompletionIds(repeatedPlanSessions, ["unknown-exercise"]),
+  [],
+  "Unknown legacy IDs are dropped."
+);
+const alreadyScoped = [completionKey(repeatedPlanSessions[1].day_label, repeatedId)];
+assert.deepEqual(migrateCompletionIds(repeatedPlanSessions, alreadyScoped), alreadyScoped, "Scoped keys pass through.");
+
 // Route boundary: the exact body the client sends must produce a Spanish
 // fallback when the provider fails. This covers the trainer.tsx -> route gap.
 async function assertRouteBoundaryKeepsSpanish() {

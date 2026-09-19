@@ -41,6 +41,12 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import {
+  completionKey,
+  countSessionCompleted,
+  isExerciseComplete,
+  isSessionComplete,
+} from "@/shared/completionKeys";
+import {
   CompletedExerciseRow,
   MuscleDelta,
   useMuscleProgressStore,
@@ -93,9 +99,7 @@ function uniqueMuscles(exercises: PlanExercise[]): string[] {
   return Array.from(seen).slice(0, 4);
 }
 
-function isSessionComplete(session: CoachPlan["sessions"][number], completedIds: string[]): boolean {
-  return session.exercises.length > 0 && session.exercises.every((exercise) => completedIds.includes(exercise.exercise_id));
-}
+
 
 function fallbackExerciseGuide(exercise: PlanExercise): ExerciseGuide {
   const dose = `${exercise.sets} sets of ${exercise.rep_range.min}-${exercise.rep_range.max} reps`;
@@ -157,8 +161,8 @@ interface WorkoutDayCardProps {
   index: number;
   completedIds: string[];
   completingId: string | null;
-  onCompleteExercise: (exercise: PlanExercise) => void;
-  onUncompleteExercise: (exercise: PlanExercise) => void;
+  onCompleteExercise: (exercise: PlanExercise, dayLabel: string) => void;
+  onUncompleteExercise: (exercise: PlanExercise, dayLabel: string) => void;
   onOpenWorkout: (session: CoachPlan["sessions"][number], index: number) => void;
   onOpenExercise: (exercise: PlanExercise) => void;
   onOpenStretch: (stretch: string, label: string, targetMuscles: string[]) => void;
@@ -176,7 +180,7 @@ function WorkoutDayCard({
   onOpenStretch,
 }: WorkoutDayCardProps) {
   const { t } = useTranslation();
-  const completedCount = session.exercises.filter((exercise) => completedIds.includes(exercise.exercise_id)).length;
+  const completedCount = countSessionCompleted(completedIds, session);
   const isComplete = completedCount === session.exercises.length && session.exercises.length > 0;
   const muscles = uniqueMuscles(session.exercises);
 
@@ -239,14 +243,16 @@ function WorkoutDayCard({
       </View>
 
       {session.exercises.map((exercise) => {
-        const isDone = completedIds.includes(exercise.exercise_id);
-        const isCompleting = completingId === exercise.exercise_id;
+        const isDone = isExerciseComplete(completedIds, session.day_label, exercise.exercise_id);
+        const isCompleting = completingId === completionKey(session.day_label, exercise.exercise_id);
         return (
           <View key={exercise.exercise_id} style={styles.exerciseRow}>
             <TouchableOpacity
               style={[styles.exerciseCheck, isDone && styles.exerciseCheckDone]}
               disabled={isCompleting}
-              onPress={() => (isDone ? onUncompleteExercise(exercise) : onCompleteExercise(exercise))}
+              onPress={() =>
+                isDone ? onUncompleteExercise(exercise, session.day_label) : onCompleteExercise(exercise, session.day_label)
+              }
             >
               {isCompleting ? (
                 <ActivityIndicator size="small" color={colors.coral} />
@@ -506,15 +512,15 @@ function WorkoutDetailModal({
   completedIds: string[];
   completingId: string | null;
   onClose: () => void;
-  onCompleteExercise: (exercise: PlanExercise) => void;
-  onUncompleteExercise: (exercise: PlanExercise) => void;
+  onCompleteExercise: (exercise: PlanExercise, dayLabel: string) => void;
+  onUncompleteExercise: (exercise: PlanExercise, dayLabel: string) => void;
   onSwapExercise: (exercise: PlanExercise, replacementName: string, scope: "today" | "permanent") => void;
   onOpenExercise: (exercise: PlanExercise) => void;
   onOpenStretch: (stretch: string, label: string, targetMuscles: string[]) => void;
 }) {
   const { t } = useTranslation();
   if (!session) return null;
-  const completedCount = session.exercises.filter((exercise) => completedIds.includes(exercise.exercise_id)).length;
+  const completedCount = countSessionCompleted(completedIds, session);
   const stretches = recommendedStretchKeys(session);
 
   return (
@@ -575,15 +581,17 @@ function WorkoutDetailModal({
           <View style={styles.detailPanel}>
             <Text style={styles.detailSectionTitle}>{t("plan.exercises")}</Text>
             {session.exercises.map((exercise) => {
-              const isDone = completedIds.includes(exercise.exercise_id);
-              const isCompleting = completingId === exercise.exercise_id;
+              const isDone = isExerciseComplete(completedIds, session.day_label, exercise.exercise_id);
+              const isCompleting = completingId === completionKey(session.day_label, exercise.exercise_id);
               return (
                 <View key={exercise.exercise_id} style={styles.detailExerciseCard}>
                   <View style={styles.detailExerciseHeader}>
                     <TouchableOpacity
                       style={[styles.exerciseCheck, isDone && styles.exerciseCheckDone]}
                       disabled={isCompleting}
-                      onPress={() => (isDone ? onUncompleteExercise(exercise) : onCompleteExercise(exercise))}
+                      onPress={() =>
+                isDone ? onUncompleteExercise(exercise, session.day_label) : onCompleteExercise(exercise, session.day_label)
+              }
                     >
                       {isCompleting ? (
                         <ActivityIndicator size="small" color={colors.coral} />
@@ -670,9 +678,7 @@ function PlanOverviewModal({
   if (!plan) return null;
 
   const totalSessions = plan.sessions.length;
-  const completedSessions = plan.sessions.filter((session) =>
-    session.exercises.every((exercise) => completedIds.includes(exercise.exercise_id))
-  ).length;
+  const completedSessions = plan.sessions.filter((session) => isSessionComplete(completedIds, session)).length;
   const overallProgress = totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0;
 
   return (
@@ -700,7 +706,7 @@ function PlanOverviewModal({
 
           <View style={styles.detailPanel}>
             {plan.sessions.map((session, index) => {
-              const doneCount = session.exercises.filter((exercise) => completedIds.includes(exercise.exercise_id)).length;
+              const doneCount = countSessionCompleted(completedIds, session);
               const isDone = session.exercises.length > 0 && doneCount === session.exercises.length;
               const isUpcoming = index >= visibleSessionCount;
               return (
@@ -738,7 +744,7 @@ function PlanOverviewModal({
 }
 
 export default function PlanScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { user } = useAuthStore();
   const {
@@ -789,8 +795,8 @@ export default function PlanScreen() {
 
   const todaySessionIndex = useMemo(() => {
     if (!plan?.sessions.length) return 0;
-    const nextIndex = plan.sessions.findIndex((session) =>
-      session.exercises.some((exercise) => !completedExerciseIds.includes(exercise.exercise_id))
+    const nextIndex = plan.sessions.findIndex(
+      (session) => !isSessionComplete(completedExerciseIds, session)
     );
     return nextIndex >= 0 ? nextIndex : 0;
   }, [plan?.sessions, completedExerciseIds]);
@@ -799,7 +805,7 @@ export default function PlanScreen() {
     if (!plan?.sessions.length) return 0;
     let leadingCompletedSessions = 0;
     for (const session of plan.sessions) {
-      if (!isSessionComplete(session, completedExerciseIds)) break;
+      if (!isSessionComplete(completedExerciseIds, session)) break;
       leadingCompletedSessions += 1;
     }
     const unlockedWeeks = Math.floor(leadingCompletedSessions / weekSize) + 1;
@@ -830,7 +836,7 @@ export default function PlanScreen() {
   const weeklyWorkedMuscles = useMemo(() => {
     const muscles = currentWeekSessions.flatMap((session) =>
       session.exercises
-        .filter((exercise) => completedExerciseIds.includes(exercise.exercise_id))
+        .filter((exercise) => isExerciseComplete(completedExerciseIds, session.day_label, exercise.exercise_id))
         .flatMap((exercise) => exercise.primary_muscles)
     );
     return normalizeMusclesToAvatarGroups(muscles);
@@ -872,14 +878,15 @@ export default function PlanScreen() {
     }
   };
 
-  const handleCompleteExercise = async (exercise: PlanExercise) => {
+  const handleCompleteExercise = async (exercise: PlanExercise, dayLabel: string) => {
     if (!user?.id) {
       setShowGuestPrompt(true);
       return;
     }
-    if (completedExerciseIds.includes(exercise.exercise_id) || completingId) return;
+    const key = completionKey(dayLabel, exercise.exercise_id);
+    if (completedExerciseIds.includes(key) || completingId) return;
 
-    setCompletingId(exercise.exercise_id);
+    setCompletingId(key);
     try {
       const deltas = await completeExercise(user.id, {
         slug: exercise.exercise_id,
@@ -887,7 +894,7 @@ export default function PlanScreen() {
         rawPrimaryMuscles: exercise.primary_muscles,
       });
 
-      markExerciseCompleted(exercise.exercise_id);
+      markExerciseCompleted(key);
 
       if (deltas.length > 0) {
         setSessionDeltas((prev) => [...prev, ...deltas]);
@@ -907,8 +914,8 @@ export default function PlanScreen() {
     }
   };
 
-  const handleUncompleteExercise = (exercise: PlanExercise) => {
-    unmarkExerciseCompleted(exercise.exercise_id);
+  const handleUncompleteExercise = (exercise: PlanExercise, dayLabel: string) => {
+    unmarkExerciseCompleted(completionKey(dayLabel, exercise.exercise_id));
     setSessionDeltas([]);
   };
 
@@ -928,7 +935,10 @@ export default function PlanScreen() {
       const guide = await apiFetch<ExerciseGuide>("/api/workout-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: exercise.name }),
+        body: JSON.stringify({
+          query: exercise.name,
+          language: i18n.language?.startsWith("es") ? "es" : "en",
+        }),
       }, 30000);
       if (guide?.found && guide.steps?.length) {
         setExerciseGuide(guide);
@@ -951,7 +961,10 @@ export default function PlanScreen() {
       const guide = await apiFetch<ExerciseGuide>("/api/workout-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: label }),
+        body: JSON.stringify({
+          query: label,
+          language: i18n.language?.startsWith("es") ? "es" : "en",
+        }),
       }, 30000);
       if (guide?.found && guide.steps?.length) {
         setExerciseGuide(guide);
@@ -965,7 +978,6 @@ export default function PlanScreen() {
 
   const handleSwapExercise = (exercise: PlanExercise, replacementName: string, scope: "today" | "permanent") => {
     if (!plan) return;
-    let replacementId: string | null = null;
     const updatedSessions = plan.sessions.map((session) => {
       const isSelectedSession = selectedSession?.day_label === session.day_label;
       if (scope === "today" && !isSelectedSession) return session;
@@ -978,9 +990,6 @@ export default function PlanScreen() {
               : item.exercise_id === exercise.exercise_id;
           if (!shouldReplace) return item;
           const nextId = `${item.exercise_id}-swap-${replacementName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-          if (item.exercise_id === exercise.exercise_id) {
-            replacementId = nextId;
-          }
           return {
             ...item,
             exercise_id: nextId,
@@ -992,10 +1001,18 @@ export default function PlanScreen() {
     });
     const nextPlan = { ...plan, sessions: updatedSessions };
     updatePlan(nextPlan);
-    if (replacementId && completedExerciseIds.includes(exercise.exercise_id)) {
-      unmarkExerciseCompleted(exercise.exercise_id);
-      markExerciseCompleted(replacementId);
-    }
+    // Carry completion across the swap for every session that actually changed.
+    plan.sessions.forEach((original, index) => {
+      const updated = updatedSessions[index];
+      original.exercises.forEach((item, exerciseIndex) => {
+        const replaced = updated.exercises[exerciseIndex];
+        if (!replaced || replaced.exercise_id === item.exercise_id) return;
+        const oldKey = completionKey(original.day_label, item.exercise_id);
+        if (!completedExerciseIds.includes(oldKey)) return;
+        unmarkExerciseCompleted(oldKey);
+        markExerciseCompleted(completionKey(updated.day_label, replaced.exercise_id));
+      });
+    });
     const nextSelected = updatedSessions.find((session) => session.day_label === selectedSession?.day_label) ?? null;
     setSelectedSession(nextSelected);
   };
@@ -1083,7 +1100,7 @@ export default function PlanScreen() {
               <View style={styles.timelineDots}>
                 {plan.sessions.map((session, index) => {
                   const isVisible = index < visibleSessionCount;
-                  const isDone = isSessionComplete(session, completedExerciseIds);
+                  const isDone = isSessionComplete(completedExerciseIds, session);
                   return (
                     <View
                       key={session.day_label}

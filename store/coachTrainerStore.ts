@@ -1,4 +1,5 @@
 import { normalizePlanTimeline } from "@/shared/planTimeline";
+import { migrateCompletionIds } from "@/shared/completionKeys";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { CoachMessage, CoachPlan, Units } from "@/lib/coachTrainer";
@@ -182,7 +183,10 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
         coachAvatar: saved.coachAvatar ?? null,
         hasEnteredCoachChat: saved.hasEnteredCoachChat === true,
         failedPrompt: typeof saved.failedPrompt === "string" ? saved.failedPrompt : null,
-        completedExerciseIds: Array.isArray(saved.completedExerciseIds) ? saved.completedExerciseIds : [],
+        completedExerciseIds: migrateCompletionIds(
+          normalizePlanTimeline(saved.plan ?? null)?.sessions,
+          Array.isArray(saved.completedExerciseIds) ? saved.completedExerciseIds : []
+        ),
         intakeHistory: Array.isArray(saved.intakeHistory) ? saved.intakeHistory : [],
         conversation: Array.isArray(saved.conversation) ? saved.conversation : [],
         hasLoaded: true,
