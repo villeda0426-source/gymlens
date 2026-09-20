@@ -6,6 +6,7 @@ type CoachResponseLike =
   | { status: "plan_updated" | "reply"; message?: string };
 import {
   buildIntakeMessages,
+  chatWithCoach,
   CoachClient,
   compactPlanForCoach,
   fallbackCoachResponse,
@@ -362,6 +363,32 @@ for (const error of [
 assert.equal(isCoachFallbackEligibleError(providerError({ status: 401, message: "invalid x-api-key" })), false);
 assert.equal(isCoachFallbackEligibleError(providerError({ status: 400, message: "bad request" })), false);
 
+// A depleted account cannot succeed on a second Anthropic model. Chat must
+// return its deterministic response after one attempt instead of surfacing 500.
+async function assertCreditExhaustionFallsBackWithoutRetry() {
+  let attempts = 0;
+  const depletedClient: CoachClient = {
+    messages: {
+      create: async () => {
+        attempts += 1;
+        throw providerError({
+          status: 400,
+          message: "Your credit balance is too low to access the Anthropic API.",
+        });
+      },
+    },
+  };
+
+  setCoachClientForTests(depletedClient);
+  try {
+    const response = await chatWithCoach("lbs", "Give me one short warmup tip.", null, undefined, "en");
+    assert.equal(response.status, "reply");
+    assert.equal(attempts, 1, "Credit exhaustion must not trigger a second paid provider attempt.");
+  } finally {
+    setCoachClientForTests(null);
+  }
+}
+
 // A timed-out attempt must abort the paid request and must not retry silently.
 async function assertTimeoutAbortsWithoutRetries() {
   const attempts: Array<{ model: string; maxRetries?: number; aborted: boolean }> = [];
@@ -661,6 +688,7 @@ async function assertRouteBoundaryKeepsSpanish() {
 
 // Sequential: both tests share the injected provider client.
 (async () => {
+  await assertCreditExhaustionFallsBackWithoutRetry();
   await assertTimeoutAbortsWithoutRetries();
   await assertMalformedCostsAtMostTwoAttempts();
   await assertRouteBoundaryKeepsSpanish();

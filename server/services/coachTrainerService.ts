@@ -415,6 +415,14 @@ function canUseStaticFallback(messages: CoachMessage[]): boolean {
   return rawContext.includes('"mode":"intake"') || rawContext.includes('"mode":"chat"');
 }
 
+function isAnthropicCreditExhausted(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error as { status?: unknown }).status === 400 &&
+    error.message.toLowerCase().includes("credit balance is too low")
+  );
+}
+
 const RECOVERABLE_PROVIDER_STATUSES = new Set([408, 409, 425, 429, 500, 502, 503, 504, 529]);
 
 /** Errors after which the deterministic plan should be served instead of an
@@ -487,6 +495,13 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
   try {
     return await run(messages, primaryModel, primaryTimeoutMs);
   } catch (error) {
+    // A depleted Anthropic balance affects every model. Intake and chat can
+    // degrade safely without paying for a second request that must also fail.
+    if (isAnthropicCreditExhausted(error)) {
+      console.error("[coach-trainer] Anthropic credits unavailable; using deterministic fallback.");
+      if (allowStaticFallback) return fallbackResponse;
+      throw error;
+    }
     if (!isRecoverableFormatError(error)) {
       throw error;
     }
