@@ -254,6 +254,6 @@ This is the strongest angle available right now because it's simultaneously rese
 ## Delivery And Sync Notes
 - **File saved:** `reports/reacher-daily-brief-2026-09-21.md`
 - **Git:** Committed and pushed to `main` branch of `villeda0426-source/gymlens`
-- **Email:** Sent to vd@villedasdelight.com via Gmail MCP — Subject: "Reacher Daily Brief - 2026-09-21 | CoachLift"
+- **Email:** NOT delivered — Gmail MCP lacks `gmail.send` OAuth scope, and `GMAIL_USER`/`GMAIL_APP_PASSWORD` environment variables are not set in this session. To enable email delivery: (1) reconnect Gmail at claude.ai with send permissions, or (2) set `GMAIL_USER` and `GMAIL_APP_PASSWORD` environment variables in the project's Railway/deployment settings.
 - **Research window:** Searches conducted 2026-09-21 ~11:15 UTC
-- **Delivery method:** Gmail MCP (mcp__Gmail__send_message)
+- **Delivery method:** Push notification sent to user; brief accessible via GitHub repo
