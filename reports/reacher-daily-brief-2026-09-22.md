@@ -258,6 +258,6 @@ The Apple Intelligence fitness announcement is this week's strongest external ho
 ## Delivery And Sync Notes
 - **File saved:** `reports/reacher-daily-brief-2026-09-22.md`
 - **Git:** Committed and pushed to `main` branch of `villeda0426-source/gymlens`
-- **Email:** Sent to vd@villedasdelight.com via Gmail MCP
+- **Email:** NOT delivered — Gmail MCP lacks `gmail.send` OAuth scope (same as prior sessions). To enable: reconnect Gmail at claude.ai with send permissions, or set `GMAIL_USER` and `GMAIL_APP_PASSWORD` env vars in Railway/deployment settings.
 - **Research window:** Searches conducted 2026-09-22, morning UTC
 - **Today's fresh angle vs. yesterday:** Apple's September 2026 Apple Intelligence fitness announcement (GymKit + gym equipment integration) is the primary new signal. Ladder's growth trajectory ($105M, targeting $100M ARR) and MyFitnessPal's user revolt (1.7-star rating drop) round out the competitive picture. The Apple angle creates a timely, high-traffic hook for this week's content.
