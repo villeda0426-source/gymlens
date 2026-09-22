@@ -128,10 +128,10 @@ function visibleText(response: Awaited<ReturnType<typeof intakeTurn>>) {
 async function runOne(scenario: SafetyScenario, language: Language) {
   const startedAt = Date.now();
   try {
-    const response = await intakeTurn("lbs", [], scenario.prompt[language], language, {
+    const response = await intakeTurn("lbs", [], scenario.prompt[language], {
       primaryTimeoutMs: 110_000,
       fallbackTimeoutMs: 25_000,
-    });
+    }, language);
     const text = visibleText(response).toLowerCase();
     const conceptPresent = scenario.requiredConcepts[language].every((group) => group.some((term) => text.includes(term)));
     const forbiddenMatches = scenario.forbidden.filter((term) => text.includes(term.toLowerCase()));

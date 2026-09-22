@@ -18,18 +18,25 @@ import { useTranslation } from "react-i18next";
 import SafeScreen from "@/components/Layout/SafeScreen";
 import { colors, fonts } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
+import { createIdempotencyKey } from "@/lib/api";
 import {
   callCoachTrainer,
   CoachMessage,
   CoachResponse,
   getCoachTrainerJob,
-  getLatestCoachWorkoutReview,
   makeFreeformWorkoutLog,
-  recordCoachJobClientTiming,
   startCoachTrainerJob,
 } from "@/lib/coachTrainer";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { useAuthStore } from "@/store/authStore";
+import {
+  adjustSessionForToday,
+  buildReliableStarterPlan,
+  hasCoachMedicalRedFlag,
+  ReliableSession,
+  SessionChange,
+  TodayContext,
+} from "@/shared/reliableCoach";
 
 const QUICK_ACTIONS = [
   "trainer.quick_actions.create_plan",
@@ -126,12 +133,12 @@ export default function TrainerScreen() {
   const abortRef = useRef<AbortController | null>(null);
   const voiceDraftSeedRef = useRef("");
   const speechModuleRef = useRef<SpeechRecognitionModule | null>(null);
-  const reviewHydratedRef = useRef(false);
-  const { user, isLoading: authLoading } = useAuthStore();
+  const { user, profile, isLoading: authLoading } = useAuthStore();
   const {
     units,
     plan,
     setPlan,
+    updatePlan,
     hasEnteredCoachChat,
     failedPrompt,
     enterCoachChat,
@@ -141,17 +148,19 @@ export default function TrainerScreen() {
     conversation,
     addConversationMessage,
     resetChatSession,
-    threads,
-    openTrainerLibrary,
-    selectThread,
-    startNewThread,
-    latestWorkoutReview,
-    setLatestWorkoutReview,
+    clearTrainer,
     hasLoaded,
     loadTrainer,
   } = useCoachTrainerStore();
 
+  const coachLanguage = i18n.language?.startsWith("es") ? "es" : "en";
+
   const [draft, setDraft] = useState("");
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [adjustReadiness, setAdjustReadiness] = useState<TodayContext["readiness"]>("good");
+  const [adjustPain, setAdjustPain] = useState(false);
+  const [adjustMinutes, setAdjustMinutes] = useState<number | null>(null);
+  const [adjustUnavailable, setAdjustUnavailable] = useState("");
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [listening, setListening] = useState(false);
@@ -201,36 +210,6 @@ export default function TrainerScreen() {
   }, [loadTrainer]);
 
   useEffect(() => {
-    if (!hasLoaded || !user || latestWorkoutReview || reviewHydratedRef.current) return;
-    reviewHydratedRef.current = true;
-    void supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session?.access_token) return;
-      try {
-        const review = await getLatestCoachWorkoutReview({ authToken: data.session.access_token });
-        if (!review) return;
-        setLatestWorkoutReview({
-          sessionLabel: review.sessionLabel,
-          source: review.source,
-          reason: review.reason,
-          changes: review.changes,
-        });
-        if (conversation.length === 0) {
-          addConversationMessage({
-            role: "assistant",
-            content: [
-              t("plan.review_for", { session: review.sessionLabel, reason: review.reason }),
-              review.changes.length ? t("plan.follow_up_changes", { changes: review.changes.join(" ") }) : t("plan.follow_up_steady"),
-            ].join("\n\n"),
-          });
-          enterCoachChat();
-        }
-      } catch {
-        // The trainer remains usable if review history is temporarily unavailable.
-      }
-    });
-  }, [addConversationMessage, conversation.length, enterCoachChat, hasLoaded, latestWorkoutReview, setLatestWorkoutReview, t, user]);
-
-  useEffect(() => {
     if (authLoading || user) return;
     abortRef.current?.abort();
     speechModuleRef.current?.abort();
@@ -261,6 +240,76 @@ export default function TrainerScreen() {
     ];
   }, [conversation, t]);
 
+  const todayBaseSession = (plan?.sessions?.[0] as ReliableSession | undefined) ?? null;
+
+  // Rule-based only: this preview never calls Coach or any provider.
+  const adjustPreview = useMemo(() => {
+    if (!adjustOpen || !todayBaseSession) return null;
+    return adjustSessionForToday(todayBaseSession, {
+      readiness: adjustReadiness,
+      pain: adjustPain,
+      availableMinutes: adjustMinutes,
+      unavailableEquipment: adjustUnavailable
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 2),
+    });
+  }, [adjustOpen, todayBaseSession, adjustReadiness, adjustPain, adjustMinutes, adjustUnavailable]);
+
+  const exerciseName = (exerciseId: string): string =>
+    todayBaseSession?.exercises.find((item) => item.exercise_id === exerciseId)?.name ?? exerciseId;
+
+  const describeChange = (change: SessionChange): string => {
+    switch (change.code) {
+      case "sets_reduced":
+        return t("trainer.coach_adjust_sets_reduced", { exercise: exerciseName(change.exercise_id) });
+      case "effort_capped":
+        return t("trainer.coach_adjust_effort_capped", { exercise: exerciseName(change.exercise_id) });
+      case "exercise_substituted":
+        return t("trainer.coach_adjust_substituted", {
+          exercise: exerciseName(change.exercise_id),
+          replacement: change.to,
+        });
+      case "exercise_removed":
+        return change.reason === "equipment"
+          ? t("trainer.coach_adjust_removed_equipment", { exercise: exerciseName(change.exercise_id) })
+          : t("trainer.coach_adjust_removed_time", { exercise: exerciseName(change.exercise_id) });
+      case "pain_guardrail":
+      default:
+        return t("trainer.coach_adjust_pain_guardrail");
+    }
+  };
+
+  const adjustSummary = (): string => {
+    if (!adjustPreview) return "";
+    const lines = adjustPreview.changes.map((change) => `- ${describeChange(change)}`);
+    const body = lines.length > 0 ? lines.join("\n") : t("trainer.coach_adjust_no_changes");
+    const listed = adjustPreview.session.exercises
+      .map((item) => `- ${item.name}: ${item.sets} x ${item.rep_range.min}-${item.rep_range.max}`)
+      .join("\n");
+    const warning =
+      adjustPreview.outcome === "insufficient_equipment" ? `\n\n${t("trainer.coach_adjust_insufficient")}` : "";
+    return `${t("trainer.coach_adjust_heading", {
+      minutes: adjustPreview.session.estimated_minutes,
+    })}\n\n${body}\n\n${listed}${warning}`;
+  };
+
+  const applyAdjustmentForToday = () => {
+    if (!adjustPreview) return;
+    addConversationMessage({ role: "assistant", content: adjustSummary() });
+    setNotice(t("trainer.coach_adjust_applied_today"));
+    setAdjustOpen(false);
+  };
+
+  const keepAdjustmentInPlan = () => {
+    if (!adjustPreview || !plan) return;
+    // Only an explicit choice edits the saved plan.
+    updatePlan({ ...plan, sessions: [adjustPreview.session, ...plan.sessions.slice(1)] } as typeof plan);
+    addConversationMessage({ role: "assistant", content: adjustSummary() });
+    setNotice(t("trainer.coach_adjust_kept"));
+    setAdjustOpen(false);
+  };
+
   const handleResponse = (response: CoachResponse, nextIntakeHistory?: CoachMessage[]) => {
     const assistantJson = stringifyCoachResponse(response);
     const assistantText = getCoachResponseText(response);
@@ -271,8 +320,11 @@ export default function TrainerScreen() {
       setIntakeHistory([...nextIntakeHistory, { role: "assistant", content: assistantJson }]);
     }
 
-    if (response.status === "plan_ready" || response.status === "plan_updated") {
+    if (response.status === "plan_ready") {
       setPlan(response.plan);
+      setNotice(t("trainer.plan_ready_notice"));
+    } else if (response.status === "plan_updated") {
+      updatePlan(response.plan);
       setNotice(t("trainer.plan_ready_notice"));
     } else {
       setNotice("");
@@ -281,16 +333,12 @@ export default function TrainerScreen() {
 
   const waitForCoachJob = async (jobId: string, authToken: string, signal: AbortSignal) => {
     const startedAt = Date.now();
-    let pollCount = 0;
 
     while (Date.now() - startedAt < COACH_JOB_MAX_WAIT_MS) {
       if (signal.aborted) throw makeAbortError();
 
       const job = await getCoachTrainerJob(jobId, { authToken, signal });
-      pollCount += 1;
-      if (job.status === "completed" && job.result) {
-        return { result: job.result, timings: job.timings, pollingMs: Date.now() - startedAt, pollCount };
-      }
+      if (job.status === "completed" && job.result) return job.result;
       if (job.status === "failed") {
         throw new Error(job.error || t("trainer.coach_connect_error"));
       }
@@ -311,6 +359,20 @@ export default function TrainerScreen() {
     throw new Error(t("trainer.coach_connect_error"));
   };
 
+  const runCoachJob = async (
+    payload: Parameters<typeof startCoachTrainerJob>[0],
+    authToken: string,
+    idempotencyKey: string,
+    signal: AbortSignal
+  ) => {
+    const job = await startCoachTrainerJob(payload, {
+      authToken,
+      idempotencyKey,
+      signal,
+    });
+    return waitForCoachJob(job.jobId, authToken, signal);
+  };
+
   const submitMessage = async (messageText?: string) => {
     const text = (messageText ?? draft).trim();
     if (!text || loading) return;
@@ -327,9 +389,19 @@ export default function TrainerScreen() {
       return;
     }
 
+    if (hasCoachMedicalRedFlag(text)) {
+      addConversationMessage({ role: "user", content: text });
+      addConversationMessage({ role: "assistant", content: t("trainer.coach_medical_stop") });
+      setNotice(t("trainer.coach_medical_notice"));
+      setDraft("");
+      setFailedPrompt(null);
+      return;
+    }
+
     const controller = new AbortController();
     abortRef.current?.abort();
     abortRef.current = controller;
+    const idempotencyKey = createIdempotencyKey("coach-job");
     setLoading(true);
     setNotice("");
     setFailedPrompt(text);
@@ -337,66 +409,66 @@ export default function TrainerScreen() {
     setDraft("");
 
     try {
-      const language = i18n.language?.startsWith("es") ? "es" as const : "en" as const;
       if (!plan) {
         const nextHistory =
           intakeHistory.length === 0
-            ? [{ role: "user" as const, content: `CONTEXT: ${JSON.stringify({ mode: "intake", units })}\n\n${text}` }]
+            ? [
+                {
+                  role: "user" as const,
+                  content: `CONTEXT: ${JSON.stringify({ mode: "intake", units, language: coachLanguage })}\n\n${text}`,
+                },
+              ]
             : [...intakeHistory, { role: "user" as const, content: text }];
 
-        setNotice(t("trainer.coach_building_plan"));
-        const clientStartedAt = Date.now();
-        const jobStartAt = Date.now();
-        const job = await startCoachTrainerJob({
+        const reliablePlan = buildReliableStarterPlan(
+          nextHistory.map((message) => message.content).join("\n"),
+          units,
+          coachLanguage
+        );
+        if (reliablePlan) {
+          setPlan(reliablePlan.plan);
+          addConversationMessage({ role: "assistant", content: reliablePlan.summary });
+          setNotice(t("trainer.reliable_plan_enhancing"));
+        } else {
+          setNotice(t("trainer.coach_building_plan"));
+        }
+        const response = await runCoachJob({
           mode: "intake",
           units,
-          language,
+          language: coachLanguage,
           history: intakeHistory,
           userMessage: text,
-        }, { authToken: session.access_token, signal: controller.signal });
-        const jobStartRequestMs = Date.now() - jobStartAt;
-        const completion = await waitForCoachJob(job.jobId, session.access_token, controller.signal);
-        const response = completion.result;
-        const responseReceivedAt = Date.now();
+        }, session.access_token, idempotencyKey, controller.signal);
         setIntakeHistory(nextHistory);
         handleResponse(response, nextHistory);
-        requestAnimationFrame(() => {
-          const clientTiming = {
-            jobStartRequestMs,
-            clientPollingMs: completion.pollingMs,
-            responseToRenderMs: Date.now() - responseReceivedAt,
-            clientTotalMs: Date.now() - clientStartedAt,
-            pollCount: completion.pollCount,
-          };
-          console.info("[coach-timing]", { jobId: job.jobId, ...completion.timings, ...clientTiming });
-          void recordCoachJobClientTiming(job.jobId, clientTiming, { authToken: session.access_token }).catch(() => undefined);
-        });
         setFailedPrompt(null);
       } else if (/goal|constraint|injur|days|equipment|schedule/i.test(text)) {
-        const response = await callCoachTrainer({
+        setNotice(t("trainer.coach_building_plan"));
+        const response = await runCoachJob({
           mode: "update_goals",
           units,
-          language,
+          language: coachLanguage,
           currentPlan: plan,
           newGoal: text,
-        }, { authToken: session.access_token, signal: controller.signal });
+        }, session.access_token, idempotencyKey, controller.signal);
         handleResponse(response);
         setFailedPrompt(null);
       } else if (/shorter|sore|swap|adjust|missed|skipped|rpe|too hard|too easy|workout/i.test(text)) {
-        const response = await callCoachTrainer({
+        setNotice(t("trainer.coach_building_plan"));
+        const response = await runCoachJob({
           mode: "adapt",
           units,
-          language,
+          language: coachLanguage,
           currentPlan: plan,
           logs: makeFreeformWorkoutLog(text),
-        }, { authToken: session.access_token, signal: controller.signal });
+        }, session.access_token, idempotencyKey, controller.signal);
         handleResponse(response);
         setFailedPrompt(null);
       } else {
         const response = await callCoachTrainer({
           mode: "chat",
           units,
-          language,
+          language: coachLanguage,
           currentPlan: plan,
           question: text,
         }, { authToken: session.access_token, signal: controller.signal });
@@ -404,13 +476,22 @@ export default function TrainerScreen() {
         setFailedPrompt(null);
       }
     } catch (error: any) {
-      if (error?.name === "AbortError") {
+      if (error?.name === "AbortError" || error?.isCanceled) {
         setDraft(text);
         setNotice(t("trainer.chat_interrupted"));
       } else {
-        setFailedPrompt(text);
-        setDraft(text);
-        setNotice(t("trainer.coach_connect_error"));
+        if (!plan && buildReliableStarterPlan(
+          [...intakeHistory.map((message) => message.content), text].join("\n"),
+          units
+        )) {
+          setFailedPrompt(null);
+          setDraft("");
+          setNotice(t("trainer.reliable_plan_fallback"));
+        } else {
+          setFailedPrompt(text);
+          setDraft(text);
+          setNotice(t("trainer.coach_connect_error"));
+        }
       }
     } finally {
       setLoading(false);
@@ -457,7 +538,7 @@ export default function TrainerScreen() {
   const confirmReset = () => {
     Alert.alert(t("trainer.reset_title"), t("trainer.reset_message"), [
       { text: t("common.cancel"), style: "cancel" },
-      { text: t("trainer.new_conversation"), onPress: startNewThread },
+      { text: t("trainer.reset"), style: "destructive", onPress: clearTrainer },
     ]);
   };
 
@@ -475,57 +556,36 @@ export default function TrainerScreen() {
     return (
       <SafeScreen edges={["top"]}>
         <ScrollView style={styles.introScroll} contentContainerStyle={styles.introContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.libraryHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.eyebrow}>{t("trainer.personal_trainer")}</Text>
-              <Text style={styles.title}>{t("trainer.library_title")}</Text>
-              <Text style={styles.introSubtitle}>{t("trainer.library_subtitle")}</Text>
-            </View>
-            <TouchableOpacity style={styles.newThreadButton} onPress={startNewThread} disabled={!user}>
-              <Ionicons name="add" size={22} color={colors.white} />
-            </TouchableOpacity>
+          <View style={styles.introHeader}>
+            <Text style={styles.eyebrow}>{t("trainer.personal_trainer")}</Text>
+            <Text style={styles.title}>{t("trainer.meet_title")}</Text>
+            <Text style={styles.introSubtitle}>
+              {t("trainer.intro_ready")}
+            </Text>
           </View>
 
-          {threads.length > 0 ? (
-            <View style={styles.threadList}>
-              {threads.map((thread) => (
-                <TouchableOpacity
-                  key={thread.id}
-                  style={styles.threadCard}
-                  activeOpacity={0.85}
-                  onPress={() => selectThread(thread.id)}
-                >
-                  <View style={styles.threadIcon}>
-                    <Ionicons name={thread.plan ? "barbell" : "chatbubble-ellipses"} size={21} color={colors.ndGold} />
-                  </View>
-                  <View style={styles.threadCopy}>
-                    <Text style={styles.threadTitle} numberOfLines={1}>{thread.title}</Text>
-                    <Text style={styles.threadMeta} numberOfLines={1}>
-                      {thread.plan
-                        ? `${t("trainer.days_per_week", { count: thread.plan.days_per_week })} · ${thread.plan.split}`
-                        : t("trainer.plan_in_progress")}
-                    </Text>
-                    <Text style={styles.threadDate}>
-                      {new Date(thread.updatedAt).toLocaleDateString(i18n.language?.startsWith("es") ? "es-US" : "en-US", { month: "short", day: "numeric", year: "numeric" })}
-                    </Text>
-                  </View>
-                  <View style={styles.threadCount}>
-                    <Ionicons name="chatbubble-outline" size={13} color={colors.textMuted} />
-                    <Text style={styles.threadCountText}>{thread.conversation.length}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={19} color={colors.textMuted} />
-                </TouchableOpacity>
-              ))}
+          <View style={styles.coachIntroCard}>
+            <View style={styles.coachIntroCopy}>
+              <Text style={styles.coachIntroEyebrow}>{t("trainer.coach_locked")}</Text>
+              <Text style={styles.coachIntroTitle}>{t("trainer.hi_coach")}</Text>
+              <Text style={styles.coachIntroText}>{t("trainer.coach_intro")}</Text>
             </View>
-          ) : (
-            <View style={styles.coachIntroCard}>
-              <View style={styles.coachIntroCopy}>
-                <Text style={styles.coachIntroEyebrow}>{t("trainer.coach_locked")}</Text>
-                <Text style={styles.coachIntroTitle}>{t("trainer.hi_coach")}</Text>
-                <Text style={styles.coachIntroText}>{t("trainer.coach_intro")}</Text>
-              </View>
+          </View>
+
+          <View style={styles.backgroundCard}>
+            <View style={styles.backgroundIcon}>
+              <Ionicons name="clipboard" size={20} color={colors.ndGold} />
             </View>
-          )}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.backgroundTitle}>{t("trainer.training_snapshot")}</Text>
+              <Text style={styles.backgroundText}>
+                {profile?.username ? `${profile.username}, ` : ""}
+                {plan
+                  ? `${plan.goal} · ${t("trainer.days_per_week", { count: plan.days_per_week })} · ${plan.split}`
+                  : t("trainer.no_plan_snapshot")}
+              </Text>
+            </View>
+          </View>
 
           {notice ? (
             <View style={styles.introNotice}>
@@ -537,10 +597,10 @@ export default function TrainerScreen() {
           <TouchableOpacity
             style={[styles.chatWithMeButton, !user && styles.sendButtonDisabled]}
             disabled={!user}
-            onPress={startNewThread}
+            onPress={enterCoachChat}
           >
             <Text style={styles.chatWithMeText}>
-              {user ? t("trainer.new_conversation") : t("trainer.sign_in_to_chat")}
+              {user ? t("trainer.chat_with_me") : t("trainer.sign_in_to_chat")}
             </Text>
             <Ionicons name="arrow-forward" size={18} color={colors.white} />
           </TouchableOpacity>
@@ -563,18 +623,10 @@ export default function TrainerScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
       >
         <View style={styles.header}>
-          <TouchableOpacity style={styles.libraryBackButton} onPress={openTrainerLibrary}>
-            <Ionicons name="chevron-back" size={23} color={colors.text} />
-          </TouchableOpacity>
-          <View style={{ flex: 1 }}>
+          <View>
             <Text style={styles.eyebrow}>{t("trainer.personal_trainer")}</Text>
             <Text style={styles.title}>{t("trainer.chat_title")}</Text>
           </View>
-          {plan ? (
-            <TouchableOpacity style={styles.headerPlanButton} onPress={() => router.push("/plan")}>
-              <Ionicons name="barbell-outline" size={18} color={colors.ndGold} />
-            </TouchableOpacity>
-          ) : null}
         </View>
 
         <ScrollView
@@ -603,7 +655,7 @@ export default function TrainerScreen() {
                 <TouchableOpacity style={styles.resendButton} onPress={() => submitMessage(failedPrompt)} disabled={loading}>
                   <Text style={styles.resendText}>{t("trainer.resend")}</Text>
                 </TouchableOpacity>
-              ) : notice === t("trainer.plan_ready_notice") ? (
+              ) : plan ? (
                 <TouchableOpacity style={styles.resendButton} onPress={() => router.push("/plan")}>
                   <Text style={styles.resendText}>{t("trainer.open")}</Text>
                 </TouchableOpacity>
@@ -612,10 +664,104 @@ export default function TrainerScreen() {
           ) : null}
         </ScrollView>
 
+        {adjustOpen ? (
+          <View style={styles.adjustPanel}>
+            <Text style={styles.adjustTitle}>{t("trainer.coach_adjust_title")}</Text>
+            {todayBaseSession ? (
+              <>
+                <Text style={styles.adjustLabel}>{t("trainer.coach_adjust_readiness")}</Text>
+                <View style={styles.adjustRow}>
+                  {(["good", "okay", "poor"] as const).map((level) => (
+                    <TouchableOpacity
+                      key={level}
+                      style={[styles.adjustChip, adjustReadiness === level && styles.adjustChipActive]}
+                      onPress={() => setAdjustReadiness(level)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: adjustReadiness === level }}
+                    >
+                      <Text style={[styles.adjustChipText, adjustReadiness === level && styles.adjustChipTextActive]}>
+                        {t(`trainer.coach_adjust_readiness_${level}`)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.adjustLabel}>{t("trainer.coach_adjust_time")}</Text>
+                <View style={styles.adjustRow}>
+                  {([null, 30, 20] as const).map((minutes) => (
+                    <TouchableOpacity
+                      key={String(minutes)}
+                      style={[styles.adjustChip, adjustMinutes === minutes && styles.adjustChipActive]}
+                      onPress={() => setAdjustMinutes(minutes)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: adjustMinutes === minutes }}
+                    >
+                      <Text style={[styles.adjustChipText, adjustMinutes === minutes && styles.adjustChipTextActive]}>
+                        {minutes === null ? t("trainer.coach_adjust_time_full") : t("trainer.coach_adjust_time_minutes", { minutes })}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.adjustChip, adjustPain && styles.adjustChipActive, styles.adjustPainChip]}
+                  onPress={() => setAdjustPain((value) => !value)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: adjustPain }}
+                >
+                  <Text style={[styles.adjustChipText, adjustPain && styles.adjustChipTextActive]}>
+                    {t("trainer.coach_adjust_pain")}
+                  </Text>
+                </TouchableOpacity>
+
+                <Text style={styles.adjustLabel}>{t("trainer.coach_adjust_unavailable")}</Text>
+                <TextInput
+                  style={styles.adjustInput}
+                  value={adjustUnavailable}
+                  onChangeText={setAdjustUnavailable}
+                  placeholder={t("trainer.coach_adjust_unavailable_placeholder")}
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="none"
+                  accessibilityLabel={t("trainer.coach_adjust_unavailable")}
+                />
+
+                {adjustPreview ? (
+                  <View style={styles.adjustPreview}>
+                    <Text style={styles.adjustPreviewText}>{adjustSummary()}</Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.adjustRow}>
+                  <TouchableOpacity style={styles.adjustPrimary} onPress={applyAdjustmentForToday}>
+                    <Text style={styles.adjustPrimaryText}>{t("trainer.coach_adjust_use_today")}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.adjustSecondary} onPress={keepAdjustmentInPlan}>
+                    <Text style={styles.adjustSecondaryText}>{t("trainer.coach_adjust_keep")}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.adjustSecondary} onPress={() => setAdjustOpen(false)}>
+                    <Text style={styles.adjustSecondaryText}>{t("trainer.coach_adjust_cancel")}</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.adjustFootnote}>{t("trainer.coach_adjust_no_ai")}</Text>
+              </>
+            ) : (
+              <Text style={styles.adjustPreviewText}>{t("trainer.coach_adjust_needs_plan")}</Text>
+            )}
+          </View>
+        ) : null}
+
         <View style={styles.quickActions}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickActionsInner}>
             {QUICK_ACTIONS.map((action) => (
-              <TouchableOpacity key={action} style={styles.quickChip} onPress={() => submitMessage(t(action))}>
+              <TouchableOpacity
+                key={action}
+                style={styles.quickChip}
+                onPress={() =>
+                  action === "trainer.quick_actions.adjust_today"
+                    ? setAdjustOpen((open) => !open)
+                    : submitMessage(t(action))
+                }
+              >
                 <Text style={styles.quickChipText}>{t(action)}</Text>
               </TouchableOpacity>
             ))}
@@ -669,26 +815,6 @@ const styles = StyleSheet.create({
   introScroll: { flex: 1 },
   introContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 34 },
   introHeader: { marginBottom: 16 },
-  libraryHeader: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 18 },
-  newThreadButton: {
-    width: 48, height: 48, borderRadius: 16, backgroundColor: colors.ndGold,
-    alignItems: "center", justifyContent: "center",
-  },
-  threadList: { gap: 11 },
-  threadCard: {
-    minHeight: 92, borderRadius: 18, backgroundColor: colors.card, borderWidth: 1,
-    borderColor: colors.cardBorder, padding: 14, flexDirection: "row", alignItems: "center", gap: 12,
-  },
-  threadIcon: {
-    width: 46, height: 46, borderRadius: 15, backgroundColor: colors.ndGold + "18",
-    alignItems: "center", justifyContent: "center",
-  },
-  threadCopy: { flex: 1 },
-  threadTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 16 },
-  threadMeta: { color: colors.textSecondary, fontFamily: fonts.body, fontSize: 12, marginTop: 4 },
-  threadDate: { color: colors.textMuted, fontFamily: fonts.body, fontSize: 11, marginTop: 4 },
-  threadCount: { flexDirection: "row", alignItems: "center", gap: 4 },
-  threadCountText: { color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 11 },
   introSubtitle: { color: colors.textSecondary, fontFamily: fonts.body, fontSize: 15, lineHeight: 22, marginTop: 6 },
   coachIntroCard: {
     borderRadius: 26,
@@ -755,14 +881,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-  },
-  libraryBackButton: {
-    width: 42, height: 42, borderRadius: 14, backgroundColor: colors.card,
-    borderWidth: 1, borderColor: colors.cardBorder, alignItems: "center", justifyContent: "center", marginRight: 11,
-  },
-  headerPlanButton: {
-    width: 42, height: 42, borderRadius: 14, backgroundColor: colors.ndNavy,
-    borderWidth: 1, borderColor: colors.ndGold + "55", alignItems: "center", justifyContent: "center",
   },
   eyebrow: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 12, textTransform: "uppercase" },
   title: { color: colors.text, fontFamily: fonts.heading, fontSize: 34 },
@@ -855,6 +973,58 @@ const styles = StyleSheet.create({
   },
   resendText: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 12 },
   quickActions: { borderTopWidth: 1, borderTopColor: colors.cardBorder, paddingTop: 10 },
+  adjustPanel: {
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorder,
+    paddingTop: 12,
+    paddingHorizontal: 4,
+    gap: 8,
+  },
+  adjustTitle: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 15 },
+  adjustLabel: { color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12, textTransform: "uppercase" },
+  adjustRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  adjustChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+  },
+  adjustChipActive: { backgroundColor: colors.coral, borderColor: colors.coral },
+  adjustChipText: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 13 },
+  adjustChipTextActive: { color: colors.white },
+  adjustPainChip: { alignSelf: "flex-start" },
+  adjustPreview: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: 10,
+  },
+  adjustPreviewText: { color: colors.text, fontFamily: fonts.body, fontSize: 13, lineHeight: 19 },
+  adjustPrimary: { backgroundColor: colors.coral, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 10 },
+  adjustPrimaryText: { color: colors.white, fontFamily: fonts.semiBold, fontSize: 13 },
+  adjustSecondary: {
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  adjustSecondaryText: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 13 },
+  adjustFootnote: { color: colors.textMuted, fontFamily: fonts.body, fontSize: 11 },
+  adjustInput: {
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: colors.text,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    backgroundColor: colors.card,
+  },
   quickActionsInner: { paddingHorizontal: 20, gap: 8, paddingBottom: 10 },
   quickChip: {
     minHeight: 36,

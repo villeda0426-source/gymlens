@@ -7,8 +7,9 @@
     "strict": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "rootDir": "..",
     "outDir": "../dist-server"
   },
-  "include": ["./**/*.ts", "../lib/ai.ts", "../lib/youtube.ts", "../lib/coachingEngine.ts"],
+  "include": ["./**/*.ts", "../lib/anthropic.ts", "../lib/youtube.ts", "../shared/**/*.ts"],
   "exclude": ["../node_modules"]
 }

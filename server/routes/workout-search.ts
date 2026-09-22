@@ -1,9 +1,7 @@
 import { Router, Request, Response } from "express";
 import { createStructuredResponse, OPENAI_DEFAULT_MODEL } from "../services/openaiService";
 
-const router = Router();
-
-type WorkoutGuide = {
+export type WorkoutGuide = {
   exercise: string;
   targetMuscles: string[];
   steps: string[];
@@ -11,19 +9,26 @@ type WorkoutGuide = {
   found: boolean;
 };
 
+type Language = "en" | "es";
+export type WorkoutGuideGenerator = (query: string, language: Language) => Promise<WorkoutGuide>;
+
 const WORKOUT_MODEL = process.env.OPENAI_WORKOUT_MODEL || OPENAI_DEFAULT_MODEL;
+const parsedWorkoutTimeout = Number.parseInt(process.env.OPENAI_WORKOUT_TIMEOUT_MS || "25000", 10);
+const WORKOUT_TIMEOUT_MS = Number.isFinite(parsedWorkoutTimeout) && parsedWorkoutTimeout > 0
+  ? Math.min(parsedWorkoutTimeout, 25000)
+  : 25000;
 
 const MUSCLE_HINTS: Array<{ pattern: RegExp; muscles: string[] }> = [
-  { pattern: /bench|push[- ]?up|chest|fly|press/i, muscles: ["Chest", "Shoulders", "Triceps"] },
-  { pattern: /row|pull[- ]?up|pulldown|lat|deadlift/i, muscles: ["Back", "Biceps", "Core"] },
-  { pattern: /curl|bicep/i, muscles: ["Biceps"] },
-  { pattern: /tricep|dip|extension|pushdown/i, muscles: ["Triceps"] },
-  { pattern: /squat|lunge|leg press|quad/i, muscles: ["Quads", "Glutes", "Hamstrings"] },
-  { pattern: /hinge|romanian|rdl|hamstring/i, muscles: ["Hamstrings", "Glutes", "Back"] },
-  { pattern: /hip thrust|glute|bridge/i, muscles: ["Glutes", "Hamstrings"] },
-  { pattern: /calf/i, muscles: ["Calves"] },
-  { pattern: /plank|crunch|sit[- ]?up|core|ab|oblique/i, muscles: ["Core"] },
-  { pattern: /shoulder|overhead|lateral raise|front raise|rear delt/i, muscles: ["Shoulders", "Triceps"] },
+  { pattern: /bench|push[- ]?up|chest|fly|press|pecho|flexiones|aperturas/i, muscles: ["Chest", "Shoulders", "Triceps"] },
+  { pattern: /row|pull[- ]?up|pulldown|lat|deadlift|remo|dominadas|jal[oó]n|peso muerto/i, muscles: ["Back", "Biceps", "Core"] },
+  { pattern: /curl|b[ií]cep/i, muscles: ["Biceps"] },
+  { pattern: /tr[ií]cep|dip|fondo|extensi[oó]n|pushdown/i, muscles: ["Triceps"] },
+  { pattern: /squat|lunge|leg press|quad|sentadilla|zancada|prensa de piernas|cu[aá]driceps/i, muscles: ["Quads", "Glutes", "Hamstrings"] },
+  { pattern: /hinge|romanian|rdl|hamstring|bisagra|rumano|isquiotibial/i, muscles: ["Hamstrings", "Glutes", "Back"] },
+  { pattern: /hip thrust|glute|bridge|empuje de cadera|gl[uú]teo|puente/i, muscles: ["Glutes", "Hamstrings"] },
+  { pattern: /calf|pantorrilla|gemelo/i, muscles: ["Calves"] },
+  { pattern: /plank|crunch|sit[- ]?up|core|ab|oblique|plancha|abdominal|oblicuo/i, muscles: ["Core"] },
+  { pattern: /shoulder|overhead|lateral raise|front raise|rear delt|hombro|press militar|elevaci[oó]n lateral/i, muscles: ["Shoulders", "Triceps"] },
 ];
 
 function titleCase(value: string): string {
@@ -40,11 +45,31 @@ function inferMuscles(query: string): string[] {
   return ["Full Body"];
 }
 
-function fallbackWorkoutGuide(query: string, language: "en" | "es"): WorkoutGuide {
+const SPANISH_MUSCLES: Record<string, string> = {
+  Chest: "Pecho",
+  Shoulders: "Hombros",
+  Triceps: "Tríceps",
+  Back: "Espalda",
+  Biceps: "Bíceps",
+  Quads: "Cuádriceps",
+  Glutes: "Glúteos",
+  Hamstrings: "Isquiotibiales",
+  Calves: "Pantorrillas",
+  Core: "Core",
+  "Full Body": "Cuerpo completo",
+};
+
+function inferLocalizedMuscles(query: string, language: Language): string[] {
+  const muscles = inferMuscles(query);
+  if (language === "en") return muscles;
+  return muscles.map((muscle) => SPANISH_MUSCLES[muscle] || muscle);
+}
+
+export function fallbackWorkoutGuide(query: string, language: Language): WorkoutGuide {
   const exercise = titleCase(query);
   return {
     exercise,
-    targetMuscles: inferMuscles(query),
+    targetMuscles: inferLocalizedMuscles(query, language),
     found: true,
     steps: language === "es" ? [
       `Prepárate para ${exercise} con una postura estable y respiración controlada.`,
@@ -69,8 +94,8 @@ function fallbackWorkoutGuide(query: string, language: "en" | "es"): WorkoutGuid
   };
 }
 
-async function getWorkoutGuide(query: string, language: "en" | "es"): Promise<WorkoutGuide> {
-  return createStructuredResponse<WorkoutGuide>({
+export const generateWorkoutGuide: WorkoutGuideGenerator = async (query, language) =>
+  createStructuredResponse<WorkoutGuide>({
     model: WORKOUT_MODEL,
     instructions:
       `You are a certified strength coach writing a quick gym-floor exercise guide. If the query is not a real exercise or is too vague to answer safely, set found to false and keep arrays empty. For real exercises, use concise beginner-friendly steps and conservative safety tips. Do not diagnose or treat medical conditions. Write every user-facing value in ${language === "es" ? "neutral Latin American Spanish" : "English"}.`,
@@ -89,35 +114,58 @@ async function getWorkoutGuide(query: string, language: "en" | "es"): Promise<Wo
       },
     },
     maxOutputTokens: 900,
-    timeoutMs: 30000,
+    // The shipped clients wait 30 seconds. Leave enough time for the server to
+    // return the deterministic fallback before their request controller aborts.
+    timeoutMs: WORKOUT_TIMEOUT_MS,
+    telemetryFeature: "workout_search",
   });
-}
 
-router.post("/", async (req: Request, res: Response) => {
+export async function resolveWorkoutSearch(
+  query: string,
+  language: Language,
+  generator: WorkoutGuideGenerator = generateWorkoutGuide
+): Promise<{ status: number; body: WorkoutGuide | { error: string } }> {
   try {
-    const query = typeof req.body?.query === "string" ? req.body.query.trim() : "";
-    const language = req.body?.language === "es" ? "es" : "en";
+    const guide = await generator(query, language);
 
-    if (!query) {
-      return res.status(400).json({ error: "Enter an exercise name to search." });
+    if (!guide.found || !guide.exercise || guide.steps.length === 0) {
+      return {
+        status: 404,
+        body: {
+          error: language === "es"
+            ? "No pude encontrar una guía confiable para ese ejercicio. Prueba con un nombre más específico."
+            : "I couldn't find a reliable how-to guide for that workout. Try a more specific exercise name.",
+        },
+      };
     }
 
-    const guide = await getWorkoutGuide(query, language);
+    return { status: 200, body: guide };
+  } catch (error: any) {
+    console.error("[workout-search] OpenAI error; using deterministic fallback:", error.message ?? error);
+    return { status: 200, body: fallbackWorkoutGuide(query, language) };
+  }
+}
 
-    if (!guide || !guide.found || !guide.exercise || guide.steps.length === 0) {
-      return res.status(404).json({
-        error: "I couldn't find a reliable how-to guide for that workout. Try a more specific exercise name.",
+export function createWorkoutSearchRouter(generator: WorkoutGuideGenerator = generateWorkoutGuide) {
+  const router = Router();
+
+  router.post("/", async (req: Request, res: Response) => {
+    const query = typeof req.body?.query === "string" ? req.body.query.trim() : "";
+    const language: Language = req.body?.language === "es" ? "es" : "en";
+
+    if (!query) {
+      return res.status(400).json({
+        error: language === "es"
+          ? "Escribe el nombre de un ejercicio para buscar."
+          : "Enter an exercise name to search.",
       });
     }
 
-    return res.json(guide);
-  } catch (error: any) {
-    console.error("[workout-search] error:", error.message ?? error);
-    const query = typeof req.body?.query === "string" ? req.body.query.trim() : "";
-    const language = req.body?.language === "es" ? "es" : "en";
-    if (query) return res.json(fallbackWorkoutGuide(query, language));
-    return res.status(500).json({ error: error.message || "Workout search is temporarily unavailable." });
-  }
-});
+    const result = await resolveWorkoutSearch(query, language, generator);
+    return res.status(result.status).json(result.body);
+  });
 
-export default router;
+  return router;
+}
+
+export default createWorkoutSearchRouter();

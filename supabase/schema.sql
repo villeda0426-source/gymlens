@@ -18,7 +18,10 @@ begin
   values (new.id, new.raw_user_meta_data->>'username');
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = '';
+
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+grant execute on function public.handle_new_user() to service_role;
 
 create trigger on_auth_user_created
   after insert on auth.users
@@ -120,14 +123,40 @@ create index idx_identifications_user on equipment_identifications(user_id);
 create index idx_saved_user on saved_equipment(user_id);
 create index idx_videos_equipment on equipment_videos(equipment_id);
 
+-- App installations are created anonymously on first launch and linked to a
+-- Supabase account after signup. Server/service-role access only.
+create table app_installations (
+  id uuid primary key default gen_random_uuid(),
+  installation_id text not null unique,
+  user_id uuid references profiles(id) on delete set null,
+  platform text,
+  app_version text,
+  build_number integer,
+  locale text,
+  created_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now(),
+  notification_sent_at timestamptz,
+  notification_attempted_at timestamptz,
+  notification_error text
+);
+
+alter table app_installations enable row level security;
+revoke all on table app_installations from public, anon, authenticated;
+grant select, insert, update, delete on table app_installations to service_role;
+create index idx_app_installations_user on app_installations(user_id);
+create index idx_app_installations_created on app_installations(created_at desc);
+
 -- Async AI trainer plan generation jobs
 create table coach_trainer_jobs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references profiles(id) on delete set null,
+  idempotency_key text check (
+    idempotency_key is null
+    or char_length(idempotency_key) between 16 and 200
+  ),
   status text not null default 'queued' check (status in ('queued', 'running', 'completed', 'failed')),
   payload jsonb,
   result jsonb,
-  timings jsonb not null default '{}'::jsonb,
   error text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -139,59 +168,19 @@ alter table coach_trainer_jobs enable row level security;
 create index idx_coach_trainer_jobs_user_created
   on coach_trainer_jobs(user_id, created_at desc);
 
--- Structured workout feedback powers the rules-first coaching engine. Routine
--- progression is decided locally; only ambiguous or safety-sensitive entries
--- are escalated to the AI model.
-create table workout_feedback (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references profiles(id) on delete cascade not null,
-  workout_id text not null,
-  session_label text not null,
-  completed_at timestamptz not null,
-  completed_exercise_ids text[] not null default '{}',
-  total_exercise_count int not null check (total_exercise_count >= 0),
-  difficulty int not null check (difficulty between 1 and 5),
-  energy int not null check (energy between 1 and 5),
-  pain int not null check (pain between 0 and 5),
-  pain_area text,
-  notes text,
-  plan_complete boolean not null default false,
-  decision_source text not null check (decision_source in ('rules', 'ai')),
-  decision_reason text not null,
-  changes jsonb not null default '[]'::jsonb,
-  created_at timestamptz not null default now(),
-  unique(user_id, workout_id)
-);
+create unique index coach_trainer_jobs_user_idempotency_key
+  on coach_trainer_jobs(user_id, idempotency_key)
+  where idempotency_key is not null;
 
-alter table workout_feedback enable row level security;
-create policy "Users manage own workout feedback" on workout_feedback
-  for all to authenticated
-  using ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
-grant select, insert, update, delete on table public.workout_feedback to service_role;
-create index idx_workout_feedback_user_completed
-  on workout_feedback(user_id, completed_at desc);
+create policy "Users view own coach trainer jobs"
+  on coach_trainer_jobs
+  for select
+  to authenticated
+  using ((select auth.uid()) = user_id);
 
--- Server-written usage ledger. It intentionally stores operational metadata,
--- never prompts, images, workout notes, or model responses.
-create table ai_usage_events (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references profiles(id) on delete set null,
-  feature text not null,
-  model text not null,
-  input_tokens int not null default 0,
-  output_tokens int not null default 0,
-  latency_ms int not null default 0,
-  succeeded boolean not null default true,
-  created_at timestamptz not null default now()
-);
-
-alter table ai_usage_events enable row level security;
-create policy "Service records AI usage" on ai_usage_events
-  for all to service_role using (true) with check (true);
-grant select, insert, update, delete on table public.ai_usage_events to service_role;
-create index idx_ai_usage_events_feature_created on ai_usage_events(feature, created_at desc);
-create index idx_ai_usage_events_user on ai_usage_events(user_id);
+revoke all on table coach_trainer_jobs from anon;
+grant select on table coach_trainer_jobs to authenticated;
+grant select, insert, update, delete on table coach_trainer_jobs to service_role;
 
 -- ============================================================
 -- Dynamic Muscle Avatar

@@ -5,6 +5,7 @@ import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { apiFetch } from "@/lib/api";
 
 const GUEST_USES_KEY = "coachlift_guest_uses";
+const GUEST_ACCESS_KEY = "coachlift_guest_access_enabled";
 const MAX_GUEST_USES = 3;
 
 interface AuthState {
@@ -12,12 +13,14 @@ interface AuthState {
   profile: any | null;
   isLoading: boolean;
   isGuest: boolean;
+  guestAccessEnabled: boolean;
   guestUses: number;
   setUser: (user: any | null) => void;
   setProfile: (profile: any | null) => void;
   loadProfile: () => Promise<void>;
   updateProfileName: (name: string) => Promise<{ error?: string }>;
   incrementGuestUses: () => Promise<void>;
+  continueAsGuest: () => Promise<void>;
   canUseAsGuest: () => boolean;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<{ error?: string }>;
@@ -28,6 +31,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   profile: null,
   isLoading: true,
   isGuest: false,
+  guestAccessEnabled: false,
   guestUses: 0,
 
   setUser: (user) => set({ user, isGuest: !user }),
@@ -37,8 +41,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loadProfile: async () => {
     const { user } = get();
     if (!user) {
-      const stored = await AsyncStorage.getItem(GUEST_USES_KEY);
-      set({ profile: null, guestUses: stored ? parseInt(stored) : 0, isLoading: false });
+      const [stored, guestAccess] = await Promise.all([
+        AsyncStorage.getItem(GUEST_USES_KEY),
+        AsyncStorage.getItem(GUEST_ACCESS_KEY),
+      ]);
+      set({
+        profile: null,
+        guestUses: stored ? parseInt(stored) : 0,
+        guestAccessEnabled: guestAccess === "true",
+        isLoading: false,
+      });
       return;
     }
     const fallbackName =
@@ -98,6 +110,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await AsyncStorage.setItem(GUEST_USES_KEY, String(current));
   },
 
+  continueAsGuest: async () => {
+    await AsyncStorage.setItem(GUEST_ACCESS_KEY, "true");
+    set({ user: null, profile: null, isGuest: true, guestAccessEnabled: true, isLoading: false });
+  },
+
   canUseAsGuest: () => {
     const { user, guestUses } = get();
     return !!user || guestUses < MAX_GUEST_USES;
@@ -106,7 +123,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signOut: async () => {
     useCoachTrainerStore.getState().resetChatSession();
     await supabase.auth.signOut();
-    set({ user: null, profile: null, isGuest: true });
+    await AsyncStorage.removeItem(GUEST_ACCESS_KEY);
+    set({ user: null, profile: null, isGuest: true, guestAccessEnabled: false });
   },
 
   deleteAccount: async () => {
@@ -119,13 +137,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       }, 30_000);
-      await useCoachTrainerStore.getState().purgeTrainer();
+      useCoachTrainerStore.getState().clearTrainer();
       await AsyncStorage.removeItem(GUEST_USES_KEY);
+      await AsyncStorage.removeItem(GUEST_ACCESS_KEY);
       await supabase.auth.signOut({ scope: "local" });
-      set({ user: null, profile: null, isGuest: true, guestUses: 0 });
+      set({ user: null, profile: null, isGuest: true, guestAccessEnabled: false, guestUses: 0 });
       return {};
     } catch (error: any) {
-      return { error: error?.message || "Account deletion failed." };
+      return { error: error?.message || "Could not delete your account. Please try again." };
     }
   },
 }));

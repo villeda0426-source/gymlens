@@ -29,21 +29,22 @@ import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { supabase } from "@/lib/supabase";
 import { handleAuthRedirectUrl } from "@/lib/authRedirect";
 import { colors } from "@/constants/theme";
+import { trackInstallation } from "@/lib/installTracking";
 
 function AuthGate() {
-  const { user, isLoading } = useAuthStore();
+  const { user, isGuest, guestAccessEnabled, isLoading } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     if (isLoading) return;
     const inAuth = segments[0] === "(auth)";
-    if (!user && !inAuth) {
+    if (!user && !(isGuest && guestAccessEnabled) && !inAuth) {
       router.replace("/(auth)/login");
     } else if (user && inAuth) {
       router.replace("/(tabs)");
     }
-  }, [user, isLoading, segments]);
+  }, [user, isGuest, guestAccessEnabled, isLoading, segments]);
 
   return null;
 }
@@ -61,11 +62,22 @@ function RootLayout() {
 
   useEffect(() => {
     getStoredLanguage().then((lang) => i18n.changeLanguage(lang));
+    void trackInstallation();
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error) {
+        // Preview builds can inherit an expired refresh token from an older
+        // session. Clear only the local session and continue as signed out.
+        await supabase.auth.signOut({ scope: "local" });
+        setUser(null);
+        Sentry.setUser(null);
+        await loadProfile();
+        return;
+      }
+
       setUser(session?.user ?? null);
       Sentry.setUser(session?.user ? { id: session.user.id, email: session.user.email } : null);
-      loadProfile();
+      await loadProfile();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -75,6 +87,7 @@ function RootLayout() {
       setUser(session?.user ?? null);
       Sentry.setUser(session?.user ? { id: session.user.id, email: session.user.email } : null);
       loadProfile();
+      void trackInstallation();
     });
 
     const handleUrl = async (url: string) => {

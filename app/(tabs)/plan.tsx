@@ -20,9 +20,10 @@ import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import SafeScreen from "@/components/Layout/SafeScreen";
 import GuestPromptModal from "@/components/UI/GuestPromptModal";
+import WeeklyMuscleCartoon from "@/components/Avatar/WeeklyMuscleCartoon";
+import MuscleDetailModal from "@/components/Avatar/MuscleDetailModal";
 import MuscleGainToast, { MuscleGain } from "@/components/Avatar/MuscleGainToast";
 import WorkoutSummaryModal, { MuscleSummaryEntry } from "@/components/Avatar/WorkoutSummaryModal";
-import WorkoutFeedbackModal from "@/components/Coach/WorkoutFeedbackModal";
 import DetailTabBar from "@/components/Equipment/DetailTabBar";
 import MuscleGroupTags from "@/components/Equipment/MuscleGroupTags";
 import MuscleMapView from "@/components/Equipment/MuscleMapView";
@@ -31,21 +32,25 @@ import TutorialSteps from "@/components/Equipment/TutorialSteps";
 import VideoList, { VideoItem } from "@/components/Equipment/VideoList";
 import { colors, fonts } from "@/constants/theme";
 import { apiFetch } from "@/lib/api";
-import {
-  CoachPlan,
-  evaluateCoachWorkout,
-  getCoachTrainerJob,
-  startCoachTrainerJob,
-} from "@/lib/coachTrainer";
-import type { WorkoutFeedback } from "@/lib/coachingEngine";
-import { supabase } from "@/lib/supabase";
+import { CoachPlan } from "@/lib/coachTrainer";
 import {
   AvatarMuscleGroup,
+  getUndertrainedRecommendation,
+  normalizeMusclesToAvatarGroups,
 } from "@/lib/muscleProgress";
 import { useAuthStore } from "@/store/authStore";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
-import { useWorkoutGuideStore } from "@/store/workoutGuideStore";
-import { MuscleDelta, useMuscleProgressStore } from "@/store/muscleProgressStore";
+import {
+  completionKey,
+  countSessionCompleted,
+  isExerciseComplete,
+  isSessionComplete,
+} from "@/shared/completionKeys";
+import {
+  CompletedExerciseRow,
+  MuscleDelta,
+  useMuscleProgressStore,
+} from "@/store/muscleProgressStore";
 
 type PlanExercise = CoachPlan["sessions"][number]["exercises"][number];
 type ExerciseGuide = {
@@ -58,19 +63,6 @@ type ExerciseGuide = {
 type GuideSubject = ExerciseGuide & { id: string };
 type GuideTab = "tutorial" | "safety" | "videos" | "calculator";
 type Level = "Beginner" | "Intermediate" | "Advanced";
-
-const NEXT_PLAN_JOB_TIMEOUT_MS = 240000;
-
-async function waitForNextPlan(jobId: string, authToken: string) {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < NEXT_PLAN_JOB_TIMEOUT_MS) {
-    const job = await getCoachTrainerJob(jobId, { authToken });
-    if (job.status === "completed" && job.result) return job.result;
-    if (job.status === "failed") throw new Error(job.error || "Next plan generation failed.");
-    await new Promise((resolve) => setTimeout(resolve, 2500));
-  }
-  throw new Error("Next plan generation timed out.");
-}
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -107,46 +99,42 @@ function uniqueMuscles(exercises: PlanExercise[]): string[] {
   return Array.from(seen).slice(0, 4);
 }
 
-function isSessionComplete(session: CoachPlan["sessions"][number], completedIds: string[]): boolean {
-  return session.exercises.length > 0 && session.exercises.every((exercise) => completedIds.includes(exercise.exercise_id));
-}
 
-function fallbackExerciseGuide(exercise: PlanExercise, isEs: boolean): ExerciseGuide {
-  const dose = isEs
-    ? `${exercise.sets} series de ${exercise.rep_range.min}-${exercise.rep_range.max} repeticiones`
-    : `${exercise.sets} sets of ${exercise.rep_range.min}-${exercise.rep_range.max} reps`;
+
+function fallbackExerciseGuide(exercise: PlanExercise): ExerciseGuide {
+  const dose = `${exercise.sets} sets of ${exercise.rep_range.min}-${exercise.rep_range.max} reps`;
   return {
     exercise: exercise.name,
     targetMuscles: exercise.primary_muscles,
     found: true,
     steps: [
-      isEs ? `Prepárate para ${exercise.name} con control antes de la primera repetición.` : `Set up for ${exercise.name} with control before the first rep.`,
-      isEs ? `${dose}. Usa ${exercise.target_load || "una carga que puedas controlar"} y mantén un movimiento fluido.` : `${dose}. Use ${exercise.target_load || "a load you can control"} and keep the movement smooth.`,
-      exercise.coach_notes || exercise.progression_rule || (isEs ? "Detén la serie si pierdes la técnica." : "Stop the set if form breaks down."),
+      `Set up for ${exercise.name} with control before the first rep.`,
+      `${dose}. Use ${exercise.target_load || "a load you can control"} and keep the movement smooth.`,
+      exercise.coach_notes || exercise.progression_rule || "Stop the set if form breaks down.",
     ].filter(Boolean),
     safetyTips: [
-      isEs ? "Comienza con menos peso del que crees necesitar hasta dominar el movimiento." : "Start lighter than you think you need until the movement feels clean.",
-      isEs ? "Haz que los músculos objetivo realicen el trabajo sin apresurar las repeticiones." : "Keep the target muscles doing the work instead of rushing through reps.",
-      exercise.target_rpe ? (isEs ? `Mantén el esfuerzo cerca de RPE ${exercise.target_rpe}.` : `Keep effort around RPE ${exercise.target_rpe}.`) : (isEs ? "Deja algunas repeticiones buenas en reserva." : "Leave a few good reps in reserve."),
+      "Start lighter than you think you need until the movement feels clean.",
+      "Keep the target muscles doing the work instead of rushing through reps.",
+      exercise.target_rpe ? `Keep effort around RPE ${exercise.target_rpe}.` : "Leave a few good reps in reserve.",
     ],
   };
 }
 
-function fallbackStretchGuide(id: string, name: string, targetMuscles: string[], isEs: boolean): GuideSubject {
+function fallbackStretchGuide(id: string, name: string, targetMuscles: string[]): GuideSubject {
   return {
     id,
     exercise: name,
     targetMuscles,
     found: true,
     steps: [
-      isEs ? `Entra en ${name} gradualmente, con respiración lenta y control.` : `Ease into ${name} with slow breathing and a controlled setup.`,
-      isEs ? "Muévete en un rango cómodo durante 30-45 segundos sin forzar el estiramiento." : "Move through a comfortable range for 30-45 seconds without forcing the stretch.",
-      isEs ? "Repite una vez más si la zona sigue tensa antes de la primera serie de trabajo." : "Repeat once more if the target area still feels tight before your first working set.",
+      `Ease into ${name} with slow breathing and a controlled setup.`,
+      "Move through a comfortable range for 30-45 seconds without forcing the stretch.",
+      "Repeat once more if the target area still feels tight before your first working set.",
     ],
     safetyTips: [
-      isEs ? "Mantén el estiramiento suave y sin dolor." : "Keep the stretch gentle and pain-free.",
-      isEs ? "Evita los rebotes y no contengas la respiración." : "Avoid bouncing or holding your breath.",
-      isEs ? "Reduce la intensidad si sientes pellizcos, entumecimiento o molestias articulares." : "Back off if you feel pinching, numbness, or joint discomfort.",
+      "Keep the stretch gentle and pain-free.",
+      "Avoid bouncing or holding your breath.",
+      "Back off if you feel pinching, numbness, or joint discomfort.",
     ],
   };
 }
@@ -173,8 +161,8 @@ interface WorkoutDayCardProps {
   index: number;
   completedIds: string[];
   completingId: string | null;
-  onCompleteExercise: (exercise: PlanExercise) => void;
-  onUncompleteExercise: (exercise: PlanExercise) => void;
+  onCompleteExercise: (exercise: PlanExercise, dayLabel: string) => void;
+  onUncompleteExercise: (exercise: PlanExercise, dayLabel: string) => void;
   onOpenWorkout: (session: CoachPlan["sessions"][number], index: number) => void;
   onOpenExercise: (exercise: PlanExercise) => void;
   onOpenStretch: (stretch: string, label: string, targetMuscles: string[]) => void;
@@ -192,7 +180,7 @@ function WorkoutDayCard({
   onOpenStretch,
 }: WorkoutDayCardProps) {
   const { t } = useTranslation();
-  const completedCount = session.exercises.filter((exercise) => completedIds.includes(exercise.exercise_id)).length;
+  const completedCount = countSessionCompleted(completedIds, session);
   const isComplete = completedCount === session.exercises.length && session.exercises.length > 0;
   const muscles = uniqueMuscles(session.exercises);
 
@@ -255,14 +243,16 @@ function WorkoutDayCard({
       </View>
 
       {session.exercises.map((exercise) => {
-        const isDone = completedIds.includes(exercise.exercise_id);
-        const isCompleting = completingId === exercise.exercise_id;
+        const isDone = isExerciseComplete(completedIds, session.day_label, exercise.exercise_id);
+        const isCompleting = completingId === completionKey(session.day_label, exercise.exercise_id);
         return (
           <View key={exercise.exercise_id} style={styles.exerciseRow}>
             <TouchableOpacity
               style={[styles.exerciseCheck, isDone && styles.exerciseCheckDone]}
               disabled={isCompleting}
-              onPress={() => (isDone ? onUncompleteExercise(exercise) : onCompleteExercise(exercise))}
+              onPress={() =>
+                isDone ? onUncompleteExercise(exercise, session.day_label) : onCompleteExercise(exercise, session.day_label)
+              }
             >
               {isCompleting ? (
                 <ActivityIndicator size="small" color={colors.coral} />
@@ -522,15 +512,15 @@ function WorkoutDetailModal({
   completedIds: string[];
   completingId: string | null;
   onClose: () => void;
-  onCompleteExercise: (exercise: PlanExercise) => void;
-  onUncompleteExercise: (exercise: PlanExercise) => void;
+  onCompleteExercise: (exercise: PlanExercise, dayLabel: string) => void;
+  onUncompleteExercise: (exercise: PlanExercise, dayLabel: string) => void;
   onSwapExercise: (exercise: PlanExercise, replacementName: string, scope: "today" | "permanent") => void;
   onOpenExercise: (exercise: PlanExercise) => void;
   onOpenStretch: (stretch: string, label: string, targetMuscles: string[]) => void;
 }) {
   const { t } = useTranslation();
   if (!session) return null;
-  const completedCount = session.exercises.filter((exercise) => completedIds.includes(exercise.exercise_id)).length;
+  const completedCount = countSessionCompleted(completedIds, session);
   const stretches = recommendedStretchKeys(session);
 
   return (
@@ -591,15 +581,17 @@ function WorkoutDetailModal({
           <View style={styles.detailPanel}>
             <Text style={styles.detailSectionTitle}>{t("plan.exercises")}</Text>
             {session.exercises.map((exercise) => {
-              const isDone = completedIds.includes(exercise.exercise_id);
-              const isCompleting = completingId === exercise.exercise_id;
+              const isDone = isExerciseComplete(completedIds, session.day_label, exercise.exercise_id);
+              const isCompleting = completingId === completionKey(session.day_label, exercise.exercise_id);
               return (
                 <View key={exercise.exercise_id} style={styles.detailExerciseCard}>
                   <View style={styles.detailExerciseHeader}>
                     <TouchableOpacity
                       style={[styles.exerciseCheck, isDone && styles.exerciseCheckDone]}
                       disabled={isCompleting}
-                      onPress={() => (isDone ? onUncompleteExercise(exercise) : onCompleteExercise(exercise))}
+                      onPress={() =>
+                isDone ? onUncompleteExercise(exercise, session.day_label) : onCompleteExercise(exercise, session.day_label)
+              }
                     >
                       {isCompleting ? (
                         <ActivityIndicator size="small" color={colors.coral} />
@@ -686,9 +678,7 @@ function PlanOverviewModal({
   if (!plan) return null;
 
   const totalSessions = plan.sessions.length;
-  const completedSessions = plan.sessions.filter((session) =>
-    session.exercises.every((exercise) => completedIds.includes(exercise.exercise_id))
-  ).length;
+  const completedSessions = plan.sessions.filter((session) => isSessionComplete(completedIds, session)).length;
   const overallProgress = totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0;
 
   return (
@@ -716,7 +706,7 @@ function PlanOverviewModal({
 
           <View style={styles.detailPanel}>
             {plan.sessions.map((session, index) => {
-              const doneCount = session.exercises.filter((exercise) => completedIds.includes(exercise.exercise_id)).length;
+              const doneCount = countSessionCompleted(completedIds, session);
               const isDone = session.exercises.length > 0 && doneCount === session.exercises.length;
               const isUpcoming = index >= visibleSessionCount;
               return (
@@ -759,22 +749,14 @@ export default function PlanScreen() {
   const { user } = useAuthStore();
   const {
     plan,
-    setPlan,
     completedExerciseIds,
     updatePlan,
     markExerciseCompleted,
     unmarkExerciseCompleted,
-    addConversationMessage,
-    latestWorkoutReview,
-    setLatestWorkoutReview,
-    enterCoachChat,
-    activeThreadId,
-    selectThread,
     hasLoaded,
     loadTrainer,
   } = useCoachTrainerStore();
-  const completeExercise = useMuscleProgressStore((state) => state.completeExercise);
-  const setCurrentWorkoutGuide = useWorkoutGuideStore((state) => state.setCurrentGuide);
+  const { progress, loadProgress, completeExercise, recentCompletionsFor } = useMuscleProgressStore();
 
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [gains, setGains] = useState<MuscleGain[]>([]);
@@ -782,6 +764,11 @@ export default function PlanScreen() {
   const [muscleSummary, setMuscleSummary] = useState<MuscleSummaryEntry[]>([]);
   const [summaryVisible, setSummaryVisible] = useState(false);
   const [showGuestPrompt, setShowGuestPrompt] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<AvatarMuscleGroup | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [recentCompletions, setRecentCompletions] = useState<CompletedExerciseRow[]>([]);
+  const [totalCompletions, setTotalCompletions] = useState(0);
   const [activeSessionIndex, setActiveSessionIndex] = useState(0);
   const [selectedSession, setSelectedSession] = useState<CoachPlan["sessions"][number] | null>(null);
   const [workoutDetailVisible, setWorkoutDetailVisible] = useState(false);
@@ -790,27 +777,26 @@ export default function PlanScreen() {
   const [exerciseGuideVisible, setExerciseGuideVisible] = useState(false);
   const [exerciseGuide, setExerciseGuide] = useState<ExerciseGuide | null>(null);
   const [exerciseGuideLoading, setExerciseGuideLoading] = useState(false);
-  const [feedbackSession, setFeedbackSession] = useState<CoachPlan["sessions"][number] | null>(null);
-  const [feedbackSessions, setFeedbackSessions] = useState<CoachPlan["sessions"]>([]);
-  const [feedbackWeekNumber, setFeedbackWeekNumber] = useState(1);
-  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
-  const [feedbackPlanComplete, setFeedbackPlanComplete] = useState(false);
   const planScrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     loadTrainer();
   }, [loadTrainer]);
 
+  useEffect(() => {
+    loadProgress(user?.id ?? null);
+  }, [user?.id, loadProgress]);
+
+  const recommendation = useMemo(() => getUndertrainedRecommendation(progress), [progress]);
   const totalExercises = plan?.sessions.reduce((sum, session) => sum + session.exercises.length, 0) ?? 0;
   const completedThisPlan = completedExerciseIds.length;
   const planProgress = totalExercises > 0 ? Math.round((completedThisPlan / totalExercises) * 100) : 0;
-  const isFullPlanComplete = totalExercises > 0 && planProgress >= 100;
   const weekSize = Math.max(1, Math.round(plan?.days_per_week || 1));
 
   const todaySessionIndex = useMemo(() => {
     if (!plan?.sessions.length) return 0;
-    const nextIndex = plan.sessions.findIndex((session) =>
-      session.exercises.some((exercise) => !completedExerciseIds.includes(exercise.exercise_id))
+    const nextIndex = plan.sessions.findIndex(
+      (session) => !isSessionComplete(completedExerciseIds, session)
     );
     return nextIndex >= 0 ? nextIndex : 0;
   }, [plan?.sessions, completedExerciseIds]);
@@ -819,7 +805,7 @@ export default function PlanScreen() {
     if (!plan?.sessions.length) return 0;
     let leadingCompletedSessions = 0;
     for (const session of plan.sessions) {
-      if (!isSessionComplete(session, completedExerciseIds)) break;
+      if (!isSessionComplete(completedExerciseIds, session)) break;
       leadingCompletedSessions += 1;
     }
     const unlockedWeeks = Math.floor(leadingCompletedSessions / weekSize) + 1;
@@ -843,6 +829,19 @@ export default function PlanScreen() {
   }, [todaySessionIndex, visibleSessionCount]);
 
   const highlightedSession = visibleSessions[activeSessionIndex] ?? visibleSessions[Math.min(todaySessionIndex, visibleSessions.length - 1)];
+  const currentWeekSessions = useMemo(() => {
+    const weekStart = Math.floor(Math.max(activeSessionIndex, 0) / weekSize) * weekSize;
+    return visibleSessions.slice(weekStart, weekStart + weekSize);
+  }, [activeSessionIndex, visibleSessions, weekSize]);
+  const weeklyWorkedMuscles = useMemo(() => {
+    const muscles = currentWeekSessions.flatMap((session) =>
+      session.exercises
+        .filter((exercise) => isExerciseComplete(completedExerciseIds, session.day_label, exercise.exercise_id))
+        .flatMap((exercise) => exercise.primary_muscles)
+    );
+    return normalizeMusclesToAvatarGroups(muscles);
+  }, [completedExerciseIds, currentWeekSessions]);
+
   const handlePlanMomentumEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const nextIndex = Math.round(event.nativeEvent.contentOffset.x / (PLAN_CARD_WIDTH + PLAN_CARD_GAP));
     setActiveSessionIndex(Math.max(0, Math.min(nextIndex, Math.max(visibleSessions.length, 1) - 1)));
@@ -859,38 +858,35 @@ export default function PlanScreen() {
     handleOpenWorkout(session);
   };
 
-  const handleCompleteExercise = async (exercise: PlanExercise) => {
+  const handlePressMuscle = async (group: AvatarMuscleGroup) => {
+    setSelectedGroup(group);
+    setModalVisible(true);
+
+    if (!user?.id) {
+      setRecentCompletions([]);
+      setTotalCompletions(0);
+      return;
+    }
+
+    setLoadingDetail(true);
+    try {
+      const { rows, total } = await recentCompletionsFor(user.id, group);
+      setRecentCompletions(rows);
+      setTotalCompletions(total);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  const handleCompleteExercise = async (exercise: PlanExercise, dayLabel: string) => {
     if (!user?.id) {
       setShowGuestPrompt(true);
       return;
     }
-    if (completedExerciseIds.includes(exercise.exercise_id) || completingId) return;
+    const key = completionKey(dayLabel, exercise.exercise_id);
+    if (completedExerciseIds.includes(key) || completingId) return;
 
-    const completingSession = plan?.sessions.find((session) =>
-      session.exercises.some((item) => item.exercise_id === exercise.exercise_id)
-    ) ?? null;
-    const completesWorkout = completingSession?.exercises.every((item) =>
-      item.exercise_id === exercise.exercise_id || completedExerciseIds.includes(item.exercise_id)
-    ) ?? false;
-    const completesPlan = plan?.sessions.every((session) =>
-      session.exercises.every((item) =>
-        item.exercise_id === exercise.exercise_id || completedExerciseIds.includes(item.exercise_id)
-      )
-    ) ?? false;
-    const completingSessionIndex = completingSession && plan
-      ? plan.sessions.findIndex((session) => session === completingSession)
-      : -1;
-    const weekStart = completingSessionIndex >= 0
-      ? Math.floor(completingSessionIndex / weekSize) * weekSize
-      : 0;
-    const weekSessions = plan?.sessions.slice(weekStart, weekStart + weekSize) ?? [];
-    const completesWeek = weekSessions.length > 0 && weekSessions.every((session) =>
-      session.exercises.every((item) =>
-        item.exercise_id === exercise.exercise_id || completedExerciseIds.includes(item.exercise_id)
-      )
-    );
-
-    setCompletingId(exercise.exercise_id);
+    setCompletingId(key);
     try {
       const deltas = await completeExercise(user.id, {
         slug: exercise.exercise_id,
@@ -898,18 +894,7 @@ export default function PlanScreen() {
         rawPrimaryMuscles: exercise.primary_muscles,
       });
 
-      markExerciseCompleted(exercise.exercise_id);
-
-      if (completingSession && completesWorkout) {
-        setWorkoutDetailVisible(false);
-      }
-
-      if (completingSession && completesWeek) {
-        setFeedbackPlanComplete(completesPlan);
-        setFeedbackSessions(weekSessions);
-        setFeedbackWeekNumber(Math.floor(weekStart / weekSize) + 1);
-        setTimeout(() => setFeedbackSession(completingSession), 200);
-      }
+      markExerciseCompleted(key);
 
       if (deltas.length > 0) {
         setSessionDeltas((prev) => [...prev, ...deltas]);
@@ -929,8 +914,8 @@ export default function PlanScreen() {
     }
   };
 
-  const handleUncompleteExercise = (exercise: PlanExercise) => {
-    unmarkExerciseCompleted(exercise.exercise_id);
+  const handleUncompleteExercise = (exercise: PlanExercise, dayLabel: string) => {
+    unmarkExerciseCompleted(completionKey(dayLabel, exercise.exercise_id));
     setSessionDeltas([]);
   };
 
@@ -940,48 +925,59 @@ export default function PlanScreen() {
   };
 
   const handleOpenExercise = async (exercise: PlanExercise) => {
-    const fallback = { id: exercise.exercise_id, ...fallbackExerciseGuide(exercise, i18n.language?.startsWith("es") === true) };
-    setCurrentWorkoutGuide(fallback);
-    setWorkoutDetailVisible(false);
-    requestAnimationFrame(() => router.push("/equipment/workout-result"));
+    const fallback = { id: exercise.exercise_id, ...fallbackExerciseGuide(exercise) };
+    setSelectedGuideSubject(fallback);
+    setExerciseGuide(fallback);
+    setExerciseGuideVisible(true);
+    setExerciseGuideLoading(true);
 
     try {
       const guide = await apiFetch<ExerciseGuide>("/api/workout-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: exercise.name, language: i18n.language?.startsWith("es") ? "es" : "en" }),
+        body: JSON.stringify({
+          query: exercise.name,
+          language: i18n.language?.startsWith("es") ? "es" : "en",
+        }),
       }, 30000);
       if (guide?.found && guide.steps?.length) {
-        setCurrentWorkoutGuide(guide);
+        setExerciseGuide(guide);
       }
     } catch {
       // Keep the local Coach-plan fallback visible when search is offline.
+    } finally {
+      setExerciseGuideLoading(false);
     }
   };
 
   const handleOpenStretch = async (stretch: string, label: string, targetMuscles: string[]) => {
-    const fallback = fallbackStretchGuide(`stretch-${stretch}`, label, targetMuscles, i18n.language?.startsWith("es") === true);
-    setCurrentWorkoutGuide(fallback);
-    setWorkoutDetailVisible(false);
-    requestAnimationFrame(() => router.push("/equipment/workout-result"));
+    const fallback = fallbackStretchGuide(`stretch-${stretch}`, label, targetMuscles);
+    setSelectedGuideSubject(fallback);
+    setExerciseGuide(fallback);
+    setExerciseGuideVisible(true);
+    setExerciseGuideLoading(true);
 
     try {
       const guide = await apiFetch<ExerciseGuide>("/api/workout-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: label, language: i18n.language?.startsWith("es") ? "es" : "en" }),
+        body: JSON.stringify({
+          query: label,
+          language: i18n.language?.startsWith("es") ? "es" : "en",
+        }),
       }, 30000);
       if (guide?.found && guide.steps?.length) {
-        setCurrentWorkoutGuide(guide);
+        setExerciseGuide(guide);
       }
     } catch {
       // Keep the local stretch fallback visible when search is offline.
+    } finally {
+      setExerciseGuideLoading(false);
     }
   };
 
   const handleSwapExercise = (exercise: PlanExercise, replacementName: string, scope: "today" | "permanent") => {
     if (!plan) return;
-    let replacementId: string | null = null;
     const updatedSessions = plan.sessions.map((session) => {
       const isSelectedSession = selectedSession?.day_label === session.day_label;
       if (scope === "today" && !isSelectedSession) return session;
@@ -994,9 +990,6 @@ export default function PlanScreen() {
               : item.exercise_id === exercise.exercise_id;
           if (!shouldReplace) return item;
           const nextId = `${item.exercise_id}-swap-${replacementName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-          if (item.exercise_id === exercise.exercise_id) {
-            replacementId = nextId;
-          }
           return {
             ...item,
             exercise_id: nextId,
@@ -1008,10 +1001,18 @@ export default function PlanScreen() {
     });
     const nextPlan = { ...plan, sessions: updatedSessions };
     updatePlan(nextPlan);
-    if (replacementId && completedExerciseIds.includes(exercise.exercise_id)) {
-      unmarkExerciseCompleted(exercise.exercise_id);
-      markExerciseCompleted(replacementId);
-    }
+    // Carry completion across the swap for every session that actually changed.
+    plan.sessions.forEach((original, index) => {
+      const updated = updatedSessions[index];
+      original.exercises.forEach((item, exerciseIndex) => {
+        const replaced = updated.exercises[exerciseIndex];
+        if (!replaced || replaced.exercise_id === item.exercise_id) return;
+        const oldKey = completionKey(original.day_label, item.exercise_id);
+        if (!completedExerciseIds.includes(oldKey)) return;
+        unmarkExerciseCompleted(oldKey);
+        markExerciseCompleted(completionKey(updated.day_label, replaced.exercise_id));
+      });
+    });
     const nextSelected = updatedSessions.find((session) => session.day_label === selectedSession?.day_label) ?? null;
     setSelectedSession(nextSelected);
   };
@@ -1036,112 +1037,6 @@ export default function PlanScreen() {
     setSummaryVisible(true);
   };
 
-  const handleContinueWithCoach = () => {
-    if (activeThreadId) {
-      selectThread(activeThreadId);
-    } else {
-      enterCoachChat();
-    }
-    router.push("/trainer");
-  };
-
-  const handleRetryCompletedPlan = () => {
-    if (!plan?.sessions.length) return;
-    setFeedbackSessions(plan.sessions);
-    setFeedbackWeekNumber(Math.max(1, plan.timeline_weeks));
-    setFeedbackPlanComplete(true);
-    setFeedbackSession(plan.sessions[plan.sessions.length - 1]);
-  };
-
-  const handleSubmitFeedback = async (feedback: WorkoutFeedback) => {
-    if (!plan) return;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-      setShowGuestPrompt(true);
-      return;
-    }
-
-    setFeedbackSubmitting(true);
-    let feedbackRecorded = false;
-    try {
-      const language = i18n.language?.startsWith("es") ? "es" as const : "en" as const;
-      let result = await evaluateCoachWorkout(plan, feedback, {
-        authToken: session.access_token,
-        language,
-      });
-      feedbackRecorded = result.feedbackSaved;
-
-      if (feedback.planComplete) {
-        const job = await startCoachTrainerJob({
-          mode: "adapt",
-          units: plan.units,
-          language,
-          currentPlan: plan,
-          logs: [{ latest_feedback: feedback, coaching_summary: result.summary }],
-        }, { authToken: session.access_token });
-        const nextPlanResponse = await waitForNextPlan(job.jobId, session.access_token);
-        if (nextPlanResponse.status !== "plan_updated" && nextPlanResponse.status !== "plan_ready") {
-          throw new Error("Coach did not return a progression plan.");
-        }
-        result = {
-          ...result,
-          source: "ai",
-          reason: nextPlanResponse.summary,
-          changes: nextPlanResponse.status === "plan_updated" ? nextPlanResponse.changes : [],
-          plan: nextPlanResponse.plan,
-          requiresUserConfirmation: false,
-        };
-      }
-      const reviewMessage = [
-        t("plan.review_for", { session: feedback.sessionLabel, reason: result.reason }),
-        result.changes.length ? t("plan.follow_up_changes", { changes: result.changes.join(" ") }) : t("plan.follow_up_steady"),
-        result.source === "rules"
-          ? t("plan.rules_decision")
-          : t("plan.ai_decision"),
-      ].join("\n\n");
-      setLatestWorkoutReview({
-        sessionLabel: feedback.sessionLabel,
-        source: result.source,
-        reason: result.reason,
-        changes: result.changes,
-      });
-      addConversationMessage({ role: "assistant", content: reviewMessage });
-      enterCoachChat();
-      const apply = () => {
-        if (feedback.planComplete) {
-          setPlan(result.plan);
-        } else {
-          updatePlan(result.plan);
-        }
-        setFeedbackSession(null);
-        setFeedbackSessions([]);
-        setFeedbackPlanComplete(false);
-        Alert.alert(
-          feedback.planComplete
-            ? t("plan.next_block_ready")
-            : result.source === "rules" ? t("plan.workout_recorded") : t("plan.feedback_reviewed"),
-          `${result.reason}${result.changes.length ? `\n\n${result.changes.join("\n")}` : ""}`
-        );
-      };
-
-      if (result.requiresUserConfirmation && result.changes.length > 0) {
-        Alert.alert(t("plan.change_recommended"), `${result.reason}\n\n${result.changes.join("\n")}`, [
-          { text: t("plan.keep_plan"), style: "cancel", onPress: () => setFeedbackSession(null) },
-          { text: t("plan.apply_changes"), onPress: apply },
-        ]);
-      } else {
-        apply();
-      }
-    } catch {
-      Alert.alert(
-        feedbackRecorded ? t("plan.feedback_saved_title") : t("plan.check_in_error_title"),
-        feedbackRecorded ? t("plan.feedback_saved_retry") : t("plan.check_in_error_message")
-      );
-    } finally {
-      setFeedbackSubmitting(false);
-    }
-  };
-
   if (!hasLoaded) {
     return (
       <SafeScreen>
@@ -1161,7 +1056,7 @@ export default function PlanScreen() {
             <Text style={styles.eyebrow}>{t("plan.eyebrow")}</Text>
             <Text style={styles.title}>{t("plan.title")}</Text>
           </View>
-          <TouchableOpacity style={styles.coachButton} onPress={handleContinueWithCoach}>
+          <TouchableOpacity style={styles.coachButton} onPress={() => router.push("/trainer")}>
             <Ionicons name="chatbubble-ellipses" size={17} color={colors.coral} />
             <Text style={styles.coachButtonText}>{t("plan.coach")}</Text>
           </TouchableOpacity>
@@ -1205,7 +1100,7 @@ export default function PlanScreen() {
               <View style={styles.timelineDots}>
                 {plan.sessions.map((session, index) => {
                   const isVisible = index < visibleSessionCount;
-                  const isDone = isSessionComplete(session, completedExerciseIds);
+                  const isDone = isSessionComplete(completedExerciseIds, session);
                   return (
                     <View
                       key={session.day_label}
@@ -1274,49 +1169,61 @@ export default function PlanScreen() {
                 <Text style={styles.progressSummaryText}>{t("plan.progress_summary")}</Text>
               </TouchableOpacity>
             ) : null}
-
-
-            {latestWorkoutReview ? (
-              <TouchableOpacity style={styles.coachReviewCard} onPress={handleContinueWithCoach} activeOpacity={0.82}>
-                <View style={styles.coachReviewHeader}>
-                  <View style={styles.coachReviewBadge}>
-                    <Ionicons name="fitness" size={14} color={colors.white} />
-                    <Text style={styles.coachReviewBadgeText}>{t("plan.coach_follow_up")}</Text>
-                  </View>
-                  <Text style={styles.coachReviewSource}>{t(latestWorkoutReview.source === "ai" ? "plan.ai_reviewed" : "plan.rules_reviewed")}</Text>
-                </View>
-                <Text style={styles.coachReviewTitle}>{latestWorkoutReview.sessionLabel}</Text>
-                <Text style={styles.coachReviewText}>{latestWorkoutReview.reason}</Text>
-                <Text style={styles.coachReviewChange}>
-                  {latestWorkoutReview.changes.length
-                    ? latestWorkoutReview.changes.join("\n")
-                    : t("plan.steady_plan")}
-                </Text>
-                <View style={styles.coachReviewLink}>
-                  <Text style={styles.coachReviewLinkText}>{t("plan.continue_coach")}</Text>
-                  <Ionicons name="arrow-forward" size={16} color={colors.ndGold} />
-                </View>
-              </TouchableOpacity>
-            ) : null}
-
-            {isFullPlanComplete ? (
-              <TouchableOpacity style={styles.feedbackCheckInCard} onPress={handleRetryCompletedPlan} activeOpacity={0.84}>
-                <View style={styles.feedbackCheckInIcon}>
-                  <Ionicons name="sparkles" size={19} color={colors.coral} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.feedbackCheckInTitle}>{t("plan.build_next_plan")}</Text>
-                  <Text style={styles.feedbackCheckInText}>{t("plan.build_next_plan_text")}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={PLAN_MUTED} />
-              </TouchableOpacity>
-            ) : null}
           </>
         ) : (
           <PlanEmptyState />
         )}
 
+        <View style={styles.avatarCard}>
+          <View style={styles.avatarHeader}>
+            <View style={styles.avatarHeaderCopy}>
+              <Text style={styles.sectionTitle}>Muscles worked this week</Text>
+              <Text style={styles.sectionSubtitle}>
+                Red highlights appear as you complete exercises this week.
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.avatarPreview}>
+            <WeeklyMuscleCartoon activeGroups={weeklyWorkedMuscles} />
+          </View>
+
+          <View style={styles.weekLegend}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendSwatch, styles.legendSwatchActive]} />
+              <Text style={styles.legendText}>Completed this week</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={styles.legendSwatch} />
+              <Text style={styles.legendText}>Not targeted</Text>
+            </View>
+          </View>
+
+          <View style={styles.workedMuscleChips}>
+            {weeklyWorkedMuscles.length > 0 ? (
+              weeklyWorkedMuscles.map((group) => (
+                <TouchableOpacity key={group} style={styles.workedMuscleChip} onPress={() => handlePressMuscle(group)}>
+                  <Text style={styles.workedMuscleText}>{t(`avatar_progress.muscles.${group}`)}</Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={styles.noWorkedMuscles}>Complete an exercise to light up its muscles.</Text>
+            )}
+          </View>
+        </View>
       </ScrollView>
+
+      <MuscleDetailModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        muscleGroup={selectedGroup}
+        score={selectedGroup ? progress[selectedGroup]?.score ?? 0 : 0}
+        level={selectedGroup ? progress[selectedGroup]?.level ?? 0 : 0}
+        totalCompletions={totalCompletions}
+        recentCompletions={recentCompletions}
+        loading={loadingDetail}
+        recommendation={recommendation}
+      />
 
       <WorkoutSummaryModal
         visible={summaryVisible}
@@ -1338,20 +1245,12 @@ export default function PlanScreen() {
         onOpenStretch={handleOpenStretch}
       />
 
-      <WorkoutFeedbackModal
-        visible={feedbackSession !== null}
-        sessionLabel={feedbackPlanComplete ? t("coach_feedback.finished_plan") : t("plan.week_check_in", { count: feedbackWeekNumber })}
-        workoutId={feedbackSession ? `week-${feedbackWeekNumber}:${feedbackSessions.flatMap((session) => session.exercises).map((exercise) => exercise.exercise_id).join(",")}` : ""}
-        completedExerciseIds={feedbackSessions.flatMap((session) => session.exercises).filter((exercise) => completedExerciseIds.includes(exercise.exercise_id)).map((exercise) => exercise.exercise_id)}
-        totalExerciseCount={feedbackSessions.reduce((total, session) => total + session.exercises.length, 0)}
-        planComplete={feedbackPlanComplete}
-        submitting={feedbackSubmitting}
-        onClose={() => {
-          setFeedbackSession(null);
-          setFeedbackSessions([]);
-          setFeedbackPlanComplete(false);
-        }}
-        onSubmit={handleSubmitFeedback}
+      <ExerciseGuideModal
+        visible={exerciseGuideVisible}
+        subject={selectedGuideSubject}
+        guide={exerciseGuide}
+        loading={exerciseGuideLoading}
+        onClose={() => setExerciseGuideVisible(false)}
       />
 
       <PlanOverviewModal
@@ -1658,55 +1557,6 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 14,
   },
-  finishWorkoutButton: {
-    minHeight: 52,
-    borderRadius: 14,
-    backgroundColor: colors.coral,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 9,
-    marginBottom: 18,
-  },
-  finishWorkoutText: { color: colors.white, fontFamily: fonts.bold, fontSize: 15 },
-  feedbackCheckInCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.coral + "55",
-    backgroundColor: colors.coral + "14",
-    padding: 14,
-    marginTop: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 11,
-  },
-  feedbackCheckInIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.coral + "20",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  feedbackCheckInTitle: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 14 },
-  feedbackCheckInText: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 12, lineHeight: 17, marginTop: 2 },
-  coachReviewCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.ndGold + "66",
-    backgroundColor: PLAN_PANEL,
-    padding: 16,
-    marginTop: 12,
-  },
-  coachReviewHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
-  coachReviewBadge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.ndGold, borderRadius: 9, paddingHorizontal: 9, paddingVertical: 5 },
-  coachReviewBadgeText: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 10 },
-  coachReviewSource: { color: PLAN_MUTED, fontFamily: fonts.semiBold, fontSize: 11 },
-  coachReviewTitle: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 16, marginTop: 13 },
-  coachReviewText: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 13, lineHeight: 19, marginTop: 5 },
-  coachReviewChange: { color: PLAN_TEXT, fontFamily: fonts.semiBold, fontSize: 13, lineHeight: 19, marginTop: 10 },
-  coachReviewLink: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 13 },
-  coachReviewLinkText: { color: colors.ndGold, fontFamily: fonts.bold, fontSize: 13 },
   detailSectionTitle: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 17, marginBottom: 8 },
   detailBody: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 13, lineHeight: 19 },
   stretchRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 7 },

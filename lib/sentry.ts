@@ -16,6 +16,8 @@ if (dsn) {
     dist: buildNumber,
     tracesSampleRate: __DEV__ ? 0 : 0.1,
     enableAutoSessionTracking: true,
+    sendDefaultPii: false,
+    enableLogs: false,
   });
 } else if (!__DEV__) {
   console.warn("Missing EXPO_PUBLIC_SENTRY_DSN; Sentry crash reporting is disabled.");

@@ -1,10 +1,49 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { jsonrepair } from "jsonrepair";
-import { createTextResponse } from "./openaiService";
+import {
+  buildReliableStarterPlan,
+  detectReliableLanguage,
+  hasCoachMedicalRedFlag,
+  ReliableLanguage,
+} from "../../shared/reliableCoach";
+
+export type CoachClient = {
+  messages: {
+    create: (
+      params: Anthropic.MessageCreateParamsNonStreaming,
+      options?: { signal?: AbortSignal; timeout?: number; maxRetries?: number }
+    ) => Promise<Anthropic.Message>;
+  };
+};
+
+let cachedClient: CoachClient | null = null;
+let injectedClient: CoachClient | null = null;
+
+/** Test seam: lets regressions drive the provider without network access. */
+export function setCoachClientForTests(client: CoachClient | null): void {
+  injectedClient = client;
+}
+
+export class CoachConfigurationError extends Error {}
+
+function getCoachClient(): CoachClient {
+  if (injectedClient) return injectedClient;
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    // Fail immediately instead of paying for a request that cannot succeed.
+    throw new CoachConfigurationError("ANTHROPIC_API_KEY is not configured on the server.");
+  }
+
+  // maxRetries: 0 keeps cost bounded; this service does its own single fallback.
+  cachedClient ??= new Anthropic({ apiKey, maxRetries: 0 });
+  return cachedClient;
+}
 
 export const COACH_TRAINER_MODEL =
-  process.env.OPENAI_COACH_MODEL || process.env.OPENAI_MODEL || "gpt-5-mini";
+  process.env.COACH_TRAINER_MODEL || "claude-sonnet-4-6";
 const COACH_TRAINER_FALLBACK_MODEL =
-  process.env.OPENAI_FALLBACK_MODEL || "gpt-5-nano";
+  process.env.COACH_TRAINER_FALLBACK_MODEL || "claude-haiku-4-5-20251001";
 const COACH_TRAINER_MAX_TOKENS = Number.parseInt(process.env.COACH_TRAINER_MAX_TOKENS || "5000", 10);
 const COACH_TRAINER_PRIMARY_TIMEOUT_MS = Number.parseInt(process.env.COACH_TRAINER_PRIMARY_TIMEOUT_MS || "38000", 10);
 const COACH_TRAINER_FALLBACK_TIMEOUT_MS = Number.parseInt(process.env.COACH_TRAINER_FALLBACK_TIMEOUT_MS || "17000", 10);
@@ -19,9 +58,6 @@ Confidence is not recklessness. The best coaches are also the safest: they scree
 - Respond with exactly ONE JSON object and NOTHING else — no markdown, no code fences, no text before or after.
 - The app sets the current MODE and the user's UNITS in the incoming CONTEXT. Match your response shape to the mode (schemas below).
 - Never claim the user said something they didn't. If a required detail is missing, ask for it (intake) or apply a sensible, stated default.
-
-## LANGUAGE
-The CONTEXT includes language: "en" or "es". Write every user-facing string in that language, including messages, summaries, changes, plan goals, session labels, focus areas, exercise names, muscle names, equipment, constraints, progression instructions, substitutions, coaching notes, weekly notes, and safety flags. Keep JSON property names and enum values exactly as defined by the schema. For Spanish, use natural neutral Latin American Spanish and retain established exercise names when translating them would be unclear.
 
 ## UNITS
 The CONTEXT includes the user's preferred unit: "kg" or "lbs". Prescribe every load in that unit and echo it in the plan's "units" field. Use unit-appropriate increments — typically 2.5 kg / 5 lbs for upper-body lifts and 5 kg / 10 lbs for lower-body lifts, scaled to the user's level. All loads the app sends back in logs are in this same unit.
@@ -42,15 +78,14 @@ Rules:
 - Don't interrogate. If the first message is already rich, go straight to plan_ready.
 - Once the user has provided experience, days per week, equipment/access, injuries/limitations, and a broad goal, you MUST generate plan_ready. Do not ask follow-up questions for nice-to-have details like exact session length, favorite lifts, swimming technique, or schedule order; choose sensible defaults and mention them in the summary.
 - Keep plans concise: no more than 5 exercises per session, and no more than 4 sessions in the JSON.
-- SAFETY: if the user reports active or exertional chest pain, unexplained dizziness or fainting, a recent surgery without clearance, an uncontrolled medical condition, pregnancy without appropriate prenatal exercise guidance, or another condition that warrants clearance, DO NOT generate a workout plan yet. Return status "gathering" with a concise, calm message telling them to pause and obtain guidance or clearance from the appropriate licensed healthcare professional. Do not diagnose, prescribe rehabilitation, suggest test exercises, or provide loads/RPE targets while clearance is unresolved. Once the user confirms appropriate clearance and supplies any restrictions, keep programming conservative and add a safety flag that reflects those restrictions. You are a coach, not a doctor or physical therapist.
-- RESPONSIBLE USE: never prescribe extreme calorie restriction, meal skipping, exercise as punishment for eating, or unsafe rapid weight loss. If the user expresses guilt about rest or food, a need to "burn off" everything eaten, training through exhaustion, meal skipping, or another sign of disordered eating or compulsive exercise, DO NOT generate the requested plan yet. Return status "gathering" with a calm, nonjudgmental message that explicitly supports adequate food, rest, and recovery and encourages speaking with an appropriate licensed healthcare or mental-health professional. Never reinforce or optimize the harmful behavior. Once safety is established, use a balanced, sustainable approach.
+- SAFETY: if the user mentions chest pain, dizziness, fainting, a recent surgery, pregnancy, an uncontrolled medical condition, or anything warranting clearance — keep programming conservative and add a safety_flag recommending they consult a physician. You are a coach, not a doctor or physical therapist; don't diagnose.
+- RESPONSIBLE USE: never prescribe extreme calorie restriction or unsafe rapid weight loss. If you see signs of disordered eating or an unhealthy relationship with exercise, encourage a balanced approach and suggest speaking with a professional; never reinforce it.
 While still gathering:
 { "status": "gathering", "message": "<friendly question(s)>" }
 When you have enough -> respond with status "plan_ready" (plan schema below).
 
 ## MODE: adapt — after the user logs workouts
 The CONTEXT includes the current plan and recent logs. Read the data and adjust:
-- If latest_feedback.planComplete is true, the athlete finished the entire training block. Review the compact summary and final feedback, then create the next complete 21-day progression block. Preserve successful exercise IDs where appropriate, progress conservatively, and clearly name the new block in the summary and changes.
 - High adherence + hitting the top of the rep range at or under target RPE -> progress load/volume per each exercise's progression_rule.
 - Failed reps, RPE consistently too high, or missed targets -> hold or slightly reduce; check recovery.
 - Low adherence (skipped sessions) -> simplify or reduce volume/frequency before adding anything; name the likely barrier in the summary.
@@ -165,19 +200,40 @@ export type CoachResponse =
 export type CoachCallOptions = {
   primaryTimeoutMs?: number;
   fallbackTimeoutMs?: number;
-  timing?: CoachStageTiming;
+  primaryModel?: string;
+  maxTokens?: number;
+  temperature?: number;
 };
 
-export type CoachStageTiming = {
-  openAiMs: number;
-  validationMs: number;
-  retryMs: number;
-  attempts: number;
-  fallbackUsed: boolean;
-};
+export function getCoachTimeoutsForBuild(
+  buildNumber: number
+): Pick<Required<CoachCallOptions>, "primaryTimeoutMs" | "fallbackTimeoutMs"> {
+  if (buildNumber >= 38) {
+    return { primaryTimeoutMs: 85000, fallbackTimeoutMs: 20000 };
+  }
+
+  return { primaryTimeoutMs: 30000, fallbackTimeoutMs: 12000 };
+}
 
 function context(obj: Record<string, unknown>): string {
-  return `CONTEXT: ${JSON.stringify(obj)}`;
+  const entries = Object.entries(obj).filter(([, value]) => value !== undefined);
+  return `CONTEXT: ${JSON.stringify(Object.fromEntries(entries))}`;
+}
+
+export function compactPlanForCoach(plan: Plan): Plan {
+  const daysPerWeek = Math.max(1, Math.min(4, Math.round(plan.days_per_week || 1)));
+  return {
+    ...plan,
+    days_per_week: daysPerWeek,
+    sessions: plan.sessions.slice(0, daysPerWeek),
+  };
+}
+
+function extractText(message: Anthropic.Message): string {
+  return message.content
+    .map((block) => (block.type === "text" ? block.text : ""))
+    .join("")
+    .trim();
 }
 
 function stripJsonFences(value: string): string {
@@ -305,157 +361,42 @@ function parseCoachResponse(rawText: string): CoachResponse {
   return parsed;
 }
 
-function enforcePlanGuardrails(response: CoachResponse, previousPlan?: Plan): CoachResponse {
-  if (response.status !== "plan_ready" && response.status !== "plan_updated") return response;
-  const previousById = new Map(
-    previousPlan?.sessions.flatMap((session) => session.exercises).map((exercise) => [exercise.exercise_id, exercise]) ?? []
-  );
-  let adjusted = false;
-  const sessions = response.plan.sessions.slice(0, 6).map((session) => ({
-    ...session,
-    estimated_minutes: Math.max(10, Math.min(120, Math.round(session.estimated_minutes))),
-    exercises: session.exercises.slice(0, 6).map((exercise) => {
-      const previous = previousById.get(exercise.exercise_id);
-      const maxSets = previous ? Math.max(1, previous.sets + 1) : 6;
-      const sets = Math.max(1, Math.min(maxSets, Math.round(exercise.sets)));
-      const minRep = Math.max(1, Math.min(50, Math.round(exercise.rep_range.min)));
-      const maxRep = Math.max(minRep, Math.min(50, Math.round(exercise.rep_range.max)));
-      const targetRpe = exercise.target_rpe === null
-        ? null
-        : Math.max(5, Math.min(10, exercise.target_rpe));
-      const restSeconds = Math.max(0, Math.min(600, Math.round(exercise.rest_seconds)));
-      if (sets !== exercise.sets || minRep !== exercise.rep_range.min || maxRep !== exercise.rep_range.max || targetRpe !== exercise.target_rpe || restSeconds !== exercise.rest_seconds) adjusted = true;
-      return { ...exercise, sets, rep_range: { min: minRep, max: maxRep }, target_rpe: targetRpe, rest_seconds: restSeconds };
-    }),
-  }));
-  const plan = {
-    ...response.plan,
-    days_per_week: Math.max(1, Math.min(6, Math.round(response.plan.days_per_week))),
-    timeline_weeks: Math.max(1, Math.min(12, Math.round(response.plan.timeline_weeks))),
-    sessions,
-  };
-  if (response.status === "plan_updated") {
-    return {
-      ...response,
-      plan,
-      changes: adjusted
-        ? [...response.changes, "SpotLift capped the change within its progression and safety limits."]
-        : response.changes,
-    };
-  }
-  return { ...response, plan };
-}
-
-function slugify(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
-
-function makeExercise(
-  name: string,
-  category: Exercise["category"],
-  primaryMuscles: string[],
-  sets: number,
-  minReps: number,
-  maxReps: number,
-  targetRpe: number | null,
-  targetLoad: string,
-  restSeconds: number,
-  coachNotes: string
-): Exercise {
-  return {
-    exercise_id: slugify(name),
-    name,
-    category,
-    primary_muscles: primaryMuscles,
-    sets,
-    rep_range: { min: minReps, max: maxReps },
-    target_rpe: targetRpe,
-    target_load: targetLoad,
-    rest_seconds: restSeconds,
-    tempo: null,
-    progression_rule: "When all sets hit the top of the rep range at or below target RPE, add 5 lb next time.",
-    substitutions: ["Machine variation", "Dumbbell variation"],
-    coach_notes: coachNotes,
-  };
-}
+const FALLBACK_COPY = {
+  en: {
+    medical:
+      "Before I build a workout, stop and get medical clearance for the symptom or condition you mentioned. You can still use the rest of SpotLift while we keep training recommendations paused.",
+    gathering:
+      "Tell me your goal, how many days you can train, what equipment you have, your experience level, and any pain or limitations. I can build a reliable starter workout from those details even if advanced personalization is unavailable.",
+    retry:
+      "Coach took too long to answer cleanly. Try the same request again in a moment, or ask for a shorter adjustment.",
+  },
+  es: {
+    medical:
+      "Antes de armar un entrenamiento, detente y consigue autorización médica por el síntoma o la condición que mencionaste. Puedes seguir usando el resto de SpotLift mientras mantenemos en pausa las recomendaciones de entrenamiento.",
+    gathering:
+      "Cuéntame tu objetivo, cuántos días puedes entrenar, qué equipo tienes, tu nivel de experiencia y cualquier dolor o limitación. Con esos datos puedo armar un entrenamiento inicial confiable aunque la personalización avanzada no esté disponible.",
+    retry:
+      "Coach tardó demasiado en responder con claridad. Intenta la misma solicitud en un momento o pide un ajuste más corto.",
+  },
+} as const;
 
 function fallbackIntakePlan(units: Units, rawContext: string): CoachResponse {
-  const wantsFourDays = /4\s*day|four\s*day|3-4|3 to 4/i.test(rawContext);
-  const daysPerWeek = wantsFourDays ? 4 : 3;
-  const load = units === "kg" ? "Use a controlled load with 2.5 kg jumps available." : "Use a controlled load with 5 lb jumps available.";
+  // Answer in the language the conversation is already using; an English
+  // fallback must never replace a Spanish starter plan the user can see.
+  const language = detectReliableLanguage(rawContext);
+  const copy = FALLBACK_COPY[language];
 
-  const sessions: Session[] = [
-    {
-      day_label: "Week 1 Day 1 - Push Strength",
-      focus: "Chest, shoulders, triceps",
-      estimated_minutes: 60,
-      exercises: [
-        makeExercise("Barbell Bench Press", "compound", ["chest", "triceps", "shoulders"], 4, 4, 6, 8, load, 150, "Shoulder blades pinned; drive evenly through both feet."),
-        makeExercise("Incline Dumbbell Press", "compound", ["chest", "shoulders"], 3, 8, 10, 8, load, 90, "Lower under control and stop just short of shoulder discomfort."),
-        makeExercise("Seated Dumbbell Shoulder Press", "compound", ["shoulders", "triceps"], 3, 6, 8, 8, load, 120, "Keep ribs down and avoid leaning back."),
-        makeExercise("Cable Triceps Pressdown", "accessory", ["triceps"], 3, 10, 14, 8, load, 60, "Lock elbows by your sides and finish each rep fully."),
-      ],
-    },
-    {
-      day_label: "Week 1 Day 2 - Lower Strength + Easy Swim",
-      focus: "Leg strength and pool technique",
-      estimated_minutes: 70,
-      exercises: [
-        makeExercise("Back Squat", "compound", ["quads", "glutes", "core"], 4, 4, 6, 8, load, 180, "Brace hard before every rep and keep depth consistent."),
-        makeExercise("Romanian Deadlift", "compound", ["hamstrings", "glutes", "back"], 3, 6, 8, 8, load, 150, "Hinge until hamstrings load; keep the bar close."),
-        makeExercise("Walking Lunge", "accessory", ["quads", "glutes"], 3, 8, 10, 8, load, 90, "Smooth steps, tall torso, full-foot pressure."),
-        makeExercise("Technique Swim", "cardio", ["core"], 1, 20, 25, null, "25m pool: easy repeats, nasal/exhale focus, no race pace.", 30, "Leave the pool feeling sharper, not crushed."),
-      ],
-    },
-    {
-      day_label: "Week 1 Day 3 - Pull Strength",
-      focus: "Back, biceps, posterior chain",
-      estimated_minutes: 60,
-      exercises: [
-        makeExercise("Pull-Up or Assisted Pull-Up", "compound", ["back", "biceps"], 4, 5, 8, 8, load, 120, "Start each rep by pulling shoulders down, then elbows."),
-        makeExercise("Barbell Row", "compound", ["back", "biceps"], 4, 6, 8, 8, load, 150, "Keep torso locked and row toward lower ribs."),
-        makeExercise("Lat Pulldown", "accessory", ["back", "biceps"], 3, 8, 12, 8, load, 90, "Pause briefly with elbows tight to your sides."),
-        makeExercise("Dumbbell Curl", "accessory", ["biceps"], 3, 10, 12, 8, load, 60, "No swinging; own the lowering phase."),
-      ],
-    },
-    {
-      day_label: "Week 1 Day 4 - Conditioning + Arms",
-      focus: "Engine, swim weakness, arms",
-      estimated_minutes: 65,
-      exercises: [
-        makeExercise("Zone 2 Bike", "cardio", ["quads", "calves"], 1, 25, 35, null, "Conversational pace.", 0, "Steady breathing; this should build capacity, not bury you."),
-        makeExercise("Swim Intervals", "cardio", ["core", "shoulders"], 1, 12, 16, null, "25m pool: 8-12 x 25m controlled repeats.", 30, "Prioritize relaxed breathing and clean turns."),
-        makeExercise("Cable Lateral Raise", "accessory", ["shoulders"], 3, 12, 15, 8, load, 45, "Lead with elbows and keep traps quiet."),
-        makeExercise("Superset: Rope Curl + Overhead Triceps Extension", "accessory", ["biceps", "triceps"], 3, 10, 14, 8, load, 45, "Smooth reps; chase tension, not momentum."),
-      ],
-    },
-  ].slice(0, daysPerWeek);
+  if (hasCoachMedicalRedFlag(rawContext)) {
+    return { status: "gathering", message: copy.medical };
+  }
 
-  return {
-    status: "plan_ready",
-    summary:
-      "You gave enough detail to start: early-intermediate training age, full gym and pool access, no injuries, a 4-day preference, and a goal of getting stronger while improving conditioning and swimming. I built week 1 as a push/lower/pull/conditioning split with swimming practice baked in. Run this first week, then repeat the structure for weeks 2 and 3 with small load or rep progressions.",
-    plan: {
-      goal: "Get stronger while improving conditioning and swimming",
-      goal_type: "general_fitness",
-      experience_level: "intermediate",
-      units,
-      timeline_weeks: 3,
-      days_per_week: daysPerWeek,
-      split: daysPerWeek === 4 ? "Push / Lower / Pull / Conditioning" : "Push / Pull / Lower + Conditioning",
-      equipment: ["Full gym", "25m pool", "bike"],
-      constraints: ["No reported injuries", "Swimming is the main conditioning weakness"],
-      progression_strategy:
-        "Weeks 2 and 3 repeat the same split. Add 5 lb or 1-2 reps when sets land at the top of the range at RPE 8 or lower; keep swim work technique-first and add 1-2 intervals per week.",
-      sessions,
-      weekly_notes:
-        "Place at least one rest or easy day after lower body. Keep endurance work mostly conversational so strength can progress. If fatigue spikes, hold loads steady and reduce swim intervals by 20%.",
-      safety_flags: [],
-    },
+  return buildReliableStarterPlan(rawContext, units, language) ?? {
+    status: "gathering",
+    message: copy.gathering,
   };
 }
 
-function fallbackCoachResponse(messages: CoachMessage[]): CoachResponse {
+export function fallbackCoachResponse(messages: CoachMessage[]): CoachResponse {
   const rawContext = messages.map((message) => message.content).join("\n");
   const units: Units = rawContext.includes('"units":"kg"') ? "kg" : "lbs";
 
@@ -465,164 +406,204 @@ function fallbackCoachResponse(messages: CoachMessage[]): CoachResponse {
 
   return {
     status: "reply",
-    message:
-      "Coach took too long to answer cleanly. Try the same request again in a moment, or ask for a shorter adjustment.",
+    message: FALLBACK_COPY[detectReliableLanguage(rawContext)].retry,
   };
+}
+
+function canUseStaticFallback(messages: CoachMessage[]): boolean {
+  const rawContext = messages.map((message) => message.content).join("\n");
+  return rawContext.includes('"mode":"intake"') || rawContext.includes('"mode":"chat"');
+}
+
+function isAnthropicCreditExhausted(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error as { status?: unknown }).status === 400 &&
+    error.message.toLowerCase().includes("credit balance is too low")
+  );
+}
+
+const RECOVERABLE_PROVIDER_STATUSES = new Set([408, 409, 425, 429, 500, 502, 503, 504, 529]);
+
+/** Errors after which the deterministic plan should be served instead of an
+ *  error screen: bad/late model output and provider availability failures. */
+export function isCoachFallbackEligibleError(error: unknown): boolean {
+  if (error instanceof CoachConfigurationError) return true;
+  if (error instanceof SyntaxError) return true;
+  if (!(error instanceof Error)) return false;
+
+  const status = (error as { status?: unknown }).status;
+  if (typeof status === "number" && RECOVERABLE_PROVIDER_STATUSES.has(status)) return true;
+
+  const name = error.name.toLowerCase();
+  if (name.includes("abort") || name.includes("apiconnection") || name.includes("timeout")) return true;
+
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("expected schema") ||
+    message.includes("timed out") ||
+    message.includes("json") ||
+    message.includes("array element") ||
+    message.includes("overloaded") ||
+    message.includes("fetch failed") ||
+    message.includes("econnreset") ||
+    message.includes("socket hang up") ||
+    message.includes("not configured")
+  );
 }
 
 async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {}): Promise<CoachResponse> {
   const fallbackResponse = fallbackCoachResponse(messages);
+  const allowStaticFallback = canUseStaticFallback(messages);
   const primaryTimeoutMs = options.primaryTimeoutMs ?? COACH_TRAINER_PRIMARY_TIMEOUT_MS;
   const fallbackTimeoutMs = options.fallbackTimeoutMs ?? COACH_TRAINER_FALLBACK_TIMEOUT_MS;
+  const primaryModel = options.primaryModel ?? COACH_TRAINER_MODEL;
+  const maxTokens = options.maxTokens ?? COACH_TRAINER_MAX_TOKENS;
+  const temperature = options.temperature ?? 0.5;
 
-  const timing = options.timing;
-  let firstFailureAt: number | null = null;
+  async function run(nextMessages: CoachMessage[], model: string, timeoutMs: number): Promise<CoachResponse> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  async function run(nextMessages: CoachMessage[], model: string, timeoutMs: number, fallback = false): Promise<CoachResponse> {
-    if (timing) {
-      timing.attempts += 1;
-      timing.fallbackUsed = timing.fallbackUsed || fallback;
-    }
-    const openAiStartedAt = Date.now();
-    let text: string;
     try {
-      text = await createTextResponse({
-        model,
-        instructions: COACH_TRAINER_SYSTEM_PROMPT,
-        input: nextMessages,
-        maxOutputTokens: Number.isFinite(COACH_TRAINER_MAX_TOKENS) ? COACH_TRAINER_MAX_TOKENS : 5000,
-        timeoutMs,
-        telemetryFeature: "coach_trainer",
-      });
+      const response = await getCoachClient().messages.create(
+        {
+          model,
+          max_tokens: Number.isFinite(maxTokens) ? maxTokens : 5000,
+          temperature,
+          system: COACH_TRAINER_SYSTEM_PROMPT,
+          messages: nextMessages,
+        },
+        // Abort the paid request itself on timeout, and never let the SDK
+        // retry behind our back.
+        { signal: controller.signal, timeout: timeoutMs, maxRetries: 0 }
+      );
+
+      return parseCoachResponse(extractText(response));
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new Error(`Coach response timed out for ${model}.`);
+      }
+      throw error;
     } finally {
-      if (timing) timing.openAiMs += Date.now() - openAiStartedAt;
-    }
-    const validationStartedAt = Date.now();
-    try {
-      return parseCoachResponse(text);
-    } finally {
-      if (timing) timing.validationMs += Date.now() - validationStartedAt;
+      clearTimeout(timer);
     }
   }
 
-  const isRecoverableFormatError = (error: unknown) =>
-    error instanceof SyntaxError ||
-    (error instanceof Error &&
-      (error.message.includes("expected schema") ||
-        error.message.includes("timed out") ||
-        error.message.toLowerCase().includes("json") ||
-        error.message.toLowerCase().includes("array element")));
+  const isRecoverableFormatError = isCoachFallbackEligibleError;
 
   try {
-    return await run(messages, COACH_TRAINER_MODEL, primaryTimeoutMs);
+    return await run(messages, primaryModel, primaryTimeoutMs);
   } catch (error) {
-    firstFailureAt = Date.now();
+    // A depleted Anthropic balance affects every model. Intake and chat can
+    // degrade safely without paying for a second request that must also fail.
+    if (isAnthropicCreditExhausted(error)) {
+      console.error("[coach-trainer] Anthropic credits unavailable; using deterministic fallback.");
+      if (allowStaticFallback) return fallbackResponse;
+      throw error;
+    }
     if (!isRecoverableFormatError(error)) {
       throw error;
     }
+    console.error("[coach-trainer] primary attempt failed:", error instanceof Error ? error.message : error);
 
-    if (error instanceof Error && error.message.includes("timed out")) {
-      console.error("[coach-trainer] primary response timed out:", error.message);
-      try {
-        const response = await run(messages, COACH_TRAINER_FALLBACK_MODEL, fallbackTimeoutMs, true);
-        if (timing && firstFailureAt) timing.retryMs += Date.now() - firstFailureAt;
-        return response;
-      } catch (fallbackError) {
-        if (isRecoverableFormatError(fallbackError)) {
-          console.error("[coach-trainer] fallback response failed:", fallbackError);
-          return fallbackResponse;
-        }
-        throw fallbackError;
-      }
-    }
-
+    // Cost bound: one primary attempt plus at most one fallback attempt. A
+    // malformed response is not worth re-asking the expensive model for.
     try {
-      const response = await run([
-      ...messages,
-      {
-        role: "user",
-        content:
-            "Your previous response was not valid JSON for the schema. Reply again with ONE valid JSON object only. Keep the plan concise: 3 weeks, no more than 4 exercises per session, no markdown, no comments.",
-      },
-      ], COACH_TRAINER_MODEL, primaryTimeoutMs);
-      if (timing && firstFailureAt) timing.retryMs += Date.now() - firstFailureAt;
-      return response;
-    } catch (retryError) {
-      if (isRecoverableFormatError(retryError)) {
-        console.error("[coach-trainer] primary JSON formatting failed after retry:", retryError);
-        try {
-          const response = await run(messages, COACH_TRAINER_FALLBACK_MODEL, fallbackTimeoutMs, true);
-          if (timing && firstFailureAt) timing.retryMs += Date.now() - firstFailureAt;
-          return response;
-        } catch (fallbackError) {
-          if (isRecoverableFormatError(fallbackError)) {
-            console.error("[coach-trainer] fallback response failed:", fallbackError);
-            return fallbackResponse;
-          }
-          throw fallbackError;
-        }
+      const strictMessages: CoachMessage[] = [
+        ...messages,
+        {
+          role: "user",
+          content:
+            "Reply with ONE valid JSON object only, matching the schema. Keep the plan concise: 3 weeks, no more than 4 exercises per session, no markdown, no comments.",
+        },
+      ];
+      return await run(strictMessages, COACH_TRAINER_FALLBACK_MODEL, fallbackTimeoutMs);
+    } catch (fallbackError) {
+      if (isRecoverableFormatError(fallbackError)) {
+        console.error("[coach-trainer] fallback attempt failed:", fallbackError instanceof Error ? fallbackError.message : fallbackError);
+        if (allowStaticFallback) return fallbackResponse;
       }
-      throw retryError;
+      throw fallbackError;
     }
   }
+}
+
+/** Exported so regressions can assert the exact payload the client produces. */
+export function buildIntakeMessages(
+  units: Units,
+  history: CoachMessage[],
+  userMessage: string,
+  language?: ReliableLanguage
+): CoachMessage[] {
+  return history.length === 0
+    ? [{ role: "user", content: `${context({ mode: "intake", units, language })}\n\n${userMessage}` }]
+    : [...history, { role: "user", content: userMessage }];
 }
 
 export async function intakeTurn(
   units: Units,
   history: CoachMessage[],
   userMessage: string,
-  language: "en" | "es" = "en",
-  options?: CoachCallOptions
+  options?: CoachCallOptions,
+  language?: ReliableLanguage
 ): Promise<CoachResponse> {
-  const messages: CoachMessage[] =
-    history.length === 0
-      ? [{ role: "user", content: `${context({ mode: "intake", units, language })}\n\n${userMessage}` }]
-      : [...history, { role: "user", content: userMessage }];
-
-  return enforcePlanGuardrails(await callCoach(messages, options));
+  return callCoach(buildIntakeMessages(units, history, userMessage, language), options);
 }
 
 export async function adaptPlan(
   units: Units,
   currentPlan: Plan,
   logs: unknown,
-  language: "en" | "es" = "en",
-  options?: CoachCallOptions
+  options?: CoachCallOptions,
+  language?: ReliableLanguage
 ): Promise<CoachResponse> {
-  return enforcePlanGuardrails(await callCoach([
+  return callCoach([
     {
       role: "user",
-      content: context({ mode: "adapt", units, language, current_plan: currentPlan, logs }),
+      content: context({ mode: "adapt", units, language, current_plan: compactPlanForCoach(currentPlan), logs }),
     },
-  ], options), currentPlan);
+  ], options);
 }
 
 export async function updateGoals(
   units: Units,
   currentPlan: Plan,
   newGoal: string,
-  language: "en" | "es" = "en",
-  options?: CoachCallOptions
+  options?: CoachCallOptions,
+  language?: ReliableLanguage
 ): Promise<CoachResponse> {
-  return enforcePlanGuardrails(await callCoach([
+  return callCoach([
     {
       role: "user",
-      content: context({ mode: "update_goals", units, language, current_plan: currentPlan, new_goal: newGoal }),
+      content: context({
+        mode: "update_goals",
+        units,
+        language,
+        current_plan: compactPlanForCoach(currentPlan),
+        new_goal: newGoal,
+      }),
     },
-  ], options), currentPlan);
+  ], options);
 }
 
 export async function chatWithCoach(
   units: Units,
   question: string,
   currentPlan?: Plan | null,
-  language: "en" | "es" = "en",
-  options?: CoachCallOptions
+  options?: CoachCallOptions,
+  language?: ReliableLanguage
 ): Promise<CoachResponse> {
   return callCoach([
     {
       role: "user",
-      content: context({ mode: "chat", units, language, question, current_plan: currentPlan ?? null }),
+      content: context({
+        mode: "chat",
+        units,
+        language,
+        question,
+        current_plan: currentPlan ? compactPlanForCoach(currentPlan) : null,
+      }),
     },
   ], options);
 }

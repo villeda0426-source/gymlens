@@ -175,10 +175,10 @@ function qualityChecks(plan: Plan, scenario: Scenario, language: Language) {
 async function runOne(scenario: Scenario, language: Language) {
   const startedAt = Date.now();
   try {
-    const response = await intakeTurn(scenario.units, [], scenario.prompt[language], language, {
+    const response = await intakeTurn(scenario.units, [], scenario.prompt[language], {
       primaryTimeoutMs: 110_000,
       fallbackTimeoutMs: 25_000,
-    });
+    }, language);
     if (response.status !== "plan_ready") {
       return { scenario: scenario.id, language, status: response.status, passed: false, latencyMs: Date.now() - startedAt, response };
     }
@@ -235,10 +235,10 @@ async function main() {
     };
     const startedAt = Date.now();
     try {
-      const adapted = await adaptPlan(plan.units, plan, { latest_feedback: feedback }, result.language, {
+      const adapted = await adaptPlan(plan.units, plan, { latest_feedback: feedback }, {
         primaryTimeoutMs: 110_000,
         fallbackTimeoutMs: 25_000,
-      });
+      }, result.language);
       const passed = adapted.status === "plan_updated" && isPlan(adapted.plan) && adapted.changes.length > 0;
       adaptationResults.push({ scenario: result.scenario, language: result.language, passed, latencyMs: Date.now() - startedAt, response: adapted });
       console.log(`${passed ? "PASS" : "FAIL"} full-plan-adaptation ${result.scenario} [${result.language}] ${Date.now() - startedAt}ms`);

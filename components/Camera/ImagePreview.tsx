@@ -53,8 +53,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: height * 0.35,
-    backgroundColor: "transparent",
-    backgroundImage: "linear-gradient(transparent, #0A0A0A)",
+    backgroundColor: "rgba(10, 10, 10, 0.72)",
   },
   actions: {
     position: "absolute",

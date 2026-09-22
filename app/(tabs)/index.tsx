@@ -213,6 +213,14 @@ export default function HomeScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickCard}
+            onPress={() => router.push("/plan")}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="body" size={22} color={colors.coral} />
+            <Text style={styles.quickLabel}>{t("home.avatar")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickCard}
             onPress={() => router.push("/(tabs)/profile")}
             activeOpacity={0.85}
           >

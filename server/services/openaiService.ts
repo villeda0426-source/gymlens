@@ -2,7 +2,19 @@ import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 
 let client: OpenAI | null = null;
+let injectedClient: OpenAIClient | null = null;
 let telemetryClient: any = null;
+
+export type OpenAIClient = {
+  responses: {
+    create: (body: any, options?: { signal?: AbortSignal; timeout?: number; maxRetries?: number }) => Promise<any>;
+  };
+};
+
+/** Test seam for exercising timeouts and retry options without a paid request. */
+export function setOpenAIClientForTests(testClient: OpenAIClient | null): void {
+  injectedClient = testClient;
+}
 
 function recordAiUsage(entry: {
   feature: string;
@@ -22,20 +34,22 @@ function recordAiUsage(entry: {
     latency_ms: entry.latencyMs,
     succeeded: entry.succeeded,
   }).then(({ error }: { error: { message: string } | null }) => {
-    if (error && !/does not exist/i.test(error.message)) console.error("[ai-usage] telemetry error:", error.message);
+    if (error && !/does not exist/i.test(error.message)) {
+      console.error("[ai-usage] telemetry error:", error.message);
+    }
   });
 }
 
-function getClient(): OpenAI {
+function getClient(): OpenAIClient {
+  if (injectedClient) return injectedClient;
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY is not configured on the server.");
   }
-  client ??= new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  client ??= new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0 });
   return client;
 }
 
 export const OPENAI_DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-5-mini";
-export const OPENAI_VISION_MODEL = process.env.OPENAI_VISION_MODEL || OPENAI_DEFAULT_MODEL;
 
 type JsonSchema = Record<string, unknown>;
 
@@ -57,7 +71,7 @@ export async function createStructuredResponse<T>({
   schemaName,
   schema,
   maxOutputTokens = 4000,
-  timeoutMs = 60000,
+  timeoutMs = 30000,
   telemetryFeature = "structured_generation",
 }: JsonRequestOptions): Promise<T> {
   const controller = new AbortController();
@@ -81,7 +95,7 @@ export async function createStructuredResponse<T>({
           },
         },
       },
-      { signal: controller.signal }
+      { signal: controller.signal, timeout: timeoutMs, maxRetries: 0 }
     );
 
     if (!response.output_text) {
@@ -98,60 +112,17 @@ export async function createStructuredResponse<T>({
     });
 
     return JSON.parse(response.output_text) as T;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-export async function createTextResponse({
-  model = OPENAI_DEFAULT_MODEL,
-  instructions,
-  input,
-  maxOutputTokens = 300,
-  timeoutMs = 30000,
-  telemetryFeature = "text_generation",
-}: Omit<JsonRequestOptions, "schemaName" | "schema">): Promise<string> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  const startedAt = Date.now();
-
-  try {
-    const response = await getClient().responses.create(
-      {
-        model,
-        instructions,
-        input: input as any,
-        max_output_tokens: maxOutputTokens,
-        reasoning: { effort: "low" },
-      },
-      { signal: controller.signal }
-    );
-
-    const text = response.output_text?.trim();
-    if (!text) throw new Error("OpenAI returned an empty text response.");
+  } catch (error) {
     recordAiUsage({
       feature: telemetryFeature,
       model,
-      inputTokens: response.usage?.input_tokens ?? 0,
-      outputTokens: response.usage?.output_tokens ?? 0,
+      inputTokens: 0,
+      outputTokens: 0,
       latencyMs: Date.now() - startedAt,
-      succeeded: true,
+      succeeded: false,
     });
-    return text;
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
-}
-
-export function imageDataUrl(base64Image: string): string {
-  const header = base64Image.slice(0, 16);
-  const mimeType = header.startsWith("iVBORw")
-    ? "image/png"
-    : header.startsWith("R0lGOD")
-      ? "image/gif"
-      : header.startsWith("UklGR")
-        ? "image/webp"
-        : "image/jpeg";
-
-  return `data:${mimeType};base64,${base64Image}`;
 }

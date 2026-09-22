@@ -8,7 +8,7 @@ AI-powered gym equipment identifier. Point your camera at any piece of gym equip
 - **Navigation**: Expo Router (file-based)
 - **Backend**: Node.js + Express
 - **Database**: Supabase (Postgres + Auth + Storage)
-- **AI**: OpenAI Responses API for vision, Coach, exercise guides, and structured generation
+- **AI Vision**: Anthropic Claude API (`claude-sonnet-4-20250514`)
 - **Video**: YouTube Data API v3
 - **i18n**: i18next (EN/ES)
 - **State**: Zustand
@@ -44,7 +44,7 @@ cp .env.example .env
 ```
 
 ```env
-OPENAI_API_KEY=...
+ANTHROPIC_API_KEY=...
 SUPABASE_URL=...
 SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
@@ -53,7 +53,17 @@ API_BASE_URL=http://localhost:3001
 EXPO_PUBLIC_API_BASE_URL=http://localhost:3001
 EXPO_PUBLIC_SUPABASE_URL=...
 EXPO_PUBLIC_SUPABASE_ANON_KEY=...
+GMAIL_USER=...
+GMAIL_APP_PASSWORD=...
+INSTALL_NOTIFICATION_EMAIL=you@example.com
+NOTIFICATION_TIME_ZONE=America/Chicago
 ```
+
+`INSTALL_NOTIFICATION_EMAIL` receives a one-time email when a new app
+installation is first opened. Installations are stored in Supabase's
+`app_installations` table and are linked to the user's Supabase account after
+signup or sign-in. Run all files in `supabase/migrations/` against the production
+project before deploying a server version that depends on them.
 
 For App Store / production builds, `API_BASE_URL` and `EXPO_PUBLIC_API_BASE_URL` must point to the deployed backend URL, not `localhost` or a LAN IP.
 
@@ -64,11 +74,10 @@ For App Store / production builds, `API_BASE_URL` and `EXPO_PUBLIC_API_BASE_URL`
 3. Copy your **Project URL** and **anon key** from **Settings → API**
 4. Copy your **service_role key** (keep this server-side only)
 
-### 4. Set up the OpenAI API
+### 4. Set up Anthropic API
 
-1. Create an API key in the [OpenAI Platform](https://platform.openai.com/)
-2. Add it to `.env.local` as `OPENAI_API_KEY`
-3. Optionally configure `OPENAI_MODEL`, `OPENAI_VISION_MODEL`, `OPENAI_COACH_MODEL`, `OPENAI_FALLBACK_MODEL`, and `OPENAI_WORKOUT_MODEL`
+1. Sign up at [console.anthropic.com](https://console.anthropic.com)
+2. Create an API key and add it to `.env` as `ANTHROPIC_API_KEY`
 
 ### 5. Set up YouTube Data API
 
@@ -77,12 +86,6 @@ For App Store / production builds, `API_BASE_URL` and `EXPO_PUBLIC_API_BASE_URL`
 3. Create an API key and add it to `.env` as `YOUTUBE_API_KEY`
 
 ---
-
-### Rules-first Coach Trainer
-
-Workout check-ins use a cost-controlled coaching pipeline. SpotLift handles routine holds and earned progression with deterministic rules; pain, repeated high difficulty, low adherence, low energy, or written context escalates to OpenAI with a compact summary. Server guardrails cap prescriptions, and AI-recommended plan changes require user confirmation.
-
-`workout_feedback` stores structured check-ins. `ai_usage_events` stores only feature, model, token totals, latency, and success metadata—never prompts or workout notes. YouTube tutorial search remains a separate YouTube Data API workflow.
 
 ## Running the App
 
@@ -145,11 +148,11 @@ gymlens/
 │   ├── UI/                # Shared UI components
 │   └── Layout/            # Screen wrappers
 ├── hooks/                 # Custom React hooks
-├── lib/                   # Shared AI schemas and API clients
+├── lib/                   # API clients (Supabase, Claude, YouTube)
 ├── locales/               # EN/ES translation files
 ├── server/                # Express backend
 │   ├── routes/            # API route handlers
-│   └── services/          # OpenAI and YouTube services
+│   └── services/          # Claude & YouTube services
 ├── store/                 # Zustand state stores
 └── supabase/              # Database schema
 ```

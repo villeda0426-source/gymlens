@@ -1,7 +1,6 @@
 import dotenv from "dotenv";
 
-dotenv.config({ path: ".env" });
-dotenv.config({ path: ".env.local", override: true });
+dotenv.config();
 
 const API_BASE = (process.env.EXPO_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "").replace(/\/+$/, "");
 const TIMEOUT_MS = 15000;
@@ -60,7 +59,27 @@ const checks: Check[] = [
       assert(response.ok, `Dependency health failed with ${response.status}: ${JSON.stringify(data)}`);
       assert(data?.status === "ok", "Dependency health did not return { status: 'ok' }.");
       assert(data?.checks?.supabaseReachable === true, "Supabase dependency is not reachable.");
+      assert(data?.checks?.anthropicConfigured === true, "Anthropic dependency is not configured.");
       assert(data?.checks?.openaiConfigured === true, "OpenAI dependency is not configured.");
+    },
+  },
+  {
+    name: "Readiness endpoint",
+    run: async () => {
+      const { response, data } = await request("/health/ready");
+      assert(response.ok, `Readiness failed with ${response.status}: ${JSON.stringify(data)}`);
+      assert(data?.status === "ok" && data?.ready === true, "Readiness did not return a ready service.");
+    },
+  },
+  {
+    name: "API capabilities",
+    run: async () => {
+      const { response, data } = await request("/api/capabilities");
+      assert(response.ok, `Capabilities failed with ${response.status}`);
+      assert(data?.contractVersion === 1, "Unexpected API contract version.");
+      assert(data?.requestTracing === true, "Request tracing capability is not enabled.");
+      assert(data?.trainer?.idempotentJobs === true, "Trainer job idempotency is not enabled.");
+      assert(data?.trainer?.ownedJobs === true, "Trainer job ownership is not enabled.");
     },
   },
   {
@@ -113,6 +132,24 @@ const checks: Check[] = [
       });
       assert(response.ok, `Trainer chat failed with ${response.status}`);
       assert(typeof data?.message === "string" || typeof data?.summary === "string", "Trainer returned an invalid payload.");
+    },
+  },
+  {
+    name: "Trainer jobs require authentication",
+    run: async () => {
+      const requestId = "spotlift-release-smoke-auth";
+      const { response, data } = await request("/api/coach-trainer/jobs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-request-id": requestId,
+        },
+        body: JSON.stringify({}),
+      });
+      assert(response.status === 401, `Unauthenticated Trainer job returned ${response.status}.`);
+      assert(data?.code === "AUTH_REQUIRED", "Trainer job did not return AUTH_REQUIRED.");
+      assert(data?.requestId === requestId, "Trainer job did not preserve the request ID.");
+      assert(data?.retryable === false, "Authentication error must not be marked retryable.");
     },
   },
 ];

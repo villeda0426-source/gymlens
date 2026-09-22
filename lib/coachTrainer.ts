@@ -1,7 +1,7 @@
 import { apiFetch } from "@/lib/api";
-import type { CoachingDecision, CoachingSummary, WorkoutFeedback } from "@/lib/coachingEngine";
 
 export type Units = "kg" | "lbs";
+export type CoachLanguage = "en" | "es";
 export type CoachMode = "intake" | "adapt" | "update_goals" | "chat";
 export type CoachMessage = { role: "user" | "assistant"; content: string };
 
@@ -53,15 +53,15 @@ export type CoachResponse =
   | { status: "plan_updated"; summary: string; changes: string[]; plan: CoachPlan };
 
 type TrainerRequest =
-  | { mode: "intake"; units: Units; language?: "en" | "es"; history: CoachMessage[]; userMessage: string }
-  | { mode: "adapt"; units: Units; language?: "en" | "es"; currentPlan: CoachPlan; logs: unknown[] }
-  | { mode: "update_goals"; units: Units; language?: "en" | "es"; currentPlan: CoachPlan; newGoal: string }
-  | { mode: "chat"; units: Units; language?: "en" | "es"; currentPlan?: CoachPlan | null; question: string };
+  | { mode: "intake"; units: Units; language?: CoachLanguage; history: CoachMessage[]; userMessage: string }
+  | { mode: "adapt"; units: Units; language?: CoachLanguage; currentPlan: CoachPlan; logs: unknown[] }
+  | { mode: "update_goals"; units: Units; language?: CoachLanguage; currentPlan: CoachPlan; newGoal: string }
+  | { mode: "chat"; units: Units; language?: CoachLanguage; currentPlan?: CoachPlan | null; question: string };
 
 type CoachTrainerRequestOptions = {
   authToken?: string;
+  idempotencyKey?: string;
   signal?: AbortSignal;
-  language?: "en" | "es";
 };
 
 export type CoachJobStatus = "queued" | "running" | "completed" | "failed";
@@ -79,35 +79,6 @@ export type CoachJobStatusResponse = {
   createdAt?: string;
   updatedAt?: string;
   completedAt?: string | null;
-  timings?: Record<string, number | boolean> | null;
-};
-
-export async function recordCoachJobClientTiming(
-  jobId: string,
-  timing: Record<string, number>,
-  options: CoachTrainerRequestOptions = {}
-): Promise<void> {
-  await apiFetch(`/api/coach-trainer/jobs/${jobId}/client-timing`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.authToken ? { Authorization: `Bearer ${options.authToken}` } : {}),
-    },
-    body: JSON.stringify(timing),
-  }, 15_000);
-}
-
-export type WorkoutEvaluationResponse = CoachingDecision & {
-  summary: CoachingSummary;
-  feedbackSaved: boolean;
-};
-
-export type LatestWorkoutReviewResponse = {
-  sessionLabel: string;
-  source: "rules" | "ai";
-  reason: string;
-  changes: string[];
-  createdAt: string;
 };
 
 export async function callCoachTrainer(
@@ -119,6 +90,7 @@ export async function callCoachTrainer(
     headers: {
       "Content-Type": "application/json",
       ...(options.authToken ? { Authorization: `Bearer ${options.authToken}` } : {}),
+      ...(options.idempotencyKey ? { "x-idempotency-key": options.idempotencyKey } : {}),
     },
     body: JSON.stringify(payload),
     signal: options.signal,
@@ -134,6 +106,7 @@ export async function startCoachTrainerJob(
     headers: {
       "Content-Type": "application/json",
       ...(options.authToken ? { Authorization: `Bearer ${options.authToken}` } : {}),
+      ...(options.idempotencyKey ? { "x-idempotency-key": options.idempotencyKey } : {}),
     },
     body: JSON.stringify(payload),
     signal: options.signal,
@@ -145,33 +118,6 @@ export async function getCoachTrainerJob(
   options: CoachTrainerRequestOptions = {}
 ): Promise<CoachJobStatusResponse> {
   return apiFetch<CoachJobStatusResponse>(`/api/coach-trainer/jobs/${jobId}`, {
-    headers: {
-      ...(options.authToken ? { Authorization: `Bearer ${options.authToken}` } : {}),
-    },
-    signal: options.signal,
-  }, 15000);
-}
-
-export async function evaluateCoachWorkout(
-  currentPlan: CoachPlan,
-  feedback: WorkoutFeedback,
-  options: CoachTrainerRequestOptions = {}
-): Promise<WorkoutEvaluationResponse> {
-  return apiFetch<WorkoutEvaluationResponse>("/api/coach-trainer/evaluate", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.authToken ? { Authorization: `Bearer ${options.authToken}` } : {}),
-    },
-    body: JSON.stringify({ currentPlan, feedback, language: options.language ?? "en" }),
-    signal: options.signal,
-  }, 120000);
-}
-
-export async function getLatestCoachWorkoutReview(
-  options: CoachTrainerRequestOptions = {}
-): Promise<LatestWorkoutReviewResponse | null> {
-  return apiFetch<LatestWorkoutReviewResponse | null>("/api/coach-trainer/reviews/latest", {
     headers: {
       ...(options.authToken ? { Authorization: `Bearer ${options.authToken}` } : {}),
     },

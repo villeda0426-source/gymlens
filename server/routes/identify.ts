@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { extractEquipmentName, identifyEquipment } from "../services/equipmentAiService";
+import { extractEquipmentName, identifyEquipment } from "../services/claudeService";
 import { getEquipmentVideos } from "../services/youtubeService";
 import { createClient } from "@supabase/supabase-js";
 
@@ -153,7 +153,7 @@ router.post("/", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Image is required" });
     }
 
-    // ── Step 1: Quick name extraction (low-detail OpenAI vision) ───────────
+    // ── Step 1: Quick name extraction (Haiku — cheap) ──────────────────────
     const quickName = await extractEquipmentName(image);
     console.log("[identify] quick name extracted:", quickName);
 
@@ -200,21 +200,11 @@ router.post("/", async (req: Request, res: Response) => {
       }
     }
 
-    // ── Step 3b: CACHE MISS — full OpenAI vision call ──────────────────────
-    console.log(`NEW SCAN - calling OpenAI for: ${quickName}`);
+    // ── Step 3b: CACHE MISS — full Anthropic call ──────────────────────────
+    console.log(`NEW SCAN - calling Anthropic for: ${quickName}`);
 
     const identification = await identifyEquipment(image);
-    console.log("[identify] OpenAI full result:", identification?.name);
-
-    if (
-      !identification?.name ||
-      /unknown|not (gym )?equipment|unable to identify/i.test(identification.name) ||
-      identification.confidence < 0.55
-    ) {
-      return res.status(422).json({
-        error: "I couldn't identify that equipment confidently. Try a closer photo with the full machine visible.",
-      });
-    }
+    console.log("[identify] Claude full result:", identification?.name);
 
     const videos = await getEquipmentVideos(identification.search_query);
 
@@ -278,7 +268,7 @@ router.post("/", async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("[identify] error:", error.message ?? error);
-    return res.status(500).json({ error: error.message || "Identification failed" });
+    return res.status(500).json({ error: "Equipment identification is temporarily unavailable." });
   }
 });
 
