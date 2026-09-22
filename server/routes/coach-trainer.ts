@@ -13,6 +13,8 @@ import {
   updateGoals,
 } from "../services/coachTrainerService";
 import { getRequestId, sendApiError } from "../lib/apiContract";
+import { routeCoachRequest, type RouteDecision } from "../services/coachRouter";
+import { detectReliableLanguage } from "../../shared/reliableCoach";
 
 const router = Router();
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -86,6 +88,30 @@ async function getAuthenticatedUserId(req: Request): Promise<string | null> {
   return data.user.id;
 }
 
+// Rules-first routing for requests that are routine enough to answer without
+// calling the AI model. Runs before any Claude call, so it does not interact
+// with shared/reliableCoach.ts's fallback (which only fires after a Claude
+// call has been made and failed). Text used only for routing/language
+// detection, never logged; see coachRouter's own metadata-only logging.
+function routeBeforeCoachCall(req: Request, mode: CoachMode, units: Units, language: "en" | "es" | undefined): RouteDecision {
+  const rawText = [req.body?.userMessage, req.body?.question, req.body?.newGoal]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ");
+  const resolvedLanguage = language ?? detectReliableLanguage(rawText || "");
+
+  return routeCoachRequest({
+    mode,
+    units,
+    language: resolvedLanguage,
+    userMessage: typeof req.body?.userMessage === "string" ? req.body.userMessage.trim() : undefined,
+    history: mode === "intake" ? getHistory(req.body?.history) : undefined,
+    question: typeof req.body?.question === "string" ? req.body.question.trim() : undefined,
+    newGoal: typeof req.body?.newGoal === "string" ? req.body.newGoal.trim() : undefined,
+    logs: req.body?.logs,
+    currentPlan: isPlan(req.body?.currentPlan) ? req.body.currentPlan : null,
+  });
+}
+
 /** Exported so regressions can drive the real request body end to end. */
 export async function runCoachRequest(req: Request, coachOptions = getCoachOptions(req)) {
   const mode = req.body?.mode;
@@ -99,6 +125,18 @@ export async function runCoachRequest(req: Request, coachOptions = getCoachOptio
   if (!isUnits(units)) {
     throw new CoachRequestError("units must be kg or lbs.");
   }
+
+  let routeDecision: RouteDecision;
+  try {
+    routeDecision = routeBeforeCoachCall(req, mode, units, language);
+  } catch {
+    // Malformed payload for the router (e.g. bad history shape) is not the
+    // router's job to reject; fall through so the existing AI-path validation
+    // below produces its normal error.
+    routeDecision = { route: "ai", reason: "router:invalid_payload" };
+  }
+  console.log(`[coach-router] mode=${mode} route=${routeDecision.route} ${routeDecision.route === "rules" ? `intent=${routeDecision.intent}` : `reason=${routeDecision.reason}`}`);
+  if (routeDecision.route === "rules") return routeDecision.response;
 
   if (mode === "intake") {
     const userMessage = typeof req.body?.userMessage === "string" ? req.body.userMessage.trim() : "";
@@ -245,7 +283,20 @@ router.post("/jobs", async (req: Request, res: Response) => {
 
     if (error || !data) throw error || new Error("Coach job insert returned no data.");
 
-    void processCoachJob(data.id, req.body);
+    // Rules-routed requests finish in milliseconds (no model call), so await
+    // them here: the client's first poll already sees the completed result
+    // instead of waiting out a poll interval for an already-finished job.
+    let routedToRules = false;
+    try {
+      routedToRules = routeBeforeCoachCall(req, mode, req.body.units, req.body?.language === "es" ? "es" : req.body?.language === "en" ? "en" : undefined).route === "rules";
+    } catch {
+      routedToRules = false;
+    }
+    if (routedToRules) {
+      await processCoachJob(data.id, req.body);
+    } else {
+      void processCoachJob(data.id, req.body);
+    }
     return res.status(202).json({
       jobId: data.id,
       status: data.status,
