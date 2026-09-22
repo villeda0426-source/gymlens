@@ -1,0 +1,14 @@
+{
+  "name": "Adanis",
+  "persona_id": "ea69b673-3326-4d4f-8ecd-f8d1070e1e35",
+  "public_identity": "421acad585036763c74c20e65431b3392a496456e6acfd3187b63e202ebb973e",
+  "dm_channel": "1b491754-b5c2-4ffe-885d-8756d70328bc",
+  "harness": "Codex",
+  "model_ui": "5.6 Sol (high)",
+  "parallelism": 1,
+  "online_verified": true,
+  "snapshot": "outputs/adanis-buzz/adanis.agent.png",
+  "snapshot_sha256": "1b59a0a288996cbd7857f46c65e7824630cc3f1e288176a51b9e7650455f3364",
+  "system_prompt_sha256": "56a2467e6f145400a599c722acea3e66f961207dee777d15ddbf46235d212096",
+  "live_acceptance": "running"
+}

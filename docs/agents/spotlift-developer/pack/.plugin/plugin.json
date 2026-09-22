@@ -1,0 +1,14 @@
+{
+  "id": "local.spotlift.developer",
+  "name": "SpotLift Developer",
+  "version": "0.2.0",
+  "description": "SpotLift engineering persona with project context, verified learning, and scoped delivery.",
+  "keywords": ["spotlift", "developer", "expo", "typescript"],
+  "personas": ["agents/spotlift-developer.persona.md"],
+  "pack_instructions": "instructions.md",
+  "defaults": {
+    "triggers": {"mentions": true, "keywords": [], "all_messages": false},
+    "thread_replies": true,
+    "broadcast_replies": false
+  }
+}

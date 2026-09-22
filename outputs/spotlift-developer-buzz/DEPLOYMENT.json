@@ -1,0 +1,20 @@
+{
+  "persona_id": "f8caba1e-c247-4b2f-ac98-e1232654f13a",
+  "display_name": "SpotLift Developer",
+  "direct_message_channel": "191ac930-bc15-46de-a146-143486e2524b",
+  "workflow_version": "0.2.0",
+  "host_instructions": "docs/agents/spotlift-developer/BUZZ_AGENT_INSTRUCTIONS.md",
+  "host_instructions_sha256": "d1479542d87b45f74f045c122fef113806afc88d0716377716bb93d268ad8e4b",
+  "runtime": "Buzz harness default (UI displayed Claude Code)",
+  "model": "Harness default",
+  "parallelism": 1,
+  "instruction_access": "Only you and your agents",
+  "ui_creation_verified": true,
+  "ui_online_verified": true,
+  "pilot_status": "passed in isolated simulation; independently rerun",
+  "production_changed": false,
+  "index_status": "disk retrieval and link integrity passed; fresh-session isolation not verified",
+  "snapshot_file": "outputs/spotlift-developer-buzz/spotlift-developer.agent.png",
+  "snapshot_sha256": "d7d26bfcf98e0e3bf9320cf175448c11a3c9c460105e6dc8d658a9a936e1d945",
+  "snapshot_prompt_matches_host_instructions": true
+}

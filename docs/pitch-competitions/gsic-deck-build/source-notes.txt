@@ -1,0 +1,12 @@
+SpotLift product sources
+- /Users/villedajr/SpotLift
+- /Users/villedajr/SpotLift/coachlift-web/hero-app-screenshot.png
+- /Users/villedajr/SpotLift/assets/images/avatar/fitness-avatar-curved-front.png
+- /Users/villedajr/SpotLift/assets/images/spotlift-letters-logo.png
+
+External verification
+- https://apps.apple.com/us/app/spotlift/id6768139635
+- https://coachliftai.netlify.app/privacy
+- https://www.sport-gsic.com/event/gsic-summit-valencia-2026/groundbreakers-pitch-sessions
+
+No market-size, revenue, customer-count, download, retention, or pilot claims were invented.

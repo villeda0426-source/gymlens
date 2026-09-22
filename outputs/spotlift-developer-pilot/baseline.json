@@ -1,0 +1,10 @@
+{
+  "root": "/Users/villedajr/SpotLift",
+  "head": "351c4d6b80bbe1dfbdf8f80775e9e661da2103fd",
+  "branch": "main",
+  "sha256": {
+    "hooks/useEquipmentSearch.ts": "66d7e4a828b9c1036e5107f244c62b9ca1bb86693b4dae36c119fa924804a6e5",
+    "package.json": "60730f80eabb59d46b04d7aca6e641583a57048061aa03efbe1131df2d974d5e",
+    "package-lock.json": "eab9ad470523e4457008856a73bc1800a4405bba54e7de5f4f30748a8014b90e"
+  }
+}

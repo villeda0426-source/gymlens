@@ -1,0 +1,3635 @@
+{
+  "version": 1,
+  "kind": "slides-derived-design-system",
+  "pageSizePt": {
+    "width": 960,
+    "height": 540
+  },
+  "multiMaster": false,
+  "masters": [
+    {
+      "masterId": "p8",
+      "displayName": "ChatGPT",
+      "effectivePageProperties": {
+        "pageBackgroundFill": {
+          "solidFill": {
+            "color": {
+              "themeColor": "LIGHT1"
+            },
+            "alpha": 1
+          }
+        },
+        "colorScheme": {
+          "colors": [
+            {
+              "type": "DARK1",
+              "color": {}
+            },
+            {
+              "type": "LIGHT1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "DARK2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            },
+            {
+              "type": "LIGHT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "ACCENT1",
+              "color": {
+                "red": 0.08235294,
+                "green": 0.3764706,
+                "blue": 0.50980395
+              }
+            },
+            {
+              "type": "ACCENT2",
+              "color": {
+                "red": 0.9137255,
+                "green": 0.44313726,
+                "blue": 0.19607843
+              }
+            },
+            {
+              "type": "ACCENT3",
+              "color": {
+                "red": 0.09803922,
+                "green": 0.41960785,
+                "blue": 0.14117648
+              }
+            },
+            {
+              "type": "ACCENT4",
+              "color": {
+                "red": 0.05882353,
+                "green": 0.61960787,
+                "blue": 0.8352941
+              }
+            },
+            {
+              "type": "ACCENT5",
+              "color": {
+                "red": 0.627451,
+                "green": 0.16862746,
+                "blue": 0.5764706
+              }
+            },
+            {
+              "type": "ACCENT6",
+              "color": {
+                "red": 0.30588236,
+                "green": 0.654902,
+                "blue": 0.18039216
+              }
+            },
+            {
+              "type": "HYPERLINK",
+              "color": {
+                "red": 0.27450982,
+                "green": 0.47058824,
+                "blue": 0.5254902
+              }
+            },
+            {
+              "type": "FOLLOWED_HYPERLINK",
+              "color": {
+                "red": 0.5882353,
+                "green": 0.3764706,
+                "blue": 0.49019608
+              }
+            },
+            {
+              "type": "TEXT1",
+              "color": {}
+            },
+            {
+              "type": "BACKGROUND1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "TEXT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "BACKGROUND2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            }
+          ]
+        }
+      },
+      "themeColors": {
+        "DARK1": {},
+        "LIGHT1": {
+          "red": 1,
+          "green": 1,
+          "blue": 1
+        },
+        "DARK2": {
+          "red": 0.05490196,
+          "green": 0.15686275,
+          "blue": 0.25490198
+        },
+        "LIGHT2": {
+          "red": 0.9098039,
+          "green": 0.9098039,
+          "blue": 0.9098039
+        },
+        "ACCENT1": {
+          "red": 0.08235294,
+          "green": 0.3764706,
+          "blue": 0.50980395
+        },
+        "ACCENT2": {
+          "red": 0.9137255,
+          "green": 0.44313726,
+          "blue": 0.19607843
+        },
+        "ACCENT3": {
+          "red": 0.09803922,
+          "green": 0.41960785,
+          "blue": 0.14117648
+        },
+        "ACCENT4": {
+          "red": 0.05882353,
+          "green": 0.61960787,
+          "blue": 0.8352941
+        },
+        "ACCENT5": {
+          "red": 0.627451,
+          "green": 0.16862746,
+          "blue": 0.5764706
+        },
+        "ACCENT6": {
+          "red": 0.30588236,
+          "green": 0.654902,
+          "blue": 0.18039216
+        },
+        "HYPERLINK": {
+          "red": 0.27450982,
+          "green": 0.47058824,
+          "blue": 0.5254902
+        },
+        "FOLLOWED_HYPERLINK": {
+          "red": 0.5882353,
+          "green": 0.3764706,
+          "blue": 0.49019608
+        },
+        "TEXT1": {},
+        "BACKGROUND1": {
+          "red": 1,
+          "green": 1,
+          "blue": 1
+        },
+        "TEXT2": {
+          "red": 0.9098039,
+          "green": 0.9098039,
+          "blue": 0.9098039
+        },
+        "BACKGROUND2": {
+          "red": 0.05490196,
+          "green": 0.15686275,
+          "blue": 0.25490198
+        }
+      },
+      "elementKinds": {},
+      "placeholderObjectIds": [],
+      "protectedRegions": []
+    }
+  ],
+  "layouts": [
+    {
+      "layoutId": "p9",
+      "masterId": "p8",
+      "name": "TITLE",
+      "displayName": "Title Slide",
+      "effectivePageProperties": {
+        "pageBackgroundFill": {
+          "solidFill": {
+            "color": {
+              "themeColor": "LIGHT1"
+            },
+            "alpha": 1
+          }
+        },
+        "colorScheme": {
+          "colors": [
+            {
+              "type": "DARK1",
+              "color": {}
+            },
+            {
+              "type": "LIGHT1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "DARK2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            },
+            {
+              "type": "LIGHT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "ACCENT1",
+              "color": {
+                "red": 0.08235294,
+                "green": 0.3764706,
+                "blue": 0.50980395
+              }
+            },
+            {
+              "type": "ACCENT2",
+              "color": {
+                "red": 0.9137255,
+                "green": 0.44313726,
+                "blue": 0.19607843
+              }
+            },
+            {
+              "type": "ACCENT3",
+              "color": {
+                "red": 0.09803922,
+                "green": 0.41960785,
+                "blue": 0.14117648
+              }
+            },
+            {
+              "type": "ACCENT4",
+              "color": {
+                "red": 0.05882353,
+                "green": 0.61960787,
+                "blue": 0.8352941
+              }
+            },
+            {
+              "type": "ACCENT5",
+              "color": {
+                "red": 0.627451,
+                "green": 0.16862746,
+                "blue": 0.5764706
+              }
+            },
+            {
+              "type": "ACCENT6",
+              "color": {
+                "red": 0.30588236,
+                "green": 0.654902,
+                "blue": 0.18039216
+              }
+            },
+            {
+              "type": "HYPERLINK",
+              "color": {
+                "red": 0.27450982,
+                "green": 0.47058824,
+                "blue": 0.5254902
+              }
+            },
+            {
+              "type": "FOLLOWED_HYPERLINK",
+              "color": {
+                "red": 0.5882353,
+                "green": 0.3764706,
+                "blue": 0.49019608
+              }
+            },
+            {
+              "type": "TEXT1",
+              "color": {}
+            },
+            {
+              "type": "BACKGROUND1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "TEXT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "BACKGROUND2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            }
+          ]
+        }
+      },
+      "themeColors": {
+        "DARK1": {},
+        "LIGHT1": {
+          "red": 1,
+          "green": 1,
+          "blue": 1
+        },
+        "DARK2": {
+          "red": 0.05490196,
+          "green": 0.15686275,
+          "blue": 0.25490198
+        },
+        "LIGHT2": {
+          "red": 0.9098039,
+          "green": 0.9098039,
+          "blue": 0.9098039
+        },
+        "ACCENT1": {
+          "red": 0.08235294,
+          "green": 0.3764706,
+          "blue": 0.50980395
+        },
+        "ACCENT2": {
+          "red": 0.9137255,
+          "green": 0.44313726,
+          "blue": 0.19607843
+        },
+        "ACCENT3": {
+          "red": 0.09803922,
+          "green": 0.41960785,
+          "blue": 0.14117648
+        },
+        "ACCENT4": {
+          "red": 0.05882353,
+          "green": 0.61960787,
+          "blue": 0.8352941
+        },
+        "ACCENT5": {
+          "red": 0.627451,
+          "green": 0.16862746,
+          "blue": 0.5764706
+        },
+        "ACCENT6": {
+          "red": 0.30588236,
+          "green": 0.654902,
+          "blue": 0.18039216
+        },
+        "HYPERLINK": {
+          "red": 0.27450982,
+          "green": 0.47058824,
+          "blue": 0.5254902
+        },
+        "FOLLOWED_HYPERLINK": {
+          "red": 0.5882353,
+          "green": 0.3764706,
+          "blue": 0.49019608
+        },
+        "TEXT1": {},
+        "BACKGROUND1": {
+          "red": 1,
+          "green": 1,
+          "blue": 1
+        },
+        "TEXT2": {
+          "red": 0.9098039,
+          "green": 0.9098039,
+          "blue": 0.9098039
+        },
+        "BACKGROUND2": {
+          "red": 0.05490196,
+          "green": 0.15686275,
+          "blue": 0.25490198
+        }
+      },
+      "elementKinds": {},
+      "placeholderSlots": [],
+      "signature": {
+        "placeholderCounts": {},
+        "placeholderTypes": [],
+        "textSlotCount": 0,
+        "mediaSlotCount": 0,
+        "textAreaRatio": 0,
+        "mediaAreaRatio": 0,
+        "dominantMediaAspectRatio": null,
+        "dominantMediaAreaRatio": null,
+        "dominantMediaPanel": null
+      },
+      "previewSlideIds": [
+        "p1",
+        "p2",
+        "p3",
+        "p4",
+        "p5",
+        "p6",
+        "p7"
+      ],
+      "usageCount": 7,
+      "protectedRegions": []
+    }
+  ],
+  "slides": [
+    {
+      "slideId": "p1",
+      "index": 0,
+      "layoutId": "p9",
+      "masterId": "p8",
+      "isSkipped": false,
+      "titlePreview": "SPOTLIFT · v1.0.7",
+      "effectivePageProperties": {
+        "pageBackgroundFill": {
+          "solidFill": {
+            "color": {
+              "themeColor": "LIGHT1",
+              "rgbColor": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            "alpha": 1
+          }
+        },
+        "colorScheme": {
+          "colors": [
+            {
+              "type": "DARK1",
+              "color": {}
+            },
+            {
+              "type": "LIGHT1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "DARK2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            },
+            {
+              "type": "LIGHT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "ACCENT1",
+              "color": {
+                "red": 0.08235294,
+                "green": 0.3764706,
+                "blue": 0.50980395
+              }
+            },
+            {
+              "type": "ACCENT2",
+              "color": {
+                "red": 0.9137255,
+                "green": 0.44313726,
+                "blue": 0.19607843
+              }
+            },
+            {
+              "type": "ACCENT3",
+              "color": {
+                "red": 0.09803922,
+                "green": 0.41960785,
+                "blue": 0.14117648
+              }
+            },
+            {
+              "type": "ACCENT4",
+              "color": {
+                "red": 0.05882353,
+                "green": 0.61960787,
+                "blue": 0.8352941
+              }
+            },
+            {
+              "type": "ACCENT5",
+              "color": {
+                "red": 0.627451,
+                "green": 0.16862746,
+                "blue": 0.5764706
+              }
+            },
+            {
+              "type": "ACCENT6",
+              "color": {
+                "red": 0.30588236,
+                "green": 0.654902,
+                "blue": 0.18039216
+              }
+            },
+            {
+              "type": "HYPERLINK",
+              "color": {
+                "red": 0.27450982,
+                "green": 0.47058824,
+                "blue": 0.5254902
+              }
+            },
+            {
+              "type": "FOLLOWED_HYPERLINK",
+              "color": {
+                "red": 0.5882353,
+                "green": 0.3764706,
+                "blue": 0.49019608
+              }
+            },
+            {
+              "type": "TEXT1",
+              "color": {}
+            },
+            {
+              "type": "BACKGROUND1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "TEXT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "BACKGROUND2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            }
+          ]
+        }
+      },
+      "placeholderLineage": [],
+      "effectiveContent": {
+        "directContentObjectIds": [
+          "p1_i8",
+          "p1_i2",
+          "p1_i3",
+          "p1_i4",
+          "p1_i13",
+          "p1_i7"
+        ],
+        "inheritedVisualObjectIds": [],
+        "hasDirectContent": true,
+        "hasInheritedVisual": false
+      },
+      "localComposition": {
+        "objects": [
+          {
+            "objectId": "p1_i8",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 27,
+              "width": 270,
+              "height": 39,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.0203125,
+            "aspectRatio": 6.923076923076923,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "top",
+              "classification": "left-top",
+              "areaRatio": 0.0203125
+            },
+            "mediaGeometry": null,
+            "textPreview": "SPOTLIFT · v1.0.7",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p1_i2",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 106.5,
+              "width": 431.25,
+              "height": 165,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.1372612847222222,
+            "aspectRatio": 2.6136363636363638,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "top",
+              "classification": "left-top",
+              "areaRatio": 0.1372612847222222
+            },
+            "mediaGeometry": null,
+            "textPreview": "Turn any gym machine into a confident next step",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p1_i3",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 298.5,
+              "width": 420,
+              "height": 112.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.09114583333333333,
+            "aspectRatio": 3.7333333333333334,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "bottom",
+              "classification": "left-bottom",
+              "areaRatio": 0.09114583333333333
+            },
+            "mediaGeometry": null,
+            "textPreview": "Camera recognition becomes clear setup, safer movement, and a workout plan that adapts to the member.",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p1_i4",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 442.5,
+              "width": 397.5,
+              "height": 30,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.023003472222222224,
+            "aspectRatio": 13.25,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "bottom",
+              "classification": "left-bottom",
+              "areaRatio": 0.023003472222222224
+            },
+            "mediaGeometry": null,
+            "textPreview": "Adan Villeda · Founder & Developer",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p1_i5",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-decoration",
+            "contentBearing": false,
+            "boundsPt": {
+              "x": 493.5,
+              "y": 31.5,
+              "width": 436.5,
+              "height": 441,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.371328125,
+            "aspectRatio": 0.9897959183673469,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "middle",
+              "classification": "right-middle",
+              "areaRatio": 0.371328125
+            },
+            "mediaGeometry": null,
+            "textPreview": null,
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p1_i13",
+            "kind": "image",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 616.388031496063,
+              "y": 47.25,
+              "width": 189.22393700787404,
+              "height": 409.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.1494737696850394,
+            "aspectRatio": 0.46208531625854465,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "middle",
+              "classification": "right-middle",
+              "areaRatio": 0.1494737696850394
+            },
+            "mediaGeometry": {
+              "mediaType": "image",
+              "boundsPt": {
+                "x": 616.388031496063,
+                "y": 47.25,
+                "width": 189.22393700787404,
+                "height": 409.5,
+                "rotatedOrSkewed": false
+              },
+              "frameAspectRatio": 0.4620853162585446,
+              "contentAspectRatioEstimate": 0.4620853162585446,
+              "occupiedAreaRatio": 0.1494737696850394,
+              "panel": {
+                "horizontal": "right",
+                "vertical": "middle",
+                "classification": "right-middle",
+                "areaRatio": 0.1494737696850394
+              },
+              "crop": {
+                "left": 0,
+                "right": 0,
+                "top": 0,
+                "bottom": 0,
+                "visibleWidthFraction": 1,
+                "visibleHeightFraction": 1,
+                "visibleAreaFraction": 1
+              }
+            },
+            "textPreview": null,
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p1_i7",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 888,
+              "y": 494.25,
+              "width": 40.5,
+              "height": 18.75,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.00146484375,
+            "aspectRatio": 2.16,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "bottom",
+              "classification": "right-bottom",
+              "areaRatio": 0.00146484375
+            },
+            "mediaGeometry": null,
+            "textPreview": "1",
+            "mediaIdentity": null
+          }
+        ],
+        "contentBearingObjectIds": [
+          "p1_i8",
+          "p1_i2",
+          "p1_i3",
+          "p1_i4",
+          "p1_i13",
+          "p1_i7"
+        ],
+        "slideLocalContentObjectIds": [
+          "p1_i8",
+          "p1_i2",
+          "p1_i3",
+          "p1_i4",
+          "p1_i13",
+          "p1_i7"
+        ],
+        "slideLocalDecorationObjectIds": [
+          "p1_i5"
+        ]
+      },
+      "mediaSignature": {
+        "mediaObjectCount": 1,
+        "occupiedAreaRatio": 0.1494737696850394,
+        "dominantObjectId": "p1_i13",
+        "dominantAspectRatio": 0.4620853162585446,
+        "dominantAreaRatio": 0.1494737696850394,
+        "dominantPanel": {
+          "horizontal": "right",
+          "vertical": "middle",
+          "classification": "right-middle",
+          "areaRatio": 0.1494737696850394
+        }
+      },
+      "protectedRegions": [],
+      "attentionReasons": [
+        "MEDIA_OR_EVIDENCE"
+      ]
+    },
+    {
+      "slideId": "p2",
+      "index": 1,
+      "layoutId": "p9",
+      "masterId": "p8",
+      "isSkipped": false,
+      "titlePreview": "A gym membership does not teach a beginner what to do next",
+      "effectivePageProperties": {
+        "pageBackgroundFill": {
+          "solidFill": {
+            "color": {
+              "themeColor": "LIGHT1"
+            },
+            "alpha": 1
+          }
+        },
+        "colorScheme": {
+          "colors": [
+            {
+              "type": "DARK1",
+              "color": {}
+            },
+            {
+              "type": "LIGHT1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "DARK2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            },
+            {
+              "type": "LIGHT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "ACCENT1",
+              "color": {
+                "red": 0.08235294,
+                "green": 0.3764706,
+                "blue": 0.50980395
+              }
+            },
+            {
+              "type": "ACCENT2",
+              "color": {
+                "red": 0.9137255,
+                "green": 0.44313726,
+                "blue": 0.19607843
+              }
+            },
+            {
+              "type": "ACCENT3",
+              "color": {
+                "red": 0.09803922,
+                "green": 0.41960785,
+                "blue": 0.14117648
+              }
+            },
+            {
+              "type": "ACCENT4",
+              "color": {
+                "red": 0.05882353,
+                "green": 0.61960787,
+                "blue": 0.8352941
+              }
+            },
+            {
+              "type": "ACCENT5",
+              "color": {
+                "red": 0.627451,
+                "green": 0.16862746,
+                "blue": 0.5764706
+              }
+            },
+            {
+              "type": "ACCENT6",
+              "color": {
+                "red": 0.30588236,
+                "green": 0.654902,
+                "blue": 0.18039216
+              }
+            },
+            {
+              "type": "HYPERLINK",
+              "color": {
+                "red": 0.27450982,
+                "green": 0.47058824,
+                "blue": 0.5254902
+              }
+            },
+            {
+              "type": "FOLLOWED_HYPERLINK",
+              "color": {
+                "red": 0.5882353,
+                "green": 0.3764706,
+                "blue": 0.49019608
+              }
+            },
+            {
+              "type": "TEXT1",
+              "color": {}
+            },
+            {
+              "type": "BACKGROUND1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "TEXT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "BACKGROUND2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            }
+          ]
+        }
+      },
+      "placeholderLineage": [],
+      "effectiveContent": {
+        "directContentObjectIds": [
+          "p2_i13",
+          "p2_i2",
+          "p2_i3",
+          "p2_i5",
+          "p2_i6",
+          "p2_i8",
+          "p2_i9",
+          "p2_i11",
+          "p2_i12"
+        ],
+        "inheritedVisualObjectIds": [],
+        "hasDirectContent": true,
+        "hasInheritedVisual": false
+      },
+      "localComposition": {
+        "objects": [
+          {
+            "objectId": "p2_i13",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 27,
+              "width": 898.5000000000001,
+              "height": 82.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.1429904513888889,
+            "aspectRatio": 10.890909090909092,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "top",
+              "classification": "horizontal-band",
+              "areaRatio": 0.1429904513888889
+            },
+            "mediaGeometry": null,
+            "textPreview": "A gym membership does not teach a beginner what to do next",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p2_i2",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 888,
+              "y": 494.25,
+              "width": 40.5,
+              "height": 18.75,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.00146484375,
+            "aspectRatio": 2.16,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "bottom",
+              "classification": "right-bottom",
+              "areaRatio": 0.00146484375
+            },
+            "mediaGeometry": null,
+            "textPreview": "2",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p2_i3",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 127.5,
+              "width": 525,
+              "height": 93.75,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.0949435763888889,
+            "aspectRatio": 5.6,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "top",
+              "classification": "left-top",
+              "areaRatio": 0.0949435763888889
+            },
+            "mediaGeometry": null,
+            "textPreview": "The moment of highest uncertainty happens on the equipment floor—after access has already been purchased.",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p2_i4",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-decoration",
+            "contentBearing": false,
+            "boundsPt": {
+              "x": 39,
+              "y": 252,
+              "width": 18,
+              "height": 18,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.000625,
+            "aspectRatio": 1,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "middle",
+              "classification": "left-middle",
+              "areaRatio": 0.000625
+            },
+            "mediaGeometry": null,
+            "textPreview": null,
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p2_i5",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 72,
+              "y": 247.5,
+              "width": 187.5,
+              "height": 30,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.010850694444444444,
+            "aspectRatio": 6.25,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "middle",
+              "classification": "left-middle",
+              "areaRatio": 0.010850694444444444
+            },
+            "mediaGeometry": null,
+            "textPreview": "Identify",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p2_i6",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 266.25,
+              "y": 247.5,
+              "width": 525,
+              "height": 37.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.03797743055555555,
+            "aspectRatio": 14,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "middle",
+              "classification": "center-middle",
+              "areaRatio": 0.03797743055555555
+            },
+            "mediaGeometry": null,
+            "textPreview": "What is this machine?",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p2_i7",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-decoration",
+            "contentBearing": false,
+            "boundsPt": {
+              "x": 39,
+              "y": 322.5,
+              "width": 18,
+              "height": 18,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.000625,
+            "aspectRatio": 1,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "bottom",
+              "classification": "left-bottom",
+              "areaRatio": 0.000625
+            },
+            "mediaGeometry": null,
+            "textPreview": null,
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p2_i8",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 72,
+              "y": 318,
+              "width": 187.5,
+              "height": 30,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.010850694444444444,
+            "aspectRatio": 6.25,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "bottom",
+              "classification": "left-bottom",
+              "areaRatio": 0.010850694444444444
+            },
+            "mediaGeometry": null,
+            "textPreview": "Set up safely",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p2_i9",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 266.25,
+              "y": 318,
+              "width": 525,
+              "height": 37.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.03797743055555555,
+            "aspectRatio": 14,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "bottom",
+              "classification": "center-bottom",
+              "areaRatio": 0.03797743055555555
+            },
+            "mediaGeometry": null,
+            "textPreview": "How should I adjust and use it?",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p2_i10",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-decoration",
+            "contentBearing": false,
+            "boundsPt": {
+              "x": 39,
+              "y": 393,
+              "width": 18,
+              "height": 18,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.000625,
+            "aspectRatio": 1,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "bottom",
+              "classification": "left-bottom",
+              "areaRatio": 0.000625
+            },
+            "mediaGeometry": null,
+            "textPreview": null,
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p2_i11",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 72,
+              "y": 388.5,
+              "width": 187.5,
+              "height": 30,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.010850694444444444,
+            "aspectRatio": 6.25,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "bottom",
+              "classification": "left-bottom",
+              "areaRatio": 0.010850694444444444
+            },
+            "mediaGeometry": null,
+            "textPreview": "Turn it into action",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p2_i12",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 266.25,
+              "y": 388.5,
+              "width": 525,
+              "height": 37.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.03797743055555555,
+            "aspectRatio": 14,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "bottom",
+              "classification": "center-bottom",
+              "areaRatio": 0.03797743055555555
+            },
+            "mediaGeometry": null,
+            "textPreview": "How does it fit into today’s workout?",
+            "mediaIdentity": null
+          }
+        ],
+        "contentBearingObjectIds": [
+          "p2_i13",
+          "p2_i2",
+          "p2_i3",
+          "p2_i5",
+          "p2_i6",
+          "p2_i8",
+          "p2_i9",
+          "p2_i11",
+          "p2_i12"
+        ],
+        "slideLocalContentObjectIds": [
+          "p2_i13",
+          "p2_i2",
+          "p2_i3",
+          "p2_i5",
+          "p2_i6",
+          "p2_i8",
+          "p2_i9",
+          "p2_i11",
+          "p2_i12"
+        ],
+        "slideLocalDecorationObjectIds": [
+          "p2_i4",
+          "p2_i7",
+          "p2_i10"
+        ]
+      },
+      "mediaSignature": {
+        "mediaObjectCount": 0,
+        "occupiedAreaRatio": 0,
+        "dominantObjectId": null,
+        "dominantAspectRatio": null,
+        "dominantAreaRatio": null,
+        "dominantPanel": null
+      },
+      "protectedRegions": [],
+      "attentionReasons": []
+    },
+    {
+      "slideId": "p3",
+      "index": 2,
+      "layoutId": "p9",
+      "masterId": "p8",
+      "isSkipped": false,
+      "titlePreview": "Recognition is useful only when it changes the workout",
+      "effectivePageProperties": {
+        "pageBackgroundFill": {
+          "solidFill": {
+            "color": {
+              "themeColor": "LIGHT1"
+            },
+            "alpha": 1
+          }
+        },
+        "colorScheme": {
+          "colors": [
+            {
+              "type": "DARK1",
+              "color": {}
+            },
+            {
+              "type": "LIGHT1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "DARK2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            },
+            {
+              "type": "LIGHT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "ACCENT1",
+              "color": {
+                "red": 0.08235294,
+                "green": 0.3764706,
+                "blue": 0.50980395
+              }
+            },
+            {
+              "type": "ACCENT2",
+              "color": {
+                "red": 0.9137255,
+                "green": 0.44313726,
+                "blue": 0.19607843
+              }
+            },
+            {
+              "type": "ACCENT3",
+              "color": {
+                "red": 0.09803922,
+                "green": 0.41960785,
+                "blue": 0.14117648
+              }
+            },
+            {
+              "type": "ACCENT4",
+              "color": {
+                "red": 0.05882353,
+                "green": 0.61960787,
+                "blue": 0.8352941
+              }
+            },
+            {
+              "type": "ACCENT5",
+              "color": {
+                "red": 0.627451,
+                "green": 0.16862746,
+                "blue": 0.5764706
+              }
+            },
+            {
+              "type": "ACCENT6",
+              "color": {
+                "red": 0.30588236,
+                "green": 0.654902,
+                "blue": 0.18039216
+              }
+            },
+            {
+              "type": "HYPERLINK",
+              "color": {
+                "red": 0.27450982,
+                "green": 0.47058824,
+                "blue": 0.5254902
+              }
+            },
+            {
+              "type": "FOLLOWED_HYPERLINK",
+              "color": {
+                "red": 0.5882353,
+                "green": 0.3764706,
+                "blue": 0.49019608
+              }
+            },
+            {
+              "type": "TEXT1",
+              "color": {}
+            },
+            {
+              "type": "BACKGROUND1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "TEXT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "BACKGROUND2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            }
+          ]
+        }
+      },
+      "placeholderLineage": [],
+      "effectiveContent": {
+        "directContentObjectIds": [
+          "p3_i12",
+          "p3_i2",
+          "p3_i3",
+          "p3_i4",
+          "p3_i5",
+          "p3_i6",
+          "p3_i7",
+          "p3_i8",
+          "p3_i9",
+          "p3_i10",
+          "p3_i11"
+        ],
+        "inheritedVisualObjectIds": [],
+        "hasDirectContent": true,
+        "hasInheritedVisual": false
+      },
+      "localComposition": {
+        "objects": [
+          {
+            "objectId": "p3_i12",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 27,
+              "width": 898.5000000000001,
+              "height": 82.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.1429904513888889,
+            "aspectRatio": 10.890909090909092,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "top",
+              "classification": "horizontal-band",
+              "areaRatio": 0.1429904513888889
+            },
+            "mediaGeometry": null,
+            "textPreview": "Recognition is useful only when it changes the workout",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p3_i2",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 888,
+              "y": 494.25,
+              "width": 40.5,
+              "height": 18.75,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.00146484375,
+            "aspectRatio": 2.16,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "bottom",
+              "classification": "right-bottom",
+              "areaRatio": 0.00146484375
+            },
+            "mediaGeometry": null,
+            "textPreview": "3",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p3_i3",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 153.75,
+              "width": 60,
+              "height": 48,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.005555555555555556,
+            "aspectRatio": 1.25,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "top",
+              "classification": "left-top",
+              "areaRatio": 0.005555555555555556
+            },
+            "mediaGeometry": null,
+            "textPreview": "01",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p3_i4",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 225,
+              "width": 262.5,
+              "height": 43.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.022026909722222224,
+            "aspectRatio": 6.0344827586206895,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "middle",
+              "classification": "left-middle",
+              "areaRatio": 0.022026909722222224
+            },
+            "mediaGeometry": null,
+            "textPreview": "Capture",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p3_i5",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 292.5,
+              "width": 262.5,
+              "height": 142.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.07215711805555555,
+            "aspectRatio": 1.8421052631578947,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "bottom",
+              "classification": "left-bottom",
+              "areaRatio": 0.07215711805555555
+            },
+            "mediaGeometry": null,
+            "textPreview": "Take a photo or upload an image of unfamiliar gym equipment.",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p3_i6",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 339,
+              "y": 153.75,
+              "width": 60,
+              "height": 48,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.005555555555555556,
+            "aspectRatio": 1.25,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "top",
+              "classification": "left-top",
+              "areaRatio": 0.005555555555555556
+            },
+            "mediaGeometry": null,
+            "textPreview": "02",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p3_i7",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 339,
+              "y": 225,
+              "width": 262.5,
+              "height": 43.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.022026909722222224,
+            "aspectRatio": 6.0344827586206895,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "middle",
+              "classification": "center-middle",
+              "areaRatio": 0.022026909722222224
+            },
+            "mediaGeometry": null,
+            "textPreview": "Match",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p3_i8",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 339,
+              "y": 292.5,
+              "width": 262.5,
+              "height": 142.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.07215711805555555,
+            "aspectRatio": 1.8421052631578947,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "bottom",
+              "classification": "center-bottom",
+              "areaRatio": 0.07215711805555555
+            },
+            "mediaGeometry": null,
+            "textPreview": "Normalize the AI result, match it to the catalog, and handle uncertainty safely.",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p3_i9",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 647.25,
+              "y": 153.75,
+              "width": 60,
+              "height": 48,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.005555555555555556,
+            "aspectRatio": 1.25,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "top",
+              "classification": "right-top",
+              "areaRatio": 0.005555555555555556
+            },
+            "mediaGeometry": null,
+            "textPreview": "03",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p3_i10",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 647.25,
+              "y": 225,
+              "width": 262.5,
+              "height": 43.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.022026909722222224,
+            "aspectRatio": 6.0344827586206895,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "middle",
+              "classification": "right-middle",
+              "areaRatio": 0.022026909722222224
+            },
+            "mediaGeometry": null,
+            "textPreview": "Coach",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p3_i11",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 647.25,
+              "y": 292.5,
+              "width": 262.5,
+              "height": 142.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.07215711805555555,
+            "aspectRatio": 1.8421052631578947,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "bottom",
+              "classification": "right-bottom",
+              "areaRatio": 0.07215711805555555
+            },
+            "mediaGeometry": null,
+            "textPreview": "Deliver setup, safety, target muscles, videos, and an editable workout plan.",
+            "mediaIdentity": null
+          }
+        ],
+        "contentBearingObjectIds": [
+          "p3_i12",
+          "p3_i2",
+          "p3_i3",
+          "p3_i4",
+          "p3_i5",
+          "p3_i6",
+          "p3_i7",
+          "p3_i8",
+          "p3_i9",
+          "p3_i10",
+          "p3_i11"
+        ],
+        "slideLocalContentObjectIds": [
+          "p3_i12",
+          "p3_i2",
+          "p3_i3",
+          "p3_i4",
+          "p3_i5",
+          "p3_i6",
+          "p3_i7",
+          "p3_i8",
+          "p3_i9",
+          "p3_i10",
+          "p3_i11"
+        ],
+        "slideLocalDecorationObjectIds": []
+      },
+      "mediaSignature": {
+        "mediaObjectCount": 0,
+        "occupiedAreaRatio": 0,
+        "dominantObjectId": null,
+        "dominantAspectRatio": null,
+        "dominantAreaRatio": null,
+        "dominantPanel": null
+      },
+      "protectedRegions": [],
+      "attentionReasons": []
+    },
+    {
+      "slideId": "p4",
+      "index": 3,
+      "layoutId": "p9",
+      "masterId": "p8",
+      "isSkipped": false,
+      "titlePreview": "v1.0.7 is a pilot-ready mobile product foundation",
+      "effectivePageProperties": {
+        "pageBackgroundFill": {
+          "solidFill": {
+            "color": {
+              "themeColor": "LIGHT1"
+            },
+            "alpha": 1
+          }
+        },
+        "colorScheme": {
+          "colors": [
+            {
+              "type": "DARK1",
+              "color": {}
+            },
+            {
+              "type": "LIGHT1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "DARK2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            },
+            {
+              "type": "LIGHT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "ACCENT1",
+              "color": {
+                "red": 0.08235294,
+                "green": 0.3764706,
+                "blue": 0.50980395
+              }
+            },
+            {
+              "type": "ACCENT2",
+              "color": {
+                "red": 0.9137255,
+                "green": 0.44313726,
+                "blue": 0.19607843
+              }
+            },
+            {
+              "type": "ACCENT3",
+              "color": {
+                "red": 0.09803922,
+                "green": 0.41960785,
+                "blue": 0.14117648
+              }
+            },
+            {
+              "type": "ACCENT4",
+              "color": {
+                "red": 0.05882353,
+                "green": 0.61960787,
+                "blue": 0.8352941
+              }
+            },
+            {
+              "type": "ACCENT5",
+              "color": {
+                "red": 0.627451,
+                "green": 0.16862746,
+                "blue": 0.5764706
+              }
+            },
+            {
+              "type": "ACCENT6",
+              "color": {
+                "red": 0.30588236,
+                "green": 0.654902,
+                "blue": 0.18039216
+              }
+            },
+            {
+              "type": "HYPERLINK",
+              "color": {
+                "red": 0.27450982,
+                "green": 0.47058824,
+                "blue": 0.5254902
+              }
+            },
+            {
+              "type": "FOLLOWED_HYPERLINK",
+              "color": {
+                "red": 0.5882353,
+                "green": 0.3764706,
+                "blue": 0.49019608
+              }
+            },
+            {
+              "type": "TEXT1",
+              "color": {}
+            },
+            {
+              "type": "BACKGROUND1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "TEXT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "BACKGROUND2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            }
+          ]
+        }
+      },
+      "placeholderLineage": [],
+      "effectiveContent": {
+        "directContentObjectIds": [
+          "p4_i10",
+          "p4_i2",
+          "p4_i3",
+          "p4_i4",
+          "p4_i5",
+          "p4_i6",
+          "p4_i7",
+          "p4_i18"
+        ],
+        "inheritedVisualObjectIds": [],
+        "hasDirectContent": true,
+        "hasInheritedVisual": false
+      },
+      "localComposition": {
+        "objects": [
+          {
+            "objectId": "p4_i10",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 27,
+              "width": 898.5000000000001,
+              "height": 82.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.1429904513888889,
+            "aspectRatio": 10.890909090909092,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "top",
+              "classification": "horizontal-band",
+              "areaRatio": 0.1429904513888889
+            },
+            "mediaGeometry": null,
+            "textPreview": "v1.0.7 is a pilot-ready mobile product foundation",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p4_i2",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 888,
+              "y": 494.25,
+              "width": 40.5,
+              "height": 18.75,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.00146484375,
+            "aspectRatio": 2.16,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "bottom",
+              "classification": "right-bottom",
+              "areaRatio": 0.00146484375
+            },
+            "mediaGeometry": null,
+            "textPreview": "4",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p4_i3",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 136.5,
+              "width": 431.25,
+              "height": 49.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.041178385416666664,
+            "aspectRatio": 8.712121212121213,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "top",
+              "classification": "left-top",
+              "areaRatio": 0.041178385416666664
+            },
+            "mediaGeometry": null,
+            "textPreview": "iOS build 41 · Android version code 5",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p4_i4",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 214.5,
+              "width": 431.25,
+              "height": 37.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.031195746527777776,
+            "aspectRatio": 11.5,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "middle",
+              "classification": "left-middle",
+              "areaRatio": 0.031195746527777776
+            },
+            "mediaGeometry": null,
+            "textPreview": "Guest access and accounts",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p4_i5",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 273.75,
+              "width": 431.25,
+              "height": 37.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.031195746527777776,
+            "aspectRatio": 11.5,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "middle",
+              "classification": "left-middle",
+              "areaRatio": 0.031195746527777776
+            },
+            "mediaGeometry": null,
+            "textPreview": "English and Spanish localization",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p4_i6",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 333,
+              "width": 431.25,
+              "height": 72,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.059895833333333336,
+            "aspectRatio": 5.989583333333333,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "bottom",
+              "classification": "left-bottom",
+              "areaRatio": 0.059895833333333336
+            },
+            "mediaGeometry": null,
+            "textPreview": "Scan history, saved equipment, feedback, and Coach workout editing",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p4_i7",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 427.5,
+              "width": 431.25,
+              "height": 40.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.03369140625,
+            "aspectRatio": 10.648148148148149,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "bottom",
+              "classification": "left-bottom",
+              "areaRatio": 0.03369140625
+            },
+            "mediaGeometry": null,
+            "textPreview": "Built for controlled gym pilots; a live production smoke test remains a release gate.",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p4_i8",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-decoration",
+            "contentBearing": false,
+            "boundsPt": {
+              "x": 493.5,
+              "y": 111,
+              "width": 436.5,
+              "height": 361.50000000000006,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.3043880208333334,
+            "aspectRatio": 1.2074688796680495,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "middle",
+              "classification": "right-middle",
+              "areaRatio": 0.3043880208333334
+            },
+            "mediaGeometry": null,
+            "textPreview": null,
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p4_i18",
+            "kind": "image",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 639.2965354330709,
+              "y": 133.5,
+              "width": 146.40700787401568,
+              "height": 316.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.08938622297863803,
+            "aspectRatio": 0.4625813834882012,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "middle",
+              "classification": "right-middle",
+              "areaRatio": 0.08938622297863803
+            },
+            "mediaGeometry": {
+              "mediaType": "image",
+              "boundsPt": {
+                "x": 639.2965354330709,
+                "y": 133.5,
+                "width": 146.40700787401568,
+                "height": 316.5,
+                "rotatedOrSkewed": false
+              },
+              "frameAspectRatio": 0.46258138348820127,
+              "contentAspectRatioEstimate": 0.46258138348820127,
+              "occupiedAreaRatio": 0.08938622297863803,
+              "panel": {
+                "horizontal": "right",
+                "vertical": "middle",
+                "classification": "right-middle",
+                "areaRatio": 0.08938622297863803
+              },
+              "crop": {
+                "left": 0,
+                "right": 0,
+                "top": 0,
+                "bottom": 0,
+                "visibleWidthFraction": 1,
+                "visibleHeightFraction": 1,
+                "visibleAreaFraction": 1
+              }
+            },
+            "textPreview": null,
+            "mediaIdentity": null
+          }
+        ],
+        "contentBearingObjectIds": [
+          "p4_i10",
+          "p4_i2",
+          "p4_i3",
+          "p4_i4",
+          "p4_i5",
+          "p4_i6",
+          "p4_i7",
+          "p4_i18"
+        ],
+        "slideLocalContentObjectIds": [
+          "p4_i10",
+          "p4_i2",
+          "p4_i3",
+          "p4_i4",
+          "p4_i5",
+          "p4_i6",
+          "p4_i7",
+          "p4_i18"
+        ],
+        "slideLocalDecorationObjectIds": [
+          "p4_i8"
+        ]
+      },
+      "mediaSignature": {
+        "mediaObjectCount": 1,
+        "occupiedAreaRatio": 0.08938622297863803,
+        "dominantObjectId": "p4_i18",
+        "dominantAspectRatio": 0.46258138348820127,
+        "dominantAreaRatio": 0.08938622297863803,
+        "dominantPanel": {
+          "horizontal": "right",
+          "vertical": "middle",
+          "classification": "right-middle",
+          "areaRatio": 0.08938622297863803
+        }
+      },
+      "protectedRegions": [],
+      "attentionReasons": [
+        "MEDIA_OR_EVIDENCE"
+      ]
+    },
+    {
+      "slideId": "p5",
+      "index": 4,
+      "layoutId": "p9",
+      "masterId": "p8",
+      "isSkipped": false,
+      "titlePreview": "The defensible layer is reliable recognition—not a chatbot",
+      "effectivePageProperties": {
+        "pageBackgroundFill": {
+          "solidFill": {
+            "color": {
+              "themeColor": "LIGHT1"
+            },
+            "alpha": 1
+          }
+        },
+        "colorScheme": {
+          "colors": [
+            {
+              "type": "DARK1",
+              "color": {}
+            },
+            {
+              "type": "LIGHT1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "DARK2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            },
+            {
+              "type": "LIGHT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "ACCENT1",
+              "color": {
+                "red": 0.08235294,
+                "green": 0.3764706,
+                "blue": 0.50980395
+              }
+            },
+            {
+              "type": "ACCENT2",
+              "color": {
+                "red": 0.9137255,
+                "green": 0.44313726,
+                "blue": 0.19607843
+              }
+            },
+            {
+              "type": "ACCENT3",
+              "color": {
+                "red": 0.09803922,
+                "green": 0.41960785,
+                "blue": 0.14117648
+              }
+            },
+            {
+              "type": "ACCENT4",
+              "color": {
+                "red": 0.05882353,
+                "green": 0.61960787,
+                "blue": 0.8352941
+              }
+            },
+            {
+              "type": "ACCENT5",
+              "color": {
+                "red": 0.627451,
+                "green": 0.16862746,
+                "blue": 0.5764706
+              }
+            },
+            {
+              "type": "ACCENT6",
+              "color": {
+                "red": 0.30588236,
+                "green": 0.654902,
+                "blue": 0.18039216
+              }
+            },
+            {
+              "type": "HYPERLINK",
+              "color": {
+                "red": 0.27450982,
+                "green": 0.47058824,
+                "blue": 0.5254902
+              }
+            },
+            {
+              "type": "FOLLOWED_HYPERLINK",
+              "color": {
+                "red": 0.5882353,
+                "green": 0.3764706,
+                "blue": 0.49019608
+              }
+            },
+            {
+              "type": "TEXT1",
+              "color": {}
+            },
+            {
+              "type": "BACKGROUND1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "TEXT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "BACKGROUND2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            }
+          ]
+        }
+      },
+      "placeholderLineage": [],
+      "effectiveContent": {
+        "directContentObjectIds": [
+          "p5_i12",
+          "p5_i2",
+          "p5_i4",
+          "p5_i5",
+          "p5_i7",
+          "p5_i8",
+          "p5_i10",
+          "p5_i11"
+        ],
+        "inheritedVisualObjectIds": [],
+        "hasDirectContent": true,
+        "hasInheritedVisual": false
+      },
+      "localComposition": {
+        "objects": [
+          {
+            "objectId": "p5_i12",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 27,
+              "width": 898.5000000000001,
+              "height": 82.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.1429904513888889,
+            "aspectRatio": 10.890909090909092,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "top",
+              "classification": "horizontal-band",
+              "areaRatio": 0.1429904513888889
+            },
+            "mediaGeometry": null,
+            "textPreview": "The defensible layer is reliable recognition—not a chatbot",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p5_i2",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 888,
+              "y": 494.25,
+              "width": 40.5,
+              "height": 18.75,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.00146484375,
+            "aspectRatio": 2.16,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "bottom",
+              "classification": "right-bottom",
+              "areaRatio": 0.00146484375
+            },
+            "mediaGeometry": null,
+            "textPreview": "5",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p5_i3",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-decoration",
+            "contentBearing": false,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 174,
+              "width": 281.25,
+              "height": 297.75,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.16153971354166666,
+            "aspectRatio": 0.9445843828715366,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "middle",
+              "classification": "left-middle",
+              "areaRatio": 0.16153971354166666
+            },
+            "mediaGeometry": null,
+            "textPreview": null,
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p5_i4",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 51.75,
+              "y": 208.5,
+              "width": 239.25,
+              "height": 54,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.024921875,
+            "aspectRatio": 4.430555555555555,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "middle",
+              "classification": "left-middle",
+              "areaRatio": 0.024921875
+            },
+            "mediaGeometry": null,
+            "textPreview": "Dedicated matching",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p5_i5",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 51.75,
+              "y": 291,
+              "width": 239.25,
+              "height": 136.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.06299696180555556,
+            "aspectRatio": 1.7527472527472527,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "bottom",
+              "classification": "left-bottom",
+              "areaRatio": 0.06299696180555556
+            },
+            "mediaGeometry": null,
+            "textPreview": "A purpose-built service maps AI output to the supported equipment catalog.",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p5_i6",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-decoration",
+            "contentBearing": false,
+            "boundsPt": {
+              "x": 339,
+              "y": 174,
+              "width": 281.25,
+              "height": 297.75,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.16153971354166666,
+            "aspectRatio": 0.9445843828715366,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "middle",
+              "classification": "center-middle",
+              "areaRatio": 0.16153971354166666
+            },
+            "mediaGeometry": null,
+            "textPreview": null,
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p5_i7",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 360,
+              "y": 208.5,
+              "width": 239.25,
+              "height": 54,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.024921875,
+            "aspectRatio": 4.430555555555555,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "middle",
+              "classification": "center-middle",
+              "areaRatio": 0.024921875
+            },
+            "mediaGeometry": null,
+            "textPreview": "Safe uncertainty",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p5_i8",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 360,
+              "y": 291,
+              "width": 239.25,
+              "height": 136.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.06299696180555556,
+            "aspectRatio": 1.7527472527472527,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "bottom",
+              "classification": "center-bottom",
+              "areaRatio": 0.06299696180555556
+            },
+            "mediaGeometry": null,
+            "textPreview": "Normalized results, confidence handling, and fallbacks reduce unsupported answers.",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p5_i9",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-decoration",
+            "contentBearing": false,
+            "boundsPt": {
+              "x": 647.25,
+              "y": 174,
+              "width": 281.25,
+              "height": 297.75,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.16153971354166666,
+            "aspectRatio": 0.9445843828715366,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "middle",
+              "classification": "right-middle",
+              "areaRatio": 0.16153971354166666
+            },
+            "mediaGeometry": null,
+            "textPreview": null,
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p5_i10",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 668.25,
+              "y": 208.5,
+              "width": 239.25,
+              "height": 54,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.024921875,
+            "aspectRatio": 4.430555555555555,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "middle",
+              "classification": "right-middle",
+              "areaRatio": 0.024921875
+            },
+            "mediaGeometry": null,
+            "textPreview": "Release discipline",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p5_i11",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 668.25,
+              "y": 291,
+              "width": 239.25,
+              "height": 136.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.06299696180555556,
+            "aspectRatio": 1.7527472527472527,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "bottom",
+              "classification": "right-bottom",
+              "areaRatio": 0.06299696180555556
+            },
+            "mediaGeometry": null,
+            "textPreview": "Contract checks, regression coverage, visual regression, and monitoring protect the workflow.",
+            "mediaIdentity": null
+          }
+        ],
+        "contentBearingObjectIds": [
+          "p5_i12",
+          "p5_i2",
+          "p5_i4",
+          "p5_i5",
+          "p5_i7",
+          "p5_i8",
+          "p5_i10",
+          "p5_i11"
+        ],
+        "slideLocalContentObjectIds": [
+          "p5_i12",
+          "p5_i2",
+          "p5_i4",
+          "p5_i5",
+          "p5_i7",
+          "p5_i8",
+          "p5_i10",
+          "p5_i11"
+        ],
+        "slideLocalDecorationObjectIds": [
+          "p5_i3",
+          "p5_i6",
+          "p5_i9"
+        ]
+      },
+      "mediaSignature": {
+        "mediaObjectCount": 0,
+        "occupiedAreaRatio": 0,
+        "dominantObjectId": null,
+        "dominantAspectRatio": null,
+        "dominantAreaRatio": null,
+        "dominantPanel": null
+      },
+      "protectedRegions": [],
+      "attentionReasons": []
+    },
+    {
+      "slideId": "p6",
+      "index": 5,
+      "layoutId": "p9",
+      "masterId": "p8",
+      "isSkipped": false,
+      "titlePreview": "Start with the member; prove value with the gym",
+      "effectivePageProperties": {
+        "pageBackgroundFill": {
+          "solidFill": {
+            "color": {
+              "themeColor": "LIGHT1"
+            },
+            "alpha": 1
+          }
+        },
+        "colorScheme": {
+          "colors": [
+            {
+              "type": "DARK1",
+              "color": {}
+            },
+            {
+              "type": "LIGHT1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "DARK2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            },
+            {
+              "type": "LIGHT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "ACCENT1",
+              "color": {
+                "red": 0.08235294,
+                "green": 0.3764706,
+                "blue": 0.50980395
+              }
+            },
+            {
+              "type": "ACCENT2",
+              "color": {
+                "red": 0.9137255,
+                "green": 0.44313726,
+                "blue": 0.19607843
+              }
+            },
+            {
+              "type": "ACCENT3",
+              "color": {
+                "red": 0.09803922,
+                "green": 0.41960785,
+                "blue": 0.14117648
+              }
+            },
+            {
+              "type": "ACCENT4",
+              "color": {
+                "red": 0.05882353,
+                "green": 0.61960787,
+                "blue": 0.8352941
+              }
+            },
+            {
+              "type": "ACCENT5",
+              "color": {
+                "red": 0.627451,
+                "green": 0.16862746,
+                "blue": 0.5764706
+              }
+            },
+            {
+              "type": "ACCENT6",
+              "color": {
+                "red": 0.30588236,
+                "green": 0.654902,
+                "blue": 0.18039216
+              }
+            },
+            {
+              "type": "HYPERLINK",
+              "color": {
+                "red": 0.27450982,
+                "green": 0.47058824,
+                "blue": 0.5254902
+              }
+            },
+            {
+              "type": "FOLLOWED_HYPERLINK",
+              "color": {
+                "red": 0.5882353,
+                "green": 0.3764706,
+                "blue": 0.49019608
+              }
+            },
+            {
+              "type": "TEXT1",
+              "color": {}
+            },
+            {
+              "type": "BACKGROUND1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "TEXT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "BACKGROUND2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            }
+          ]
+        }
+      },
+      "placeholderLineage": [],
+      "effectiveContent": {
+        "directContentObjectIds": [
+          "p6_i13",
+          "p6_i2",
+          "p6_i3",
+          "p6_i5",
+          "p6_i6",
+          "p6_i8",
+          "p6_i9",
+          "p6_i11",
+          "p6_i12"
+        ],
+        "inheritedVisualObjectIds": [],
+        "hasDirectContent": true,
+        "hasInheritedVisual": false
+      },
+      "localComposition": {
+        "objects": [
+          {
+            "objectId": "p6_i13",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 27,
+              "width": 898.5000000000001,
+              "height": 82.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.1429904513888889,
+            "aspectRatio": 10.890909090909092,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "top",
+              "classification": "horizontal-band",
+              "areaRatio": 0.1429904513888889
+            },
+            "mediaGeometry": null,
+            "textPreview": "Start with the member; prove value with the gym",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p6_i2",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 888,
+              "y": 494.25,
+              "width": 40.5,
+              "height": 18.75,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.00146484375,
+            "aspectRatio": 2.16,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "bottom",
+              "classification": "right-bottom",
+              "areaRatio": 0.00146484375
+            },
+            "mediaGeometry": null,
+            "textPreview": "6",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p6_i3",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 108.75,
+              "width": 897.75,
+              "height": 61.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.10650390625,
+            "aspectRatio": 14.597560975609756,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "top",
+              "classification": "horizontal-band",
+              "areaRatio": 0.10650390625
+            },
+            "mediaGeometry": null,
+            "textPreview": "A controlled pilot connects product engagement to the onboarding outcomes operators care about.",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p6_i4",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-decoration",
+            "contentBearing": false,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 237.75,
+              "width": 281.25,
+              "height": 234,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.126953125,
+            "aspectRatio": 1.2019230769230769,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "bottom",
+              "classification": "left-bottom",
+              "areaRatio": 0.126953125
+            },
+            "mediaGeometry": null,
+            "textPreview": null,
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p6_i5",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 54.75,
+              "y": 267,
+              "width": 232.5,
+              "height": 67.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.0302734375,
+            "aspectRatio": 3.4444444444444446,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "middle",
+              "classification": "left-middle",
+              "areaRatio": 0.0302734375
+            },
+            "mediaGeometry": null,
+            "textPreview": "Free",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p6_i6",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 54.75,
+              "y": 357,
+              "width": 232.5,
+              "height": 84,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.03767361111111111,
+            "aspectRatio": 2.767857142857143,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "bottom",
+              "classification": "left-bottom",
+              "areaRatio": 0.03767361111111111
+            },
+            "mediaGeometry": null,
+            "textPreview": "Recognition and essential equipment guidance drive trial",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p6_i7",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-decoration",
+            "contentBearing": false,
+            "boundsPt": {
+              "x": 339,
+              "y": 237.75,
+              "width": 281.25,
+              "height": 234,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.126953125,
+            "aspectRatio": 1.2019230769230769,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "bottom",
+              "classification": "center-bottom",
+              "areaRatio": 0.126953125
+            },
+            "mediaGeometry": null,
+            "textPreview": null,
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p6_i8",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 363,
+              "y": 267,
+              "width": 232.5,
+              "height": 67.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.0302734375,
+            "aspectRatio": 3.4444444444444446,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "middle",
+              "classification": "center-middle",
+              "areaRatio": 0.0302734375
+            },
+            "mediaGeometry": null,
+            "textPreview": "Premium",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p6_i9",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 363,
+              "y": 357,
+              "width": 232.5,
+              "height": 84,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.03767361111111111,
+            "aspectRatio": 2.767857142857143,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "bottom",
+              "classification": "center-bottom",
+              "areaRatio": 0.03767361111111111
+            },
+            "mediaGeometry": null,
+            "textPreview": "Personalized plans and AI coaching deepen retention",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p6_i10",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-decoration",
+            "contentBearing": false,
+            "boundsPt": {
+              "x": 647.25,
+              "y": 237.75,
+              "width": 281.25,
+              "height": 234,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.126953125,
+            "aspectRatio": 1.2019230769230769,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "bottom",
+              "classification": "right-bottom",
+              "areaRatio": 0.126953125
+            },
+            "mediaGeometry": null,
+            "textPreview": null,
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p6_i11",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 671.25,
+              "y": 267,
+              "width": 232.5,
+              "height": 67.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.0302734375,
+            "aspectRatio": 3.4444444444444446,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "middle",
+              "classification": "right-middle",
+              "areaRatio": 0.0302734375
+            },
+            "mediaGeometry": null,
+            "textPreview": "B2B",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p6_i12",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 671.25,
+              "y": 357,
+              "width": 232.5,
+              "height": 84,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.03767361111111111,
+            "aspectRatio": 2.767857142857143,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "bottom",
+              "classification": "right-bottom",
+              "areaRatio": 0.03767361111111111
+            },
+            "mediaGeometry": null,
+            "textPreview": "Gym licensing can scale a co-branded onboarding layer",
+            "mediaIdentity": null
+          }
+        ],
+        "contentBearingObjectIds": [
+          "p6_i13",
+          "p6_i2",
+          "p6_i3",
+          "p6_i5",
+          "p6_i6",
+          "p6_i8",
+          "p6_i9",
+          "p6_i11",
+          "p6_i12"
+        ],
+        "slideLocalContentObjectIds": [
+          "p6_i13",
+          "p6_i2",
+          "p6_i3",
+          "p6_i5",
+          "p6_i6",
+          "p6_i8",
+          "p6_i9",
+          "p6_i11",
+          "p6_i12"
+        ],
+        "slideLocalDecorationObjectIds": [
+          "p6_i4",
+          "p6_i7",
+          "p6_i10"
+        ]
+      },
+      "mediaSignature": {
+        "mediaObjectCount": 0,
+        "occupiedAreaRatio": 0,
+        "dominantObjectId": null,
+        "dominantAspectRatio": null,
+        "dominantAreaRatio": null,
+        "dominantPanel": null
+      },
+      "protectedRegions": [],
+      "attentionReasons": []
+    },
+    {
+      "slideId": "p7",
+      "index": 6,
+      "layoutId": "p9",
+      "masterId": "p8",
+      "isSkipped": false,
+      "titlePreview": "SPOTLIFT",
+      "effectivePageProperties": {
+        "pageBackgroundFill": {
+          "solidFill": {
+            "color": {
+              "themeColor": "LIGHT1"
+            },
+            "alpha": 1
+          }
+        },
+        "colorScheme": {
+          "colors": [
+            {
+              "type": "DARK1",
+              "color": {}
+            },
+            {
+              "type": "LIGHT1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "DARK2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            },
+            {
+              "type": "LIGHT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "ACCENT1",
+              "color": {
+                "red": 0.08235294,
+                "green": 0.3764706,
+                "blue": 0.50980395
+              }
+            },
+            {
+              "type": "ACCENT2",
+              "color": {
+                "red": 0.9137255,
+                "green": 0.44313726,
+                "blue": 0.19607843
+              }
+            },
+            {
+              "type": "ACCENT3",
+              "color": {
+                "red": 0.09803922,
+                "green": 0.41960785,
+                "blue": 0.14117648
+              }
+            },
+            {
+              "type": "ACCENT4",
+              "color": {
+                "red": 0.05882353,
+                "green": 0.61960787,
+                "blue": 0.8352941
+              }
+            },
+            {
+              "type": "ACCENT5",
+              "color": {
+                "red": 0.627451,
+                "green": 0.16862746,
+                "blue": 0.5764706
+              }
+            },
+            {
+              "type": "ACCENT6",
+              "color": {
+                "red": 0.30588236,
+                "green": 0.654902,
+                "blue": 0.18039216
+              }
+            },
+            {
+              "type": "HYPERLINK",
+              "color": {
+                "red": 0.27450982,
+                "green": 0.47058824,
+                "blue": 0.5254902
+              }
+            },
+            {
+              "type": "FOLLOWED_HYPERLINK",
+              "color": {
+                "red": 0.5882353,
+                "green": 0.3764706,
+                "blue": 0.49019608
+              }
+            },
+            {
+              "type": "TEXT1",
+              "color": {}
+            },
+            {
+              "type": "BACKGROUND1",
+              "color": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            {
+              "type": "TEXT2",
+              "color": {
+                "red": 0.9098039,
+                "green": 0.9098039,
+                "blue": 0.9098039
+              }
+            },
+            {
+              "type": "BACKGROUND2",
+              "color": {
+                "red": 0.05490196,
+                "green": 0.15686275,
+                "blue": 0.25490198
+              }
+            }
+          ]
+        }
+      },
+      "placeholderLineage": [],
+      "effectiveContent": {
+        "directContentObjectIds": [
+          "p7_i7",
+          "p7_i2",
+          "p7_i3",
+          "p7_i4",
+          "p7_i5",
+          "p7_i6"
+        ],
+        "inheritedVisualObjectIds": [],
+        "hasDirectContent": true,
+        "hasInheritedVisual": false
+      },
+      "localComposition": {
+        "objects": [
+          {
+            "objectId": "p7_i7",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 30,
+              "width": 172.5,
+              "height": 40.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.0134765625,
+            "aspectRatio": 4.2592592592592595,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "top",
+              "classification": "left-top",
+              "areaRatio": 0.0134765625
+            },
+            "mediaGeometry": null,
+            "textPreview": "SPOTLIFT",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p7_i2",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 127.5,
+              "width": 780,
+              "height": 210,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.3159722222222222,
+            "aspectRatio": 3.7142857142857144,
+            "panel": {
+              "horizontal": "center",
+              "vertical": "middle",
+              "classification": "center-middle",
+              "areaRatio": 0.3159722222222222
+            },
+            "mediaGeometry": null,
+            "textPreview": "Prove that one confident scan creates a stronger member journey",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p7_i3",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 386.25,
+              "width": 375,
+              "height": 31.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.022786458333333332,
+            "aspectRatio": 11.904761904761905,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "bottom",
+              "classification": "left-bottom",
+              "areaRatio": 0.022786458333333332
+            },
+            "mediaGeometry": null,
+            "textPreview": "Seeking gym and equipment partners",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p7_i4",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 423.75,
+              "width": 427.5,
+              "height": 25.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.021028645833333335,
+            "aspectRatio": 16.764705882352942,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "bottom",
+              "classification": "left-bottom",
+              "areaRatio": 0.021028645833333335
+            },
+            "mediaGeometry": null,
+            "textPreview": "Measure scan → guidance → workout conversion",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p7_i5",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 30.75,
+              "y": 453.75,
+              "width": 427.5,
+              "height": 25.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.021028645833333335,
+            "aspectRatio": 16.764705882352942,
+            "panel": {
+              "horizontal": "left",
+              "vertical": "bottom",
+              "classification": "left-bottom",
+              "areaRatio": 0.021028645833333335
+            },
+            "mediaGeometry": null,
+            "textPreview": "Validate confidence, activation, and repeat use",
+            "mediaIdentity": null
+          },
+          {
+            "objectId": "p7_i6",
+            "kind": "shape",
+            "placeholder": null,
+            "classification": "slide-local-content",
+            "contentBearing": true,
+            "boundsPt": {
+              "x": 573.75,
+              "y": 435,
+              "width": 355.5,
+              "height": 31.5,
+              "rotatedOrSkewed": false
+            },
+            "areaRatio": 0.0216015625,
+            "aspectRatio": 11.285714285714286,
+            "panel": {
+              "horizontal": "right",
+              "vertical": "bottom",
+              "classification": "right-bottom",
+              "areaRatio": 0.0216015625
+            },
+            "mediaGeometry": null,
+            "textPreview": "Adan Villeda · villeda.0426@gmail.com",
+            "mediaIdentity": null
+          }
+        ],
+        "contentBearingObjectIds": [
+          "p7_i7",
+          "p7_i2",
+          "p7_i3",
+          "p7_i4",
+          "p7_i5",
+          "p7_i6"
+        ],
+        "slideLocalContentObjectIds": [
+          "p7_i7",
+          "p7_i2",
+          "p7_i3",
+          "p7_i4",
+          "p7_i5",
+          "p7_i6"
+        ],
+        "slideLocalDecorationObjectIds": []
+      },
+      "mediaSignature": {
+        "mediaObjectCount": 0,
+        "occupiedAreaRatio": 0,
+        "dominantObjectId": null,
+        "dominantAspectRatio": null,
+        "dominantAreaRatio": null,
+        "dominantPanel": null
+      },
+      "protectedRegions": [],
+      "attentionReasons": []
+    }
+  ],
+  "placeholders": {},
+  "source": {
+    "presentation": {
+      "id": "1anbgEDQwsYWLFfuqTa6oaecRYfPmbDkOnEThgyUIvYA",
+      "title": "SpotLift-GSIC-Groundbreakers-2026",
+      "revisionId": "l55Z4yLZatpS7g",
+      "locale": "en-US",
+      "pageSizePt": {
+        "width": 960,
+        "height": 540
+      },
+      "slideCount": 7,
+      "slideIds": [
+        "p1",
+        "p2",
+        "p3",
+        "p4",
+        "p5",
+        "p6",
+        "p7"
+      ]
+    },
+    "snapshotSha256": "ff6eb8976fb50e3e0b2fd1d726d5e06cf9749d82f727cd83a52064e149b317f8"
+  }
+}

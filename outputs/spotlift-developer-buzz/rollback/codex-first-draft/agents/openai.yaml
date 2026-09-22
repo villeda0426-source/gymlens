@@ -1,0 +1,6 @@
+interface:
+  display_name: "SpotLift Developer"
+  short_description: "Build and verify SpotLift features across the stack"
+  default_prompt: "Use $spotlift-developer to implement my requested app change and verify the affected user flow."
+policy:
+  allow_implicit_invocation: true

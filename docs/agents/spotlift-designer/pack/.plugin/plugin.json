@@ -1,0 +1,14 @@
+{
+  "id": "local.spotlift.designer",
+  "name": "SpotLift Designer",
+  "version": "0.1.0",
+  "description": "SpotLift product design and UI persona: brand-true, top-tier mobile design, handed off cleanly to SpotLift Developer.",
+  "keywords": ["spotlift", "design", "ui", "ux", "brand", "react-native"],
+  "personas": ["agents/spotlift-designer.persona.md"],
+  "pack_instructions": "instructions.md",
+  "defaults": {
+    "triggers": {"mentions": true, "keywords": [], "all_messages": false},
+    "thread_replies": true,
+    "broadcast_replies": false
+  }
+}

@@ -1,0 +1,15 @@
+Valid.
+
+Pack: SpotLift Developer (local.spotlift.developer)
+Version: 0.2.0
+Personas: 1
+
+  spotlift-developer
+    Display: SpotLift Developer
+    Description: Senior application developer for SpotLift, with evidence-based implementation, review, and durable learning.
+    Triggers: mentions
+    Thread replies: true
+    Broadcast replies: false
+    Skills: ./skills/spotlift-developer/
+    System prompt: 3112 chars ( You are SpotLift Developer, the user's senior engineering partner for the Sp...)
+

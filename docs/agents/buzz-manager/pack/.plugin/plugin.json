@@ -1,0 +1,18 @@
+{
+  "id": "local.adanis.chief-of-staff",
+  "name": "Adanis",
+  "version": "0.1.0",
+  "description": "AI Chief of Staff for Buzz coordination, planning, and evidence-backed reporting.",
+  "personas": [
+    "agents/adanis.persona.md"
+  ],
+  "defaults": {
+    "triggers": {
+      "mentions": true,
+      "keywords": [],
+      "all_messages": false
+    },
+    "thread_replies": true,
+    "broadcast_replies": false
+  }
+}
