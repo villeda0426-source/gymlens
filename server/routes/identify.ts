@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { extractEquipmentName, identifyEquipment } from "../services/claudeService";
+import { extractEquipmentName, identifyEquipment } from "../services/equipmentAiService";
 import { getEquipmentVideos } from "../services/youtubeService";
 import { createClient } from "@supabase/supabase-js";
 

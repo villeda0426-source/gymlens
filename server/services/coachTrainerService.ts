@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { jsonrepair } from "jsonrepair";
 import {
   buildReliableStarterPlan,
@@ -6,44 +5,28 @@ import {
   hasCoachMedicalRedFlag,
   ReliableLanguage,
 } from "../../shared/reliableCoach";
+import { createTextResponse, setOpenAIClientForTests, type OpenAIClient } from "./openaiService";
 
-export type CoachClient = {
-  messages: {
-    create: (
-      params: Anthropic.MessageCreateParamsNonStreaming,
-      options?: { signal?: AbortSignal; timeout?: number; maxRetries?: number }
-    ) => Promise<Anthropic.Message>;
-  };
-};
-
-let cachedClient: CoachClient | null = null;
-let injectedClient: CoachClient | null = null;
+// Temporary provider swap (2026-09-21): Coach runs on OpenAI while the
+// Anthropic account has no usable credits. shared/reliableCoach.ts (the
+// deterministic fallback below) is unchanged and still applies on any
+// failure. Switching back to Claude means restoring the Anthropic client
+// here; the last Claude-based version is in git history (see
+// docs/coach-rules-router.md). scripts/coach-update-regression-test.ts
+// still injects an Anthropic-shaped test client and needs updating for
+// this provider separately - it is not exercised by this change.
 
 /** Test seam: lets regressions drive the provider without network access. */
-export function setCoachClientForTests(client: CoachClient | null): void {
-  injectedClient = client;
+export function setCoachClientForTests(client: OpenAIClient | null): void {
+  setOpenAIClientForTests(client);
 }
 
 export class CoachConfigurationError extends Error {}
 
-function getCoachClient(): CoachClient {
-  if (injectedClient) return injectedClient;
-
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    // Fail immediately instead of paying for a request that cannot succeed.
-    throw new CoachConfigurationError("ANTHROPIC_API_KEY is not configured on the server.");
-  }
-
-  // maxRetries: 0 keeps cost bounded; this service does its own single fallback.
-  cachedClient ??= new Anthropic({ apiKey, maxRetries: 0 });
-  return cachedClient;
-}
-
 export const COACH_TRAINER_MODEL =
-  process.env.COACH_TRAINER_MODEL || "claude-sonnet-4-6";
+  process.env.COACH_TRAINER_MODEL || process.env.OPENAI_COACH_MODEL || "gpt-5-mini";
 const COACH_TRAINER_FALLBACK_MODEL =
-  process.env.COACH_TRAINER_FALLBACK_MODEL || "claude-haiku-4-5-20251001";
+  process.env.COACH_TRAINER_FALLBACK_MODEL || process.env.OPENAI_FALLBACK_MODEL || "gpt-5-nano";
 const COACH_TRAINER_MAX_TOKENS = Number.parseInt(process.env.COACH_TRAINER_MAX_TOKENS || "5000", 10);
 const COACH_TRAINER_PRIMARY_TIMEOUT_MS = Number.parseInt(process.env.COACH_TRAINER_PRIMARY_TIMEOUT_MS || "38000", 10);
 const COACH_TRAINER_FALLBACK_TIMEOUT_MS = Number.parseInt(process.env.COACH_TRAINER_FALLBACK_TIMEOUT_MS || "17000", 10);
@@ -78,8 +61,8 @@ Rules:
 - Don't interrogate. If the first message is already rich, go straight to plan_ready.
 - Once the user has provided experience, days per week, equipment/access, injuries/limitations, and a broad goal, you MUST generate plan_ready. Do not ask follow-up questions for nice-to-have details like exact session length, favorite lifts, swimming technique, or schedule order; choose sensible defaults and mention them in the summary.
 - Keep plans concise: no more than 5 exercises per session, and no more than 4 sessions in the JSON.
-- SAFETY: if the user mentions chest pain, dizziness, fainting, a recent surgery, pregnancy, an uncontrolled medical condition, or anything warranting clearance — keep programming conservative and add a safety_flag recommending they consult a physician. You are a coach, not a doctor or physical therapist; don't diagnose.
-- RESPONSIBLE USE: never prescribe extreme calorie restriction or unsafe rapid weight loss. If you see signs of disordered eating or an unhealthy relationship with exercise, encourage a balanced approach and suggest speaking with a professional; never reinforce it.
+- SAFETY: if the user reports active or exertional chest pain, unexplained dizziness or fainting, a recent surgery without clearance, an uncontrolled medical condition, pregnancy without appropriate prenatal exercise guidance, or another condition that warrants clearance, DO NOT generate a workout plan yet. Return status "gathering" with a concise, calm message telling them to pause and obtain guidance or clearance from the appropriate licensed healthcare professional. Do not diagnose, prescribe rehabilitation, suggest test exercises, or provide loads/RPE targets while clearance is unresolved. Once the user confirms appropriate clearance and supplies any restrictions, keep programming conservative and add a safety flag that reflects those restrictions. You are a coach, not a doctor or physical therapist.
+- RESPONSIBLE USE: never prescribe extreme calorie restriction, meal skipping, exercise as punishment for eating, or unsafe rapid weight loss. If the user expresses guilt about rest or food, a need to "burn off" everything eaten, training through exhaustion, meal skipping, or another sign of disordered eating or compulsive exercise, DO NOT generate the requested plan yet. Return status "gathering" with a calm, nonjudgmental message that explicitly supports adequate food, rest, and recovery and encourages speaking with an appropriate licensed healthcare or mental-health professional. Never reinforce or optimize the harmful behavior. Once safety is established, use a balanced, sustainable approach.
 While still gathering:
 { "status": "gathering", "message": "<friendly question(s)>" }
 When you have enough -> respond with status "plan_ready" (plan schema below).
@@ -230,13 +213,6 @@ export function compactPlanForCoach(plan: Plan): Plan {
     days_per_week: daysPerWeek,
     sessions: plan.sessions.slice(0, daysPerWeek),
   };
-}
-
-function extractText(message: Anthropic.Message): string {
-  return message.content
-    .map((block) => (block.type === "text" ? block.text : ""))
-    .join("")
-    .trim();
 }
 
 function stripJsonFences(value: string): string {
@@ -446,11 +422,13 @@ function canUseStaticFallback(messages: CoachMessage[]): boolean {
   return rawContext.includes('"mode":"intake"') || rawContext.includes('"mode":"chat"');
 }
 
-function isAnthropicCreditExhausted(error: unknown): boolean {
+function isProviderCreditExhausted(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const status = (error as { status?: unknown }).status;
+  const message = error.message.toLowerCase();
   return (
-    error instanceof Error &&
-    (error as { status?: unknown }).status === 400 &&
-    error.message.toLowerCase().includes("credit balance is too low")
+    (status === 400 && message.includes("credit balance is too low")) || // Anthropic
+    (status === 429 && (message.includes("insufficient_quota") || message.includes("exceeded your current quota"))) // OpenAI
   );
 }
 
@@ -490,35 +468,20 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
   const fallbackTimeoutMs = options.fallbackTimeoutMs ?? COACH_TRAINER_FALLBACK_TIMEOUT_MS;
   const primaryModel = options.primaryModel ?? COACH_TRAINER_MODEL;
   const maxTokens = options.maxTokens ?? COACH_TRAINER_MAX_TOKENS;
-  const temperature = options.temperature ?? 0.5;
+  // options.temperature (used by the legacy build-38 path in coach-trainer.ts)
+  // is not currently applied: createTextResponse (OpenAI Responses API) does
+  // not expose a temperature parameter.
 
   async function run(nextMessages: CoachMessage[], model: string, timeoutMs: number): Promise<CoachResponse> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const response = await getCoachClient().messages.create(
-        {
-          model,
-          max_tokens: Number.isFinite(maxTokens) ? maxTokens : 5000,
-          temperature,
-          system: COACH_TRAINER_SYSTEM_PROMPT,
-          messages: nextMessages,
-        },
-        // Abort the paid request itself on timeout, and never let the SDK
-        // retry behind our back.
-        { signal: controller.signal, timeout: timeoutMs, maxRetries: 0 }
-      );
-
-      return parseCoachResponse(extractText(response));
-    } catch (error) {
-      if (controller.signal.aborted) {
-        throw new Error(`Coach response timed out for ${model}.`);
-      }
-      throw error;
-    } finally {
-      clearTimeout(timer);
-    }
+    const text = await createTextResponse({
+      model,
+      instructions: COACH_TRAINER_SYSTEM_PROMPT,
+      input: nextMessages,
+      maxOutputTokens: Number.isFinite(maxTokens) ? maxTokens : 5000,
+      timeoutMs,
+      telemetryFeature: "coach_trainer",
+    });
+    return parseCoachResponse(text);
   }
 
   const isRecoverableFormatError = isCoachFallbackEligibleError;
@@ -526,10 +489,10 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
   try {
     return await run(messages, primaryModel, primaryTimeoutMs);
   } catch (error) {
-    // A depleted Anthropic balance affects every model. Intake and chat can
+    // A depleted provider balance affects every model. Intake and chat can
     // degrade safely without paying for a second request that must also fail.
-    if (isAnthropicCreditExhausted(error)) {
-      console.error("[coach-trainer] Anthropic credits unavailable; using deterministic fallback.");
+    if (isProviderCreditExhausted(error)) {
+      console.error("[coach-trainer] AI provider credits unavailable; using deterministic fallback.");
       if (allowStaticFallback) return fallbackResponse;
       throw error;
     }

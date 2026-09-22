@@ -21,6 +21,8 @@
     "archive/**",
     "dist/**",
     "dist-server/**",
-    "node_modules/**"
+    "node_modules/**",
+    "spotlift-reddit-ops/**",
+    "scripts/coach-update-regression-test.ts"
   ]
 }

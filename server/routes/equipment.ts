@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { createClient } from "@supabase/supabase-js";
-import { callClaudeMessage } from "../services/claudeService";
+import { createTextResponse, OPENAI_DEFAULT_MODEL } from "../services/openaiService";
 
 const router = Router();
 
@@ -55,20 +55,15 @@ router.get("/:id/weight-factor", async (req: Request, res: Response) => {
       return res.json({ weight_factor: Number(equipment.weight_factor) });
     }
 
-    // Call Claude once to get weight factor
-    console.log(`[weight-factor] Asking Claude for: ${equipment.name}`);
-    const response = await callClaudeMessage({
-      model: process.env.ANTHROPIC_VISION_FAST_MODEL || "claude-haiku-4-5-20251001",
-      max_tokens: 16,
-      messages: [
-        {
-          role: "user",
-          content: `For the gym exercise ${equipment.name}, what percentage of a person's body weight is a reasonable starting weight for a complete beginner? Reply with ONLY a decimal between 0.05 and 1.5, nothing else.`,
-        },
-      ],
-    }, { timeoutMs: 10000 });
-
-    const raw = response.content[0].type === "text" ? response.content[0].text.trim() : "0.3";
+    // Call OpenAI once to get weight factor
+    console.log(`[weight-factor] Asking OpenAI for: ${equipment.name}`);
+    const raw = await createTextResponse({
+      model: OPENAI_DEFAULT_MODEL,
+      instructions: "Estimate conservative beginner starting loads for gym exercises. This is educational guidance, not a medical prescription.",
+      input: `For the gym exercise ${equipment.name}, what percentage of a person's body weight is a reasonable starting weight for a complete beginner? Reply with ONLY a decimal between 0.05 and 1.5, nothing else.`,
+      maxOutputTokens: 16,
+      timeoutMs: 10000,
+    });
     const parsed = parseFloat(raw);
     const factor = isNaN(parsed) ? 0.3 : Math.min(1.5, Math.max(0.05, parsed));
 

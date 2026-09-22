@@ -64,6 +64,71 @@ type JsonRequestOptions = {
   telemetryFeature?: string;
 };
 
+export async function createTextResponse({
+  model = OPENAI_DEFAULT_MODEL,
+  instructions,
+  input,
+  maxOutputTokens = 300,
+  timeoutMs = 30000,
+  telemetryFeature = "text_generation",
+}: Omit<JsonRequestOptions, "schemaName" | "schema">): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const startedAt = Date.now();
+
+  try {
+    const response = await getClient().responses.create(
+      {
+        model,
+        instructions,
+        input: input as any,
+        max_output_tokens: maxOutputTokens,
+        reasoning: { effort: "low" },
+      },
+      { signal: controller.signal, timeout: timeoutMs, maxRetries: 0 }
+    );
+
+    const text = response.output_text?.trim();
+    if (!text) throw new Error("OpenAI returned an empty text response.");
+    recordAiUsage({
+      feature: telemetryFeature,
+      model,
+      inputTokens: response.usage?.input_tokens ?? 0,
+      outputTokens: response.usage?.output_tokens ?? 0,
+      latencyMs: Date.now() - startedAt,
+      succeeded: true,
+    });
+    return text;
+  } catch (error) {
+    recordAiUsage({
+      feature: telemetryFeature,
+      model,
+      inputTokens: 0,
+      outputTokens: 0,
+      latencyMs: Date.now() - startedAt,
+      succeeded: false,
+    });
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export function imageDataUrl(base64Image: string): string {
+  const header = base64Image.slice(0, 16);
+  const mimeType = header.startsWith("iVBORw")
+    ? "image/png"
+    : header.startsWith("R0lGOD")
+      ? "image/gif"
+      : header.startsWith("UklGR")
+        ? "image/webp"
+        : "image/jpeg";
+
+  return `data:${mimeType};base64,${base64Image}`;
+}
+
+export const OPENAI_VISION_MODEL = process.env.OPENAI_VISION_MODEL || OPENAI_DEFAULT_MODEL;
+
 export async function createStructuredResponse<T>({
   model = OPENAI_DEFAULT_MODEL,
   instructions,
