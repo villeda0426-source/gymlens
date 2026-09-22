@@ -69,6 +69,7 @@ function RootLayout() {
         // Preview builds can inherit an expired refresh token from an older
         // session. Clear only the local session and continue as signed out.
         await supabase.auth.signOut({ scope: "local" });
+        useCoachTrainerStore.getState().clearTrainer();
         setUser(null);
         Sentry.setUser(null);
         await loadProfile();
@@ -82,7 +83,7 @@ function RootLayout() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || !session) {
-        useCoachTrainerStore.getState().resetChatSession();
+        useCoachTrainerStore.getState().clearTrainer();
       }
       setUser(session?.user ?? null);
       Sentry.setUser(session?.user ? { id: session.user.id, email: session.user.email } : null);

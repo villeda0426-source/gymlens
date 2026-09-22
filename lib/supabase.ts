@@ -31,17 +31,47 @@ export type Database = {
           language: string;
           guest_uses: number;
           created_at: string;
+          updated_at: string | null;
+          // Additive account fields. `username` and `language` remain during
+          // the rollout so older clients continue to work.
+          display_name: string | null;
+          preferred_language: "en" | "es" | null;
+          preferred_units: "kg" | "lb" | null;
+          experience_level: "beginner" | "intermediate" | "advanced" | null;
+          goal: string | null;
+          equipment_type: "full_gym" | "dumbbells_home" | "bodyweight" | null;
+          days_per_week: number | null;
+          age_band: "unknown" | "under_18" | "adult_18_59" | "over_59" | null;
+          safety_reviewed_at: string | null;
         };
         Insert: {
           id: string;
           username?: string | null;
           language?: string;
           guest_uses?: number;
+          display_name?: string | null;
+          preferred_language?: "en" | "es" | null;
+          preferred_units?: "kg" | "lb" | null;
+          experience_level?: "beginner" | "intermediate" | "advanced" | null;
+          goal?: string | null;
+          equipment_type?: "full_gym" | "dumbbells_home" | "bodyweight" | null;
+          days_per_week?: number | null;
+          age_band?: "unknown" | "under_18" | "adult_18_59" | "over_59" | null;
+          safety_reviewed_at?: string | null;
         };
         Update: {
           username?: string | null;
           language?: string;
           guest_uses?: number;
+          display_name?: string | null;
+          preferred_language?: "en" | "es" | null;
+          preferred_units?: "kg" | "lb" | null;
+          experience_level?: "beginner" | "intermediate" | "advanced" | null;
+          goal?: string | null;
+          equipment_type?: "full_gym" | "dumbbells_home" | "bodyweight" | null;
+          days_per_week?: number | null;
+          age_band?: "unknown" | "under_18" | "adult_18_59" | "over_59" | null;
+          safety_reviewed_at?: string | null;
         };
       };
       equipment: {

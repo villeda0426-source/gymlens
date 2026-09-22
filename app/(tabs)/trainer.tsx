@@ -23,6 +23,8 @@ import {
   callCoachTrainer,
   CoachMessage,
   CoachResponse,
+  CoachRulesMetadata,
+  flagCoachRulesResponse,
   getCoachTrainerJob,
   makeFreeformWorkoutLog,
   startCoachTrainerJob,
@@ -31,7 +33,6 @@ import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { useAuthStore } from "@/store/authStore";
 import {
   adjustSessionForToday,
-  buildReliableStarterPlan,
   hasCoachMedicalRedFlag,
   ReliableSession,
   SessionChange,
@@ -147,6 +148,7 @@ export default function TrainerScreen() {
     setIntakeHistory,
     conversation,
     addConversationMessage,
+    markConversationFeedbackFlagged,
     resetChatSession,
     clearTrainer,
     hasLoaded,
@@ -164,6 +166,7 @@ export default function TrainerScreen() {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [listening, setListening] = useState(false);
+  const [flaggingConversationId, setFlaggingConversationId] = useState<string | null>(null);
 
   useEffect(() => {
     const speechModule = loadSpeechRecognitionModule();
@@ -230,11 +233,13 @@ export default function TrainerScreen() {
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
   }, [conversation.length, notice]);
 
-  const visibleConversation = useMemo<CoachMessage[]>(() => {
+  const visibleConversation = useMemo(() => {
     if (conversation.length > 0) return conversation;
     return [
       {
-        role: "assistant",
+        id: "coach-starter-message",
+        createdAt: "",
+        role: "assistant" as const,
         content: t("trainer.starter_message"),
       },
     ];
@@ -314,7 +319,7 @@ export default function TrainerScreen() {
     const assistantJson = stringifyCoachResponse(response);
     const assistantText = getCoachResponseText(response);
 
-    addConversationMessage({ role: "assistant", content: assistantText });
+    addConversationMessage({ role: "assistant", content: assistantText }, response.rulesMetadata);
 
     if (nextIntakeHistory) {
       setIntakeHistory([...nextIntakeHistory, { role: "assistant", content: assistantJson }]);
@@ -328,6 +333,31 @@ export default function TrainerScreen() {
       setNotice(t("trainer.plan_ready_notice"));
     } else {
       setNotice("");
+    }
+  };
+
+  const flagRulesResponse = async (conversationId: string, metadata: CoachRulesMetadata) => {
+    if (flaggingConversationId) return;
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      setNotice(t("trainer.response_feedback_sign_in"));
+      return;
+    }
+
+    setFlaggingConversationId(conversationId);
+    try {
+      // The feedback endpoint receives routing metadata only. Conversation text
+      // never leaves this device as part of the feedback action.
+      await flagCoachRulesResponse(metadata, { authToken: session.access_token });
+      markConversationFeedbackFlagged(conversationId);
+      setNotice(t("trainer.response_feedback_thanks"));
+    } catch {
+      setNotice(t("trainer.response_feedback_error"));
+    } finally {
+      setFlaggingConversationId(null);
     }
   };
 
@@ -420,18 +450,9 @@ export default function TrainerScreen() {
               ]
             : [...intakeHistory, { role: "user" as const, content: text }];
 
-        const reliablePlan = buildReliableStarterPlan(
-          nextHistory.map((message) => message.content).join("\n"),
-          units,
-          coachLanguage
-        );
-        if (reliablePlan) {
-          setPlan(reliablePlan.plan);
-          addConversationMessage({ role: "assistant", content: reliablePlan.summary });
-          setNotice(t("trainer.reliable_plan_enhancing"));
-        } else {
-          setNotice(t("trainer.coach_building_plan"));
-        }
+        // Do not create a local provisional plan. The server must read the
+        // account history and safety profile before a plan can be prescribed.
+        setNotice(t("trainer.coach_building_plan"));
         const response = await runCoachJob({
           mode: "intake",
           units,
@@ -480,18 +501,11 @@ export default function TrainerScreen() {
         setDraft(text);
         setNotice(t("trainer.chat_interrupted"));
       } else {
-        if (!plan && buildReliableStarterPlan(
-          [...intakeHistory.map((message) => message.content), text].join("\n"),
-          units
-        )) {
-          setFailedPrompt(null);
-          setDraft("");
-          setNotice(t("trainer.reliable_plan_fallback"));
-        } else {
-          setFailedPrompt(text);
-          setDraft(text);
-          setNotice(t("trainer.coach_connect_error"));
-        }
+        // A failed Coach request must never fall back to a client-generated
+        // prescription that bypasses the account-history safety checks.
+        setFailedPrompt(text);
+        setDraft(text);
+        setNotice(t("trainer.coach_connect_error"));
       }
     } finally {
       setLoading(false);

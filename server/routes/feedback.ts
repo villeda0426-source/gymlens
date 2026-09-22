@@ -9,21 +9,48 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const FEEDBACK_CATEGORIES = new Set(["wrong_id", "missing_info", "video_quality", "other"]);
+
+async function optionalAuthenticatedUserId(
+  req: Request
+): Promise<{ userId: string | null; invalidToken: boolean }> {
+  const authorization = req.header("authorization");
+  if (!authorization) return { userId: null, invalidToken: false };
+
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  const token = match?.[1]?.trim();
+  if (!token) return { userId: null, invalidToken: true };
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user?.id) return { userId: null, invalidToken: true };
+  return { userId: data.user.id, invalidToken: false };
+}
+
 router.post("/", async (req: Request, res: Response) => {
   try {
-    const { userId, rating, category, message } = req.body;
+    const identity = await optionalAuthenticatedUserId(req);
+    if (identity.invalidToken) {
+      return res.status(401).json({ error: "Your session is no longer valid. Please sign in again." });
+    }
 
-    if (!rating || rating < 1 || rating > 5) {
+    const rating = Number(req.body?.rating);
+    const category = FEEDBACK_CATEGORIES.has(req.body?.category) ? req.body.category : "other";
+    const message =
+      typeof req.body?.message === "string" ? req.body.message.trim().slice(0, 4_000) || null : null;
+
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
       return res.status(400).json({ error: "Rating must be between 1 and 5" });
     }
 
     const { data, error } = await supabase
       .from("feedback")
       .insert({
-        user_id: userId || null,
+        // Deliberately ignore req.body.userId. Anonymous feedback remains
+        // supported; authenticated feedback is always attributed by Supabase.
+        user_id: identity.userId,
         rating,
-        category: category || "other",
-        message: message || null,
+        category,
+        message,
       })
       .select()
       .single();
@@ -32,7 +59,8 @@ router.post("/", async (req: Request, res: Response) => {
 
     return res.json({ success: true, id: data.id });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    console.error("[feedback] submission failed:", error?.code || "unknown_error");
+    return res.status(500).json({ error: "We could not save your feedback. Please try again." });
   }
 });
 

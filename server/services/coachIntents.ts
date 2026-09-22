@@ -10,6 +10,7 @@ import {
 } from "./coachTemplates";
 import { normalizeText } from "./coachText";
 import * as knowledge from "./coachKnowledge";
+import { allocateUniqueExerciseId, slugExerciseId } from "../../shared/exerciseIds";
 
 // Stage-two Coach intents: the ongoing coaching relationship after a plan exists.
 // Each matcher is deliberately narrow. When a message matches no intent, matches
@@ -76,9 +77,8 @@ const GENERIC_WORDS: Array<[RegExp, MovementPattern]> = [
   [/\b(?:pull ?downs?|jalones?)\b/, "vertical_pull"],
 ];
 
-const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const ID_TO_KEY = new Map(Object.entries(MOVE_LIBRARY).map(([key, move]) => [slug(move.name.en), key]));
+const ID_TO_KEY = new Map(Object.entries(MOVE_LIBRARY).map(([key, move]) => [slugExerciseId(move.name.en), key]));
 
 function containsPhrase(normalized: string, phrase: string): boolean {
   return new RegExp(`\\b${escapeRegex(phrase)}\\b`).test(normalized);
@@ -311,13 +311,6 @@ function whyReply(ctx: Stage2Context): Handled {
   return reply("why_exercise", knowledge.whyExerciseReply(name, move.pattern, ctx.currentPlan.goal_type, ctx.language));
 }
 
-function uniqueId(base: string, taken: Set<string>): string {
-  if (!taken.has(base)) return base;
-  let n = 2;
-  while (taken.has(`${base}-${n}`)) n += 1;
-  return `${base}-${n}`;
-}
-
 function applySwap(plan: Plan, oldKey: string, newKey: string, units: Units, language: Language): Plan {
   const taken = new Set(plan.sessions.flatMap((session) => session.exercises.map((exercise) => exercise.exercise_id)));
   const sessions = plan.sessions.map((session) => ({
@@ -325,7 +318,7 @@ function applySwap(plan: Plan, oldKey: string, newKey: string, units: Units, lan
     exercises: session.exercises.map((exercise) => {
       if (moveKeyOfExercise(exercise) !== oldKey) return exercise;
       const fresh = buildExerciseFromMove(newKey, plan.goal_type as BeginnerGoal, units, language);
-      const id = uniqueId(fresh.exercise_id, taken);
+      const id = allocateUniqueExerciseId(fresh.exercise_id, taken);
       taken.add(id);
       // Keep the prescription the user already has; only the movement changes.
       return { ...fresh, exercise_id: id, sets: exercise.sets, rep_range: exercise.rep_range, target_rpe: exercise.target_rpe, rest_seconds: exercise.rest_seconds };

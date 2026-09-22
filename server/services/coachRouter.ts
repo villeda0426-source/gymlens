@@ -7,6 +7,7 @@ import {
 } from "./coachTemplates";
 import { normalizeText } from "./coachText";
 import { routeStageTwo, type Stage2Intent } from "./coachIntents";
+import { historyRouteReason, type CoachHistoryContext } from "./coachHistory";
 
 // Rules-first Coach router.
 //
@@ -28,13 +29,16 @@ export type CoachRouterInput = {
   newGoal?: string; // update_goals
   logs?: unknown; // adapt
   currentPlan?: Plan | null;
+  // Production routes always attach this from the authenticated account. It is
+  // optional only so the router stays a pure unit-testable function.
+  accountHistory?: CoachHistoryContext;
 };
 
 export type RouteDecision =
-  | { route: "rules"; intent: RulesIntent; response: CoachResponse }
+  | { route: "rules"; intent: RulesIntent; response: CoachResponse; reason?: string }
   | { route: "ai"; reason: string };
 
-export type RulesIntent = "beginner_plan" | Stage2Intent;
+export type RulesIntent = "beginner_plan" | "intake_clarification" | Stage2Intent;
 
 export function isRulesRouterEnabled(): boolean {
   return (process.env.COACH_RULES_ROUTER || "on").toLowerCase() !== "off";
@@ -181,6 +185,63 @@ function userTextFromIntake(input: CoachRouterInput): string {
   return [...past, (input.userMessage ?? "").replace(CONTEXT_PREFIX, "")].join(" \n ");
 }
 
+function profileEquipment(value: string | null | undefined): BeginnerEquipment | null {
+  switch (value) {
+    case "full_gym":
+    case "gym":
+      return "gym";
+    case "dumbbells_home":
+    case "home_dumbbells":
+      return "home_dumbbells";
+    case "bodyweight":
+      return "bodyweight";
+    default:
+      return null;
+  }
+}
+
+function profileGoal(value: string | null | undefined): BeginnerGoal | null {
+  return value === "general_fitness" || value === "fat_loss" || value === "hypertrophy" || value === "strength"
+    ? value
+    : null;
+}
+
+function intakeClarification(field: "beginner" | "no_injury" | "days" | "equipment" | "goal", language: Language): CoachResponse {
+  const en: Record<typeof field, string> = {
+    beginner: "Before I make a beginner plan, are you new to strength training?",
+    no_injury: "Before I make a plan, can you confirm that you do not have pain, an injury, or a health limitation affecting exercise?",
+    days: "How many days per week can you realistically train?",
+    equipment: "What equipment will you use: a full gym, dumbbells at home, or bodyweight only?",
+    goal: "What is your main goal right now: general fitness, getting stronger, building muscle, or losing fat?",
+  };
+  const es: Record<typeof field, string> = {
+    beginner: "Antes de hacer un plan para principiantes, ¿eres nuevo en el entrenamiento de fuerza?",
+    no_injury: "Antes de hacer un plan, ¿puedes confirmar que no tienes dolor, una lesión o una limitación de salud que afecte el ejercicio?",
+    days: "¿Cuántos días por semana puedes entrenar de forma realista?",
+    equipment: "¿Qué equipo usarás: gimnasio completo, mancuernas en casa o solo peso corporal?",
+    goal: "¿Cuál es tu meta principal ahora: estar en forma, ganar fuerza, ganar músculo o perder grasa?",
+  };
+  return { status: "gathering", message: (language === "es" ? es : en)[field] };
+}
+
+function intakeProfileConflict(
+  profile: NonNullable<CoachHistoryContext["profile"]>,
+  explicitDays: number | null,
+  explicitEquipment: BeginnerEquipment | "ambiguous" | null,
+  explicitGoal: BeginnerGoal | null
+): string | null {
+  if (explicitDays !== null && profile.daysPerWeek !== null && explicitDays !== profile.daysPerWeek) {
+    return "history:profile_conflict_days";
+  }
+  const savedEquipment = profileEquipment(profile.equipmentType);
+  if (explicitEquipment && explicitEquipment !== "ambiguous" && savedEquipment && explicitEquipment !== savedEquipment) {
+    return "history:profile_conflict_equipment";
+  }
+  const savedGoal = profileGoal(profile.goal);
+  if (explicitGoal && savedGoal && explicitGoal !== savedGoal) return "history:profile_conflict_goal";
+  return null;
+}
+
 function routeIntake(input: CoachRouterInput): RouteDecision {
   const raw = userTextFromIntake(input);
   const risks = detectRiskSignals(raw);
@@ -188,21 +249,39 @@ function routeIntake(input: CoachRouterInput): RouteDecision {
 
   const normalized = normalizeText(raw);
   if (ADVANCED_MARKERS.test(normalized)) return { route: "ai", reason: "experience:not_beginner" };
-  if (!BEGINNER_MARKERS.test(normalized)) return { route: "ai", reason: "missing:beginner_confirmation" };
-  if (!hasExplicitNoInjuries(normalized)) return { route: "ai", reason: "missing:no_injury_confirmation" };
+  const explicitDays = extractDaysPerWeek(normalized);
+  const explicitEquipment = extractEquipment(normalized);
+  const explicitGoal = extractGoal(normalized);
+  const profile = input.accountHistory?.profile;
+  if (profile) {
+    const conflict = intakeProfileConflict(profile, explicitDays, explicitEquipment, explicitGoal);
+    if (conflict) return { route: "ai", reason: conflict };
+  }
 
-  const days = extractDaysPerWeek(normalized);
-  if (days === null) return { route: "ai", reason: "missing:days" };
+  const days = explicitDays ?? (profile?.daysPerWeek ?? null);
   // Beginners do well on 2-3 sessions a week; the router never pushes toward more.
   // Anything else (including a request for 4+) goes to the AI, which honors what they asked for.
-  if (days < 2 || days > 3) return { route: "ai", reason: "days:out_of_range" };
+  if (days !== null && (days < 2 || days > 3)) return { route: "ai", reason: "days:out_of_range" };
 
-  const equipment = extractEquipment(normalized);
-  if (equipment === null) return { route: "ai", reason: "missing:equipment" };
-  if (equipment === "ambiguous") return { route: "ai", reason: "equipment:ambiguous" };
+  if (explicitEquipment === "ambiguous") return { route: "ai", reason: "equipment:ambiguous" };
+  const equipment = explicitEquipment ?? profileEquipment(profile?.equipmentType);
+  const goal = explicitGoal ?? profileGoal(profile?.goal);
 
-  const goal = extractGoal(normalized);
-  if (goal === null) return { route: "ai", reason: "missing:goal" };
+  const missing: Array<"beginner" | "no_injury" | "days" | "equipment" | "goal"> = [];
+  if (!BEGINNER_MARKERS.test(normalized) && profile?.experienceLevel !== "beginner") missing.push("beginner");
+  // A profile with no stored limitation is not the same thing as a current
+  // confirmation. This deliberately remains an explicit safety question.
+  if (!hasExplicitNoInjuries(normalized)) missing.push("no_injury");
+  if (days === null) missing.push("days");
+  if (!equipment) missing.push("equipment");
+  if (!goal) missing.push("goal");
+
+  // Ask exactly one narrowly-scoped detail when that is all that is missing.
+  // Multiple unknowns remain an AI task rather than a rules-path interview.
+  if (missing.length === 1) {
+    return { route: "rules", intent: "intake_clarification", response: intakeClarification(missing[0], input.language) };
+  }
+  if (missing.length > 1) return { route: "ai", reason: `missing:${missing[0]}_and_more` };
 
   return {
     route: "rules",
@@ -255,7 +334,16 @@ function routePlanQuestion(input: CoachRouterInput): RouteDecision {
 export function routeCoachRequest(input: CoachRouterInput): RouteDecision {
   if (!isRulesRouterEnabled()) return { route: "ai", reason: "router:disabled" };
   try {
-    return input.mode === "intake" ? routeIntake(input) : routePlanQuestion(input);
+    // Account history is monotonic: it can only force an AI review. Pure router
+    // tests omit it; authenticated production routes always attach it.
+    if (input.accountHistory) {
+      const historyReason = historyRouteReason(input.accountHistory);
+      if (historyReason) return { route: "ai", reason: historyReason };
+    }
+    const decision = input.mode === "intake" ? routeIntake(input) : routePlanQuestion(input);
+    return decision.route === "rules" && !decision.reason
+      ? { ...decision, reason: `rule:${decision.intent}` }
+      : decision;
   } catch {
     // Never let a router bug block a Coach request; the AI pipeline is the fallback.
     return { route: "ai", reason: "router:error" };

@@ -65,7 +65,7 @@ async function sendNewInstallEmail(installation: {
 }
 
 async function deliverAndRecordNotification(
-  installationId: string,
+  installationRecordId: string,
   installation: Parameters<typeof sendNewInstallEmail>[0]
 ): Promise<boolean> {
   try {
@@ -77,7 +77,7 @@ async function deliverAndRecordNotification(
         notification_attempted_at: new Date().toISOString(),
         notification_error: null,
       })
-      .eq("installation_id", installationId);
+      .eq("id", installationRecordId);
     if (error) throw error;
     return true;
   } catch (error: any) {
@@ -89,7 +89,7 @@ async function deliverAndRecordNotification(
         notification_attempted_at: new Date().toISOString(),
         notification_error: message,
       })
-      .eq("installation_id", installationId);
+      .eq("id", installationRecordId);
     return false;
   }
 }
@@ -116,36 +116,66 @@ router.post("/", async (req: Request, res: Response) => {
 
     const { data: existing, error: lookupError } = await supabase
       .from("app_installations")
-      .select("id, platform, app_version, build_number, locale, created_at, notification_sent_at")
+      .select("id, user_id, platform, app_version, build_number, locale, created_at, notification_sent_at")
       .eq("installation_id", installationId)
       .maybeSingle();
     if (lookupError) throw lookupError;
 
     if (existing) {
-      const update = userId ? record : { ...record, user_id: undefined };
-      const { error } = await supabase
+      // An installation ID may be anonymously created, then claimed after
+      // sign-in. Once it is bound to an account, only that exact account can
+      // update it; a guessed ID must not overwrite another user's linkage.
+      if (existing.user_id && existing.user_id !== userId) {
+        return res.status(403).json({ error: "This installation belongs to a different account." });
+      }
+
+      const { user_id: _userId, ...anonymousRecord } = record;
+      const update = userId ? record : anonymousRecord;
+      let updateQuery = supabase
         .from("app_installations")
         .update(update)
         .eq("id", existing.id);
+
+      updateQuery = existing.user_id
+        ? updateQuery.eq("user_id", userId!)
+        : updateQuery.is("user_id", null);
+
+      const { data: updated, error } = await updateQuery.select("id").maybeSingle();
       if (error) throw error;
+      if (!updated) {
+        return res.status(409).json({ error: "Installation ownership changed. Please try again." });
+      }
+
       const notificationSent = existing.notification_sent_at
         ? true
-        : await deliverAndRecordNotification(installationId, existing);
+        : await deliverAndRecordNotification(existing.id, existing);
       return res.json({ success: true, isNew: false, notificationSent });
     }
 
     const { data: created, error: insertError } = await supabase
       .from("app_installations")
       .insert(record)
-      .select("platform, app_version, build_number, locale, created_at")
+      .select("id, platform, app_version, build_number, locale, created_at")
       .single();
     if (insertError) {
-      // Concurrent duplicate requests are harmless; the unique index is authoritative.
-      if (insertError.code === "23505") return res.json({ success: true, isNew: false });
+      if (insertError.code === "23505") {
+        // Do not report a duplicate as successful before confirming that it is
+        // still unclaimed or owned by this authenticated account.
+        const { data: raced, error: raceLookupError } = await supabase
+          .from("app_installations")
+          .select("user_id")
+          .eq("installation_id", installationId)
+          .maybeSingle();
+        if (raceLookupError) throw raceLookupError;
+        if (raced?.user_id && raced.user_id !== userId) {
+          return res.status(403).json({ error: "This installation belongs to a different account." });
+        }
+        return res.json({ success: true, isNew: false });
+      }
       throw insertError;
     }
 
-    const notificationSent = await deliverAndRecordNotification(installationId, created);
+    const notificationSent = await deliverAndRecordNotification(created.id, created);
     return res.status(201).json({ success: true, isNew: true, notificationSent });
   } catch (error: any) {
     console.error("[installations] Tracking failed:", error?.message || error);

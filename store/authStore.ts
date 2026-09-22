@@ -24,6 +24,7 @@ interface AuthState {
   canUseAsGuest: () => boolean;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<{ error?: string }>;
+  exportAccountData: () => Promise<{ data?: unknown; error?: string }>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -34,7 +35,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   guestAccessEnabled: false,
   guestUses: 0,
 
-  setUser: (user) => set({ user, isGuest: !user }),
+  setUser: (user) => {
+    const currentUserId = get().user?.id ?? null;
+    const nextUserId = user?.id ?? null;
+    if (currentUserId !== nextUserId) {
+      // Coach state is scoped before a different account can render it.
+      void useCoachTrainerStore.getState().setStorageScope(nextUserId);
+    }
+    set({ user, isGuest: !user });
+  },
 
   setProfile: (profile) => set({ profile }),
 
@@ -73,7 +82,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.warn("[loadProfile] profile fetch error:", error.message);
     }
 
-    set({ profile: { id: user.id, username: fallbackName || null }, isLoading: false });
+    set({
+      profile: {
+        id: user.id,
+        // Keep the legacy fields while the additive account migration rolls out.
+        username: fallbackName || null,
+        display_name: fallbackName || null,
+        language: "en",
+        preferred_language: "en",
+      },
+      isLoading: false,
+    });
   },
 
   updateProfileName: async (name) => {
@@ -82,12 +101,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return { error: "You need to be signed in." };
     if (!cleanName) return { error: "Name cannot be empty." };
 
-    const { error } = await supabase
+    const preferredLanguage = profile?.preferred_language || profile?.language || "en";
+    const modernUpdate = {
+      username: cleanName,
+      display_name: cleanName,
+      language: preferredLanguage,
+      preferred_language: preferredLanguage,
+    };
+    let { error } = await supabase
       .from("profiles")
-      .update({ username: cleanName, language: profile?.language || "en" })
+      .update(modernUpdate)
       .eq("id", user.id)
       .select("*")
       .maybeSingle();
+
+    // Older installations may reach the app before the additive migration is
+    // applied. Continue updating the legacy columns rather than failing a name
+    // edit because a new optional column is not present yet.
+    if (error) {
+      ({ error } = await supabase
+        .from("profiles")
+        .update({ username: cleanName, language: preferredLanguage })
+        .eq("id", user.id)
+        .select("*")
+        .maybeSingle());
+    }
 
     if (error) {
       console.warn("[updateProfileName] profile update error:", error.message);
@@ -100,7 +138,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.warn("[updateProfileName] auth metadata update error:", authError.message);
     }
 
-    set({ profile: { ...(profile || { id: user.id }), username: cleanName } });
+    set({
+      profile: {
+        ...(profile || { id: user.id }),
+        username: cleanName,
+        display_name: cleanName,
+        language: preferredLanguage,
+        preferred_language: preferredLanguage,
+      },
+    });
     return {};
   },
 
@@ -112,6 +158,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   continueAsGuest: async () => {
     await AsyncStorage.setItem(GUEST_ACCESS_KEY, "true");
+    void useCoachTrainerStore.getState().setStorageScope(null);
     set({ user: null, profile: null, isGuest: true, guestAccessEnabled: true, isLoading: false });
   },
 
@@ -121,10 +168,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
-    useCoachTrainerStore.getState().resetChatSession();
+    useCoachTrainerStore.getState().clearTrainer();
     await supabase.auth.signOut();
     await AsyncStorage.removeItem(GUEST_ACCESS_KEY);
-    set({ user: null, profile: null, isGuest: true, guestAccessEnabled: false });
+    get().setUser(null);
+    set({ profile: null, isGuest: true, guestAccessEnabled: false });
   },
 
   deleteAccount: async () => {
@@ -141,10 +189,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await AsyncStorage.removeItem(GUEST_USES_KEY);
       await AsyncStorage.removeItem(GUEST_ACCESS_KEY);
       await supabase.auth.signOut({ scope: "local" });
-      set({ user: null, profile: null, isGuest: true, guestAccessEnabled: false, guestUses: 0 });
+      get().setUser(null);
+      set({ profile: null, isGuest: true, guestAccessEnabled: false, guestUses: 0 });
       return {};
     } catch (error: any) {
       return { error: error?.message || "Could not delete your account. Please try again." };
+    }
+  },
+
+  exportAccountData: async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) return { error: "Your session is no longer valid. Please sign in again." };
+
+    try {
+      const exportData = await apiFetch<unknown>("/api/account/export", {
+        headers: { Authorization: `Bearer ${token}` },
+      }, 30_000);
+      return { data: exportData };
+    } catch (error: any) {
+      return { error: error?.message || "Could not export your account data. Please try again." };
     }
   },
 }));
