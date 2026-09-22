@@ -13,6 +13,7 @@ import {
   Units,
   updateGoals,
 } from "../services/coachTrainerService";
+import { routeCoachRequest, type RouteDecision } from "../services/coachRouter";
 import {
   buildCoachingSummary,
   evaluateWorkoutFeedback,
@@ -99,10 +100,45 @@ function isWorkoutFeedback(value: unknown): value is WorkoutFeedback {
   );
 }
 
+// Sorts a Coach payload into the rules bucket or the AI bucket. Any malformed
+// payload is left for the normal AI-path validation to reject with its usual error.
+function routePayload(body: any): RouteDecision {
+  const mode = body?.mode;
+  const units = body?.units;
+  const language = body?.language === "es" ? "es" : "en";
+  if (!isMode(mode) || !isUnits(units)) return { route: "ai", reason: "invalid_payload" };
+
+  try {
+    const currentPlan = isPlan(body?.currentPlan) ? body.currentPlan : null;
+    return routeCoachRequest({
+      mode,
+      units,
+      language,
+      userMessage: typeof body?.userMessage === "string" ? body.userMessage.trim() : undefined,
+      history: mode === "intake" ? getHistory(body?.history) : undefined,
+      question: typeof body?.question === "string" ? body.question.trim() : undefined,
+      newGoal: typeof body?.newGoal === "string" ? body.newGoal.trim() : undefined,
+      logs: body?.logs,
+      currentPlan,
+    });
+  } catch {
+    return { route: "ai", reason: "invalid_payload" };
+  }
+}
+
 async function runCoachRequest(req: Request, coachOptions: CoachCallOptions = getCoachTimeouts(req)) {
   const mode = req.body?.mode;
   const units = req.body?.units;
   const language = req.body?.language === "es" ? "es" : "en";
+
+  const decision = routePayload(req.body);
+  // Metadata only: never log the message text.
+  console.log(`[coach-router] mode=${mode} route=${decision.route} ${decision.route === "rules" ? `intent=${decision.intent}` : `reason=${decision.reason}`}`);
+  if (coachOptions.timing) {
+    coachOptions.timing.rulesHandled = decision.route === "rules";
+    if (decision.route === "ai") coachOptions.timing.routeReason = decision.reason;
+  }
+  if (decision.route === "rules") return decision.response;
 
   if (!isMode(mode)) {
     throw new Error("mode must be intake, adapt, update_goals, or chat.");
@@ -228,7 +264,13 @@ router.post("/jobs", async (req: Request, res: Response) => {
 
     if (error) throw error;
 
-    void processCoachJob(data.id, req.body);
+    // Routine requests are answered from templates in milliseconds, so finish the job
+    // before responding and the client's first poll already sees the result.
+    if (routePayload(req.body).route === "rules") {
+      await processCoachJob(data.id, req.body);
+    } else {
+      void processCoachJob(data.id, req.body);
+    }
     return res.status(202).json({ jobId: data.id, status: data.status });
   } catch (error: any) {
     console.error("[coach-trainer-jobs] create error:", error.message ?? error);

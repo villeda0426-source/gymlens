@@ -187,7 +187,7 @@ export function evaluateWorkoutFeedback(
         ...session,
         exercises: session.exercises.map((exercise) => ({
           ...exercise,
-          progression_rule: isEs ? `La próxima vez, añade 1 repetición por serie o el incremento mínimo disponible (aproximadamente ${increment}); nunca aumentes ambos a la vez.` : `Next time, add 1 rep per set or the smallest available increment (about ${increment}); never increase both at once.`,
+          progression_rule: isEs ? `La próxima vez, añade 1 repetición por serie o el incremento mínimo disponible (aproximadamente ${increment}, nunca más de alrededor de 10 % del peso actual); nunca aumentes ambos a la vez.` : `Next time, add 1 rep per set or the smallest available increment (about ${increment}, never more than about 10% of the current load); never increase both at once.`,
         })),
       };
     });
