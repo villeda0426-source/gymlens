@@ -2,7 +2,6 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"
@@ -21,6 +20,7 @@
     "archive/**",
     "dist/**",
     "dist-server/**",
+    "spotlift-reddit-ops/**",
     "node_modules/**"
   ]
 }

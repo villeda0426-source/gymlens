@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#faf7f0"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -72,7 +67,7 @@
         "backgroundColor": "#FFFFFF"
       },
       "package": "com.coachlift.app",
-      "versionCode": 4,
+      "versionCode": 6,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE"
@@ -112,7 +107,18 @@
       ],
       "expo-font",
       "expo-apple-authentication",
-      "@sentry/react-native"
+      "@sentry/react-native",
+      "expo-sharing",
+      "expo-status-bar",
+      "expo-splash-screen",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#faf7f0"
+        }
+      ]
     ],
     "scheme": [
       "spotlift",

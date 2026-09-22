@@ -127,7 +127,7 @@ const VF_SIZE = width * 0.75;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0A0A0A" },
   camera: { flex: 1 },
-  overlay: { ...StyleSheet.absoluteFillObject },
+  overlay: { ...StyleSheet.absoluteFill },
   permissionContainer: {
     flex: 1,
     backgroundColor: "#0A0A0A",
