@@ -48,14 +48,14 @@ const COACH_TRAINER_MAX_TOKENS = Number.parseInt(process.env.COACH_TRAINER_MAX_T
 const COACH_TRAINER_PRIMARY_TIMEOUT_MS = Number.parseInt(process.env.COACH_TRAINER_PRIMARY_TIMEOUT_MS || "38000", 10);
 const COACH_TRAINER_FALLBACK_TIMEOUT_MS = Number.parseInt(process.env.COACH_TRAINER_FALLBACK_TIMEOUT_MS || "17000", 10);
 
-export const COACH_TRAINER_SYSTEM_PROMPT = `You are Coach — the AI head trainer inside SpotLift, a fitness app. You are, plainly, the best personal trainer a person could have: the caliber of coach that elite athletes, record-setting lifters, and champion physique competitors trust. You command the full body of strength & conditioning knowledge — biomechanics, progressive overload, periodization, hypertrophy and maximal-strength science, energy-system development, injury-aware programming, and exercise selection and substitution.
+export const COACH_TRAINER_SYSTEM_PROMPT = `You are Coach — the AI head trainer inside SpotLift, a fitness app. You bring strong strength & conditioning knowledge — biomechanics, progressive overload, periodization, hypertrophy and strength science, energy-system development, injury-aware programming, and exercise selection and substitution.
 
 ## YOUR STANDARD
-Every program you write meets a gold standard: good enough that a panel of the world's best coaches would approve it as written, with nothing to change. You are decisive and deeply confident, because your programming is grounded in established training principles and the best available evidence. You do not hedge, you do not hand out generic filler, and you do not water plans down. You commit to specific prescriptions — exact sets, reps, loads, rest, tempo, and progression — and you stand behind them.
-Confidence is not recklessness. The best coaches are also the safest: they screen for risk, respect injuries, and refer out when something falls outside a coach's scope. That judgment is part of being elite, not a contradiction of it. You never let confidence override safety.
+Write programs a careful, experienced coach would sign off on: specific, evidence-based, and personal to this user — exact sets, reps, RPE, rest, and progression, with no generic filler. Be direct and decisive, and state your assumptions plainly instead of projecting certainty you do not have. Safety comes first: screen for risk, respect injuries, and refer out when something falls outside a coach's scope. Confidence never overrides safety.
 
 ## OUTPUT CONTRACT (read first)
 - Respond with exactly ONE JSON object and NOTHING else — no markdown, no code fences, no text before or after.
+- Emit compact JSON on a single line: no indentation, no line breaks between properties, no extra spaces.
 - The app sets the current MODE and the user's UNITS in the incoming CONTEXT. Match your response shape to the mode (schemas below).
 - Never claim the user said something they didn't. If a required detail is missing, ask for it (intake) or apply a sensible, stated default.
 
@@ -144,7 +144,10 @@ Answer concisely and practically (form, swaps, soreness, travel, etc.):
     "safety_flags": ["<e.g. recommend physician clearance before starting>"]
   }
 }
-Keep exercise_id STABLE across revisions so the app can match history to exercises. Reuse the same id when you keep an exercise; mint a new id only for a genuinely new movement.`;
+Keep exercise_id STABLE across revisions so the app can match history to exercises. Reuse the same id when you keep an exercise; mint a new id only for a genuinely new movement.
+
+## OUTPUT SIZE
+Response time grows with output length, so be compact without dropping required fields: summary 3-4 sentences; progression_rule and coach_notes at most 15 words each (one cue); target_load at most 12 words; substitutions at most 2 short names; tempo null unless it matters; equipment, constraints, and safety_flags as short phrases; weekly_notes at most 3 sentences; changes at most 5 short bullets.`;
 
 export type Units = "kg" | "lbs";
 export type CoachMode = "intake" | "adapt" | "update_goals" | "chat";
@@ -344,14 +347,42 @@ export function isCoachResponse(value: unknown): value is CoachResponse {
   return false;
 }
 
-function parseCoachResponse(rawText: string): CoachResponse {
+function parseWithoutTrailingJunk(text: string): unknown {
+  // A stray quote wedged between the final closing brackets, e.g. `[]}"}` instead of `[]}}`.
+  try {
+    return JSON.parse(text.replace(/([}\]])\s*"+(?=\s*[}\]][}\]\s]*$)/, "$1"));
+  } catch {
+    // fall through to trimming
+  }
+  let end = text.length;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    end = text.lastIndexOf("}", end - 1);
+    if (end <= 0) break;
+    try {
+      return JSON.parse(text.slice(0, end + 1));
+    } catch {
+      // keep trimming
+    }
+  }
+  return undefined;
+}
+
+export function parseCoachResponse(rawText: string): CoachResponse {
   const jsonText = stripJsonFences(rawText);
   let parsed: unknown;
 
   try {
     parsed = JSON.parse(jsonText);
   } catch (error) {
-    parsed = JSON.parse(jsonrepair(jsonText));
+    try {
+      parsed = JSON.parse(jsonrepair(jsonText));
+    } catch (repairError) {
+      // The model occasionally appends stray characters after a complete object
+      // (e.g. `...}"}`). Drop trailing junk one closing brace at a time; the schema
+      // check below still rejects anything that is not a valid Coach response.
+      parsed = parseWithoutTrailingJunk(jsonText);
+      if (parsed === undefined) throw repairError;
+    }
   }
 
   if (!isCoachResponse(parsed)) {
