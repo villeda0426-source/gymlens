@@ -398,3 +398,17 @@ create policy "Users manage own muscle progress history" on muscle_progress_hist
 create index idx_completed_exercises_user on completed_exercises(user_id);
 create index idx_muscle_progress_user on muscle_progress(user_id);
 create index idx_muscle_progress_history_user_recorded on muscle_progress_history(user_id, recorded_at);
+
+-- Cached AI exercise guides (see supabase/migrations/20260921000000_add_workout_guides_cache.sql)
+create table if not exists workout_guides (
+  cache_key text primary key,
+  language text not null check (language in ('en', 'es')),
+  query_normalized text not null,
+  guide jsonb not null,
+  hit_count int not null default 0,
+  created_at timestamptz not null default now(),
+  last_hit_at timestamptz
+);
+alter table workout_guides enable row level security;
+create policy "Service manages workout guides" on workout_guides
+  for all to service_role using (true) with check (true);

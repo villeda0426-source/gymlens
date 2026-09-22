@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { createStructuredResponse, OPENAI_DEFAULT_MODEL } from "../services/openaiService";
+import { getOrCreateGuide, getSupabaseGuideStore } from "../services/workoutGuideCache";
 
 export type WorkoutGuide = {
   exercise: string;
@@ -146,7 +147,16 @@ export async function resolveWorkoutSearch(
   }
 }
 
-export function createWorkoutSearchRouter(generator: WorkoutGuideGenerator = generateWorkoutGuide) {
+// Caches complete, found:true guides in Supabase so a repeated query (or a
+// common misspelling/casing variant) never calls the model twice. Falls back
+// to plain generation if Supabase is unconfigured or the cache table/read/
+// write fails; see workoutGuideCache.ts for the fail-open behavior.
+export const cachedGenerateWorkoutGuide: WorkoutGuideGenerator = async (query, language) => {
+  const { guide } = await getOrCreateGuide(getSupabaseGuideStore(), query, language, () => generateWorkoutGuide(query, language));
+  return guide;
+};
+
+export function createWorkoutSearchRouter(generator: WorkoutGuideGenerator = cachedGenerateWorkoutGuide) {
   const router = Router();
 
   router.post("/", async (req: Request, res: Response) => {
