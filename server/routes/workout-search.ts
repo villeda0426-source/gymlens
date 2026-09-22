@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { createStructuredResponse, OPENAI_DEFAULT_MODEL } from "../services/openaiService";
+import { getOrCreateGuide, getSupabaseGuideStore } from "../services/workoutGuideCache";
 
 const router = Router();
 
@@ -102,7 +103,7 @@ router.post("/", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Enter an exercise name to search." });
     }
 
-    const guide = await getWorkoutGuide(query, language);
+    const { guide } = await getOrCreateGuide(getSupabaseGuideStore(), query, language, () => getWorkoutGuide(query, language));
 
     if (!guide || !guide.found || !guide.exercise || guide.steps.length === 0) {
       return res.status(404).json({
