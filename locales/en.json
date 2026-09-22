@@ -357,7 +357,7 @@
     "done": "Done",
     "workout_complete": "Workout complete",
     "open_workout_details": "Open workout details",
-    "timeline_title": "Plan timeline",
+    "timeline_title": "Days completed",
     "visible_days": "{{visible}}/{{total}} days visible",
     "unlock_hint": "Finish this 4-day block to reveal the next workouts. Completed days stay visible here.",
     "all_unlocked_hint": "All blocks are unlocked. You can still review every completed workout.",
@@ -513,5 +513,17 @@
     "empty_category": "No items in this category",
     "count": "{{count}} item",
     "count_plural": "{{count}} items"
+  },
+  "workout_log": {
+    "title": "Workout Log",
+    "pr": "PR",
+    "sets": "Set",
+    "reps": "Reps",
+    "weight": "Weight ({{unit}})",
+    "done": "Done",
+    "add_set": "Add set",
+    "reps_label": "Reps for set {{n}}",
+    "weight_label": "Weight in {{unit}} for set {{n}}",
+    "done_label": "Mark set {{n}} done"
   }
 }

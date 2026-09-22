@@ -8,12 +8,15 @@ import MuscleMapView from "@/components/Equipment/MuscleMapView";
 import DetailTabBar from "@/components/Equipment/DetailTabBar";
 import TutorialSteps from "@/components/Equipment/TutorialSteps";
 import SafetyTips from "@/components/Equipment/SafetyTips";
+import WorkoutLogTable from "@/components/Equipment/WorkoutLogTable";
 import VideoList, { VideoItem } from "@/components/Equipment/VideoList";
 import { useWorkoutGuideStore } from "@/store/workoutGuideStore";
+import { useWorkoutLogStore } from "@/store/workoutLogStore";
+import { useAuthStore } from "@/store/authStore";
 import { colors, fonts } from "@/constants/theme";
 import { apiFetch } from "@/lib/api";
 
-const TABS = ["tutorial", "safety", "videos", "calculator"] as const;
+const TABS = ["tutorial", "videos", "calculator"] as const;
 type TabType = typeof TABS[number];
 type Level = "Beginner" | "Intermediate" | "Advanced";
 
@@ -31,6 +34,14 @@ export default function WorkoutResultScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const { currentGuide } = useWorkoutGuideStore();
+  const userId = useAuthStore((state) => state.user?.id) ?? "guest";
+  const loadWorkoutLog = useWorkoutLogStore((state) => state.load);
+  const addLogSet = useWorkoutLogStore((state) => state.addSet);
+  const logContext = currentGuide?.logContext;
+
+  useEffect(() => {
+    loadWorkoutLog();
+  }, [loadWorkoutLog]);
 
   const [activeTab, setActiveTab] = useState<TabType>("tutorial");
   const [videos, setVideos] = useState<VideoItem[]>([]);
@@ -82,7 +93,6 @@ export default function WorkoutResultScreen() {
 
   const TAB_LABELS: Record<TabType, string> = {
     tutorial: t("equipment.tutorial"),
-    safety: t("equipment.safety_short"),
     videos: t("equipment.videos"),
     calculator: t("equipment.calculator"),
   };
@@ -104,41 +114,41 @@ export default function WorkoutResultScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Hero — muscle diagram */}
-        <View style={styles.heroMuscle}>
-          <MuscleMapView muscleGroups={currentGuide.targetMuscles} />
-        </View>
-
         <View style={styles.content}>
-          <View style={styles.aiBadge}>
-            <Text style={styles.aiBadgeText}>{t("equipment.ai_workout_guide")}</Text>
-          </View>
+          {logContext ? (
+            <View style={styles.logBlock}>
+              <WorkoutLogTable userId={userId} ctx={logContext} />
+            </View>
+          ) : null}
 
+          {/* Workout card: name + chip, tabs, guide badge, content, anatomy */}
           <Text style={styles.name}>{currentGuide.exercise}</Text>
 
           {currentGuide.targetMuscles.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t("equipment.muscle_groups")}</Text>
               <MuscleGroupTags groups={currentGuide.targetMuscles} />
             </View>
           )}
 
-          {/* Tab bar */}
           <DetailTabBar
             tabs={TABS.map((tab) => ({ key: tab, label: TAB_LABELS[tab] }))}
             activeTab={activeTab}
             onChange={(key) => setActiveTab(key as TabType)}
           />
 
+          <View style={styles.aiBadge}>
+            <Text style={styles.aiBadgeText}>{t("equipment.ai_workout_guide")}</Text>
+          </View>
+
           {activeTab === "tutorial" && (
             <View style={styles.tabContent}>
               <TutorialSteps steps={tutorials} />
-            </View>
-          )}
-
-          {activeTab === "safety" && (
-            <View style={styles.tabContent}>
-              <SafetyTips tips={currentGuide.safetyTips} />
+              {currentGuide.safetyTips.length > 0 && (
+                <View style={styles.safetySection}>
+                  <Text style={styles.sectionTitle}>{t("equipment.safety")}</Text>
+                  <SafetyTips tips={currentGuide.safetyTips} />
+                </View>
+              )}
             </View>
           )}
 
@@ -217,6 +227,23 @@ export default function WorkoutResultScreen() {
               </View>
             </View>
           )}
+
+          <View style={styles.anatomy}>
+            <MuscleMapView muscleGroups={currentGuide.targetMuscles} />
+          </View>
+
+          {logContext ? (
+            <TouchableOpacity
+              style={styles.addSetButton}
+              onPress={() => addLogSet(userId, logContext)}
+              accessibilityRole="button"
+              accessibilityLabel={t("workout_log.add_set")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.addSetPlus}>+</Text>
+              <Text style={styles.addSetText}>{t("workout_log.add_set")}</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       </ScrollView>
     </SafeScreen>
@@ -249,6 +276,15 @@ const styles = StyleSheet.create({
   aiBadgeText: { color: colors.lime, fontSize: 11, fontFamily: fonts.semiBold },
   name: { color: colors.text, fontSize: 28, fontFamily: fonts.heading, marginBottom: 16, lineHeight: 34 },
   section: { marginBottom: 20 },
+  logBlock: { marginBottom: 24 },
+  safetySection: { marginTop: 12, gap: 10 },
+  anatomy: { marginTop: 24, marginHorizontal: -20, backgroundColor: colors.bg, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.cardBorder },
+  addSetButton: {
+    marginTop: 24, marginBottom: 32, height: 52, borderRadius: 12, borderWidth: 1, borderColor: colors.cardBorder,
+    backgroundColor: colors.card, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+  },
+  addSetPlus: { color: colors.coral, fontSize: 22, fontFamily: fonts.bold, lineHeight: 26 },
+  addSetText: { color: colors.text, fontSize: 16, fontFamily: fonts.bold },
   sectionTitle: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 },
   tabContent: { gap: 12 },
   calcCard: {

@@ -31,6 +31,7 @@ import TutorialSteps from "@/components/Equipment/TutorialSteps";
 import VideoList, { VideoItem } from "@/components/Equipment/VideoList";
 import { colors, fonts } from "@/constants/theme";
 import { apiFetch } from "@/lib/api";
+import { isStrengthExercise } from "@/lib/workoutLog";
 import {
   CoachPlan,
   evaluateCoachWorkout,
@@ -195,6 +196,7 @@ function WorkoutDayCard({
   const completedCount = session.exercises.filter((exercise) => completedIds.includes(exercise.exercise_id)).length;
   const isComplete = completedCount === session.exercises.length && session.exercises.length > 0;
   const muscles = uniqueMuscles(session.exercises);
+  const dayPercent = session.exercises.length > 0 ? Math.round((completedCount / session.exercises.length) * 100) : 0;
 
   const stretches = recommendedStretchKeys(session);
 
@@ -215,11 +217,14 @@ function WorkoutDayCard({
             {session.estimated_minutes} {t("plan.min")} · {session.exercises.length} {t("plan.exercises")}
           </Text>
         </View>
-        <View style={[styles.statusPill, isComplete && styles.statusPillComplete]}>
-          <Text style={[styles.statusText, isComplete && styles.statusTextComplete]}>
-            {isComplete ? t("plan.done") : `${completedCount}/${session.exercises.length}`}
-          </Text>
-        </View>
+        <LinearGradient
+          colors={isComplete ? [colors.lime, colors.lime] : [colors.coral, "#ff6b6b"]}
+          style={styles.dayProgressRing}
+          accessible
+          accessibilityLabel={`${dayPercent}%`}
+        >
+          <Text style={styles.dayProgressText}>{dayPercent}%</Text>
+        </LinearGradient>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => onOpenWorkout(session, index)} activeOpacity={0.82}>
@@ -842,7 +847,6 @@ export default function PlanScreen() {
     });
   }, [todaySessionIndex, visibleSessionCount]);
 
-  const highlightedSession = visibleSessions[activeSessionIndex] ?? visibleSessions[Math.min(todaySessionIndex, visibleSessions.length - 1)];
   const handlePlanMomentumEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const nextIndex = Math.round(event.nativeEvent.contentOffset.x / (PLAN_CARD_WIDTH + PLAN_CARD_GAP));
     setActiveSessionIndex(Math.max(0, Math.min(nextIndex, Math.max(visibleSessions.length, 1) - 1)));
@@ -940,7 +944,20 @@ export default function PlanScreen() {
   };
 
   const handleOpenExercise = async (exercise: PlanExercise) => {
-    const fallback = { id: exercise.exercise_id, ...fallbackExerciseGuide(exercise, i18n.language?.startsWith("es") === true) };
+    const sessionIndex = plan?.sessions.findIndex((session) =>
+      session.exercises.some((item) => item.exercise_id === exercise.exercise_id)
+    ) ?? -1;
+    const logContext = plan && sessionIndex >= 0 && isStrengthExercise(exercise.exercise_id, exercise.name)
+      ? {
+          exerciseId: exercise.exercise_id,
+          exerciseName: exercise.name,
+          week: Math.floor(sessionIndex / weekSize) + 1,
+          day: (sessionIndex % weekSize) + 1,
+          prescribedSets: exercise.sets,
+          units: plan.units,
+        }
+      : undefined;
+    const fallback = { id: exercise.exercise_id, ...fallbackExerciseGuide(exercise, i18n.language?.startsWith("es") === true), logContext };
     setCurrentWorkoutGuide(fallback);
     setWorkoutDetailVisible(false);
     requestAnimationFrame(() => router.push("/equipment/workout-result"));
@@ -952,7 +969,7 @@ export default function PlanScreen() {
         body: JSON.stringify({ query: exercise.name, language: i18n.language?.startsWith("es") ? "es" : "en" }),
       }, 30000);
       if (guide?.found && guide.steps?.length) {
-        setCurrentWorkoutGuide(guide);
+        setCurrentWorkoutGuide({ ...guide, logContext });
       }
     } catch {
       // Keep the local Coach-plan fallback visible when search is offline.
@@ -1169,32 +1186,6 @@ export default function PlanScreen() {
 
         {plan ? (
           <>
-            <LinearGradient
-              colors={["rgba(255,255,255,0.075)", "rgba(255,255,255,0.025)"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.planHero}
-            >
-              <TouchableOpacity
-                style={{ flex: 1 }}
-                activeOpacity={0.82}
-                onPress={() => highlightedSession && handleOpenWorkout(highlightedSession)}
-              >
-                <Text style={styles.planHeroEyebrow}>{t("plan.todays_workout")}</Text>
-                <Text style={styles.planHeroTitle}>
-                  {highlightedSession?.day_label.replace(/^Day\s*\d+\s*[-–]\s*/i, "") || plan.split}
-                </Text>
-                <Text style={styles.planHeroText}>
-                  {highlightedSession
-                    ? `${highlightedSession.focus} · ${highlightedSession.estimated_minutes} ${t("plan.min")} · ${highlightedSession.exercises.length} ${t("plan.exercises")}`
-                    : plan.goal}
-                </Text>
-              </TouchableOpacity>
-              <LinearGradient colors={[colors.coral, "#ff6b6b"]} style={styles.progressRing}>
-                <Text style={styles.progressRingText}>{planProgress}%</Text>
-              </LinearGradient>
-            </LinearGradient>
-
             <View style={styles.timelineCard}>
               <View style={styles.timelineHeader}>
                 <Text style={styles.timelineTitle}>{t("plan.timeline_title")}</Text>
@@ -1479,6 +1470,8 @@ const styles = StyleSheet.create({
   dayBadgeText: { color: colors.coral, fontFamily: fonts.extraBold, fontSize: 13 },
   dayTitle: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 20 },
   dayMeta: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 13, marginTop: 2 },
+  dayProgressRing: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
+  dayProgressText: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 13, fontVariant: ["tabular-nums"] },
   statusPill: { backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5 },
   statusPillComplete: { backgroundColor: colors.lime + "18" },
   statusText: { color: "rgba(255,255,255,0.75)", fontFamily: fonts.bold, fontSize: 11 },

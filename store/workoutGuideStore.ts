@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { WorkoutLogContext } from "@/lib/workoutLog";
 
 export interface WorkoutGuide {
   exercise: string;
@@ -6,6 +7,8 @@ export interface WorkoutGuide {
   steps: string[];
   safetyTips: string[];
   found: boolean;
+  // Present only for strength exercises opened from the plan; enables the Workout Log.
+  logContext?: WorkoutLogContext;
 }
 
 interface WorkoutGuideStore {

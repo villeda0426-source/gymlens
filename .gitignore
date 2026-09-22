@@ -24,3 +24,4 @@ tmp/
 output/
 undefined/
 spotlift-expo-qr.png
+artifacts/releases/*/*.zip

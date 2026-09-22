@@ -357,7 +357,7 @@
     "done": "Listo",
     "workout_complete": "Rutina completa",
     "open_workout_details": "Ver detalles de la rutina",
-    "timeline_title": "Calendario del plan",
+    "timeline_title": "Días cumplidos",
     "visible_days": "{{visible}}/{{total}} días visibles",
     "unlock_hint": "Termina este bloque de 4 días para revelar las siguientes rutinas. Los días completados seguirán visibles aquí.",
     "all_unlocked_hint": "Todos los bloques están desbloqueados. Aún puedes revisar cada rutina completada.",
@@ -513,5 +513,17 @@
     "empty_category": "No hay elementos en esta categoría",
     "count": "{{count}} elemento",
     "count_plural": "{{count}} elementos"
+  },
+  "workout_log": {
+    "title": "Registro de entrenamiento",
+    "pr": "PR",
+    "sets": "Serie",
+    "reps": "Reps",
+    "weight": "Peso ({{unit}})",
+    "done": "Hecho",
+    "add_set": "Añadir serie",
+    "reps_label": "Repeticiones de la serie {{n}}",
+    "weight_label": "Peso en {{unit}} de la serie {{n}}",
+    "done_label": "Marcar la serie {{n}} como hecha"
   }
 }

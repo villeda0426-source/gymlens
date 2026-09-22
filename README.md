@@ -1,10 +1,20 @@
-# GymLens
+# SpotLift
 
-AI-powered gym equipment identifier. Point your camera at any piece of gym equipment to instantly get tutorials, safety tips, and curated video guides — in English or Spanish.
+SpotLift is an AI-assisted gym companion that identifies equipment, explains setup and safety, surfaces curated YouTube tutorials, and creates personalized workout plans that adapt from user goals, workout history, and structured feedback—in English or Spanish.
+
+## Current Release
+
+- iOS version: **1.0.7**
+- App Store build: **44**
+- Bundle identifier: `com.coachlift.app`
+- Local release record: [`artifacts/releases/v1.0.7-build-44/`](./artifacts/releases/v1.0.7-build-44/)
+- Product and engineering roadmap: [`docs/roadmap/`](./docs/roadmap/)
+- Growth strategy: [`docs/growth/`](./docs/growth/)
+- Pitch materials: [`docs/pitch-competitions/`](./docs/pitch-competitions/)
 
 ## Tech Stack
 
-- **Mobile**: React Native + Expo SDK 51
+- **Mobile**: React Native + Expo SDK 54
 - **Navigation**: Expo Router (file-based)
 - **Backend**: Node.js + Express
 - **Database**: Supabase (Postgres + Auth + Storage)
@@ -31,7 +41,7 @@ AI-powered gym equipment identifier. Point your camera at any piece of gym equip
 
 ```bash
 git clone <repo>
-cd gymlens
+cd SpotLift
 npm install
 ```
 
@@ -133,7 +143,7 @@ npm start
 ## Project Structure
 
 ```
-gymlens/
+SpotLift/
 ├── app/                    # Expo Router screens
 │   ├── (auth)/            # Login & Register
 │   ├── (tabs)/            # Main tab screens
@@ -147,9 +157,16 @@ gymlens/
 ├── hooks/                 # Custom React hooks
 ├── lib/                   # Shared AI schemas and API clients
 ├── locales/               # EN/ES translation files
+├── docs/
+│   ├── roadmap/           # Product, quality, latency, and release planning
+│   ├── growth/            # Marketing system and Road to 10,000
+│   └── pitch-competitions/# Applications and pitch assets
+├── artifacts/
+│   └── releases/          # Local release records and sanitized snapshots
 ├── server/                # Express backend
 │   ├── routes/            # API route handlers
 │   └── services/          # OpenAI and YouTube services
+├── spotlift-reddit-ops/   # Separate private Reddit operations workspace
 ├── store/                 # Zustand state stores
 └── supabase/              # Database schema
 ```
@@ -174,7 +191,8 @@ gymlens/
 - **Manual Search**: Text search with category filters
 - **Equipment Detail**: Tutorial steps, safety tips, YouTube videos
 - **Bilingual**: Full English/Spanish support with live toggle
-- **User Accounts**: Save equipment, view history (Supabase Auth)
+- **User Accounts**: Supabase authentication, profile preferences, and in-app account deletion
+- **Coach Continuity**: Plan-linked conversations, weekly checkpoints, and full-plan adaptation
 - **Guest Mode**: 3 free identifications before signup prompt
 - **Feedback**: Star rating + category + message system
 - **Dark Theme**: Electric lime accent throughout

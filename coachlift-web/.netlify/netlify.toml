@@ -1,2 +1,28 @@
+plugins = []
+headers = []
+redirects = []
+
+[functions]
+
+[functions."*"]
+
 [build]
-publish = "."
+publish = "/Users/villedajr/SpotLift/coachlift-web/dist"
+publishOrigin = "ui"
+commandOrigin = "ui"
+base = "/Users/villedajr/SpotLift/coachlift-web"
+command = "npm run build"
+
+[build.environment]
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
