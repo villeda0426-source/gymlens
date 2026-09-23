@@ -82,7 +82,7 @@ function RootLayout() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || !session) {
-        useCoachTrainerStore.getState().resetChatSession();
+        useCoachTrainerStore.getState().clearTrainer();
       }
       setUser(session?.user ?? null);
       Sentry.setUser(session?.user ? { id: session.user.id, email: session.user.email } : null);

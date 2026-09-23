@@ -10,6 +10,7 @@ import {
 } from "./coachTemplates";
 import { normalizeText } from "./coachText";
 import * as knowledge from "./coachKnowledge";
+import { allocateUniqueExerciseId, slugExerciseId } from "../../shared/exerciseIds";
 
 // Stage-two Coach intents: the ongoing coaching relationship after a plan exists.
 // Each matcher is deliberately narrow. When a message matches no intent, matches
@@ -76,9 +77,8 @@ const GENERIC_WORDS: Array<[RegExp, MovementPattern]> = [
   [/\b(?:pull ?downs?|jalones?)\b/, "vertical_pull"],
 ];
 
-const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const ID_TO_KEY = new Map(Object.entries(MOVE_LIBRARY).map(([key, move]) => [slug(move.name.en), key]));
+const ID_TO_KEY = new Map(Object.entries(MOVE_LIBRARY).map(([key, move]) => [slugExerciseId(move.name.en), key]));
 
 function containsPhrase(normalized: string, phrase: string): boolean {
   return new RegExp(`\\b${escapeRegex(phrase)}\\b`).test(normalized);
@@ -222,6 +222,7 @@ const SORE = /\b(?:sore|soreness|doms|delayed onset|adolorid\w*|agujetas|muscle 
 const SORENESS_ESCALATION = /\b(?:sharp|stabbing|shooting|burning|swell\w*|swollen|bruis\w*|pop|popped|popping|click\w*|locked|gave out|unstable|numb\w*|worse|worsening|wont go away|not going away|doesnt go away|filoso|punzante|agudo|hinchaz\w*|moreton\w*|empeora\w*|no se quita|no desaparece)\b/;
 
 const OUT_OF_SCOPE_NUTRITION = /\b(?:calories?|kcal|calorias?|diets?|dietas?|keto|macros?|meal plans?|deficit|surplus|bulk\w*|cutting|fat burners?|quemador\w*|steroids?|esteroides?|sarms?|testosterone|hgh|ephedra|clenbuterol|thermogenic\w*|termogenic\w*|pre ?workout|preentreno|bcaas?)\b/;
+const PERSONAL_DIET_OR_WEIGHT_LOSS = /\b(?:what (?:should|can) i eat|tell me (?:what|how) to eat|make (?:me )?(?:a )?(?:diet|meal plan)|should i (?:eat|cut|bulk)|lose (?:weight|fat)|weight loss|bajar de peso|perder peso|que (?:debo|puedo) comer|dime (?:que|como) comer|haz(?:me)? (?:una )?(?:dieta|plan de comidas)|debo (?:comer|hacer dieta))\b/;
 const PROTEIN = /\b(?:proteins?|proteinas?)\b/;
 const TIMING_WHEN = /\b(?:before|after|pre|post)\s+(?:a\s+|my\s+|the\s+)?(?:training|workouts?|lifting|gym|sessions?|exercise)\b|\bmeal timing\b|\b(?:antes|despues) de (?:entrenar|ejercitarme|levantar|mi entrenamiento|el gym|el gimnasio)\b/;
 // Timing only counts as a nutrition question when food is actually mentioned, so
@@ -234,6 +235,9 @@ const CAFFEINE = /\b(?:caffeine|cafeina|coffee|cafe|espresso)\b/;
 const SUB_TRIGGER = /\b(?:instead of|in place of|alternatives? (?:to|for)|substitutes? for|swap|replace|switch|dont have|do not have|cant do|cannot do|unable to do|what can i (?:do|use)|en lugar de|en vez de|alternativa|sustituto|sustituir|reemplaz\w*|cambiar|cambia\w*|no tengo|no puedo hacer|otra opcion)\b/;
 const SWAP_APPLY = /(?:swap|replace|change|switch|substitute|cambia\w*|cambiar|reemplaza\w*|sustituye\w*)\s+(?:the\s+|my\s+|el\s+|la\s+|mi\s+)?(.+?)\s+(?:for|with|to|by|por|con)\s+(?:a\s+|an\s+|the\s+|un\s+|una\s+|el\s+|la\s+)?(.+)$/;
 const BORED = /\b(?:bored|boring|aburrid\w*|me aburro|aburrimiento)\b/;
+// "can't do it" may mean pain. The rules path applies a swap only for a
+// plainly stated non-pain equipment/space reason.
+const NON_PAIN_SWAP_REASON = /\b(?:dont have|do not have|no (?:equipment|space|room)|at a hotel|travel(?:ing)?|gym is closed|machine is broken|not available|sin (?:equipo|espacio)|no tengo|no hay (?:equipo|espacio)|estoy (?:viajando|de viaje)|gimnasio cerrado|maquina rota|no esta disponible)\b/;
 
 const WHY = /\b(?:why (?:is|am i|do i|are|does|did you)|why this|why these|what(?:s| is) (?:the )?(?:point|purpose|reason)|what does .* (?:do|work|train)|what is .* for|por que (?:hago|esta|estoy|tengo|incluiste|hay|es)|para que (?:sirve|es)|cual es el (?:punto|proposito))\b/;
 
@@ -257,14 +261,6 @@ const VIEW_PLAN_PATTERNS: RegExp[] = [
 
 const CHANGE_VERBS = /\b(?:change|swap|replace|adjust|shorten|shorter|longer|skip|add|remove|delete|harder|easier|update|modify|reduce|instead|different|new plan|cambia\w*|reemplaza\w*|ajusta\w*|acorta\w*|agrega\w*|quita\w*|elimina\w*|mas dificil|mas facil|actualiza\w*|modifica\w*|diferente|nuevo plan)\b/;
 
-function extractBodyWeightKg(text: string): number | null {
-  const match = text.match(/(?:i weigh|weigh|my weight is|weight is|peso|pesa)\s*(?:about|around|unos|aproximadamente)?\s*(\d{2,3}(?:[.,]\d)?)\s*(kg|kgs|kilos?|lbs?|pounds?|libras?)/i);
-  if (!match) return null;
-  const value = Number(match[1].replace(",", "."));
-  const kg = /^(?:kg|kgs|kilo)/i.test(match[2]) ? value : value * 0.45359;
-  return kg >= 30 && kg <= 250 ? kg : null;
-}
-
 // ---- Handlers ----------------------------------------------------------------------------------
 
 type Handled = Stage2Decision;
@@ -273,9 +269,9 @@ const toAi = (reason: string): Handled => ({ route: "ai", reason });
 
 function nutritionReply(ctx: Stage2Context): Handled {
   const { normalized, language } = ctx;
-  if (OUT_OF_SCOPE_NUTRITION.test(normalized)) return toAi("nutrition:out_of_scope");
+  if (OUT_OF_SCOPE_NUTRITION.test(normalized) || PERSONAL_DIET_OR_WEIGHT_LOSS.test(normalized)) return toAi("nutrition:personal_or_out_of_scope");
   const parts: string[] = [];
-  if (PROTEIN.test(normalized)) parts.push(knowledge.proteinReply(extractBodyWeightKg(ctx.text), language));
+  if (PROTEIN.test(normalized)) parts.push(knowledge.proteinReply(language));
   if (mealTiming(normalized)) parts.push(knowledge.mealTimingReply(language));
   if (CREATINE.test(normalized)) parts.push(knowledge.creatineReply(language));
   if (CAFFEINE.test(normalized)) parts.push(knowledge.caffeineReply(language));
@@ -311,13 +307,6 @@ function whyReply(ctx: Stage2Context): Handled {
   return reply("why_exercise", knowledge.whyExerciseReply(name, move.pattern, ctx.currentPlan.goal_type, ctx.language));
 }
 
-function uniqueId(base: string, taken: Set<string>): string {
-  if (!taken.has(base)) return base;
-  let n = 2;
-  while (taken.has(`${base}-${n}`)) n += 1;
-  return `${base}-${n}`;
-}
-
 function applySwap(plan: Plan, oldKey: string, newKey: string, units: Units, language: Language): Plan {
   const taken = new Set(plan.sessions.flatMap((session) => session.exercises.map((exercise) => exercise.exercise_id)));
   const sessions = plan.sessions.map((session) => ({
@@ -325,7 +314,7 @@ function applySwap(plan: Plan, oldKey: string, newKey: string, units: Units, lan
     exercises: session.exercises.map((exercise) => {
       if (moveKeyOfExercise(exercise) !== oldKey) return exercise;
       const fresh = buildExerciseFromMove(newKey, plan.goal_type as BeginnerGoal, units, language);
-      const id = uniqueId(fresh.exercise_id, taken);
+      const id = allocateUniqueExerciseId(fresh.exercise_id, taken);
       taken.add(id);
       // Keep the prescription the user already has; only the movement changes.
       return { ...fresh, exercise_id: id, sets: exercise.sets, rep_range: exercise.rep_range, target_rpe: exercise.target_rpe, rest_seconds: exercise.rest_seconds };
@@ -351,6 +340,7 @@ function substitutionReply(ctx: Stage2Context): Handled {
 
   const newKey = swap ? findLibraryMove(swap[2]) : null;
   if (swap && newKey) {
+    if (!NON_PAIN_SWAP_REASON.test(normalized)) return toAi("substitution:missing_nonpain_reason");
     const target = MOVE_LIBRARY[newKey];
     const newName = target.name[language];
     if (newKey === oldMove.key) return toAi("substitution:same_exercise");
@@ -376,7 +366,7 @@ function substitutionReply(ctx: Stage2Context): Handled {
 
   if (options.length === 0) return toAi("substitution:no_compatible_option");
   const names = options.slice(0, 2).map((key) => MOVE_LIBRARY[key].name[language]);
-  const forced = /\b(?:dont have|do not have|cant do|cannot do|unable to do|no tengo|no puedo hacer)\b/.test(normalized);
+  const forced = NON_PAIN_SWAP_REASON.test(normalized);
   return reply("substitution", knowledge.swapOptionsReply(oldName, names, old.pattern, language, forced));
 }
 

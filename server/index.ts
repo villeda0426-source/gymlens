@@ -12,6 +12,7 @@ import videosRouter from "./routes/videos";
 import workoutSearchRouter from "./routes/workout-search";
 import coachTrainerRouter from "./routes/coach-trainer";
 import installationsRouter from "./routes/installations";
+import accountRouter from "./routes/account";
 import {
   getRequestId,
   makeApiErrorBody,
@@ -252,6 +253,7 @@ app.use("/api/search", searchRouter);
 app.use("/api/equipment", equipmentRouter);
 app.use("/api/feedback", feedbackRouter);
 app.use("/api/installations", installationsRouter);
+app.use("/api/account", accountRouter);
 app.use("/api/videos", videosRouter);
 app.use("/workout-search", workoutSearchRouter);
 app.use("/api/workout-search", workoutSearchRouter);

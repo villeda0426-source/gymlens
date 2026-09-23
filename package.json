@@ -17,6 +17,8 @@
     "test:api-contract": "ts-node --project server/tsconfig.json scripts/api-contract-regression-test.ts",
     "test:ai-provider": "ts-node --project server/tsconfig.json scripts/ai-provider-regression-test.ts",
     "test:foundation": "npm run test:api-contract && npm run test:coach-update && npm run test:ai-provider",
+    "check:rls": "ts-node --project server/tsconfig.json scripts/check-rls.ts",
+    "check:coach:router": "ts-node --project server/tsconfig.json scripts/check-coach-router.ts",
     "check:ci": "npm run typecheck && npm run typecheck:server && npm run test:foundation",
     "check:release": "npm run typecheck && npm run typecheck:server && npm run smoke:api",
     "start:server": "node dist-server/server/index.js",

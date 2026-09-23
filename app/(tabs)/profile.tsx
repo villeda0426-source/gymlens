@@ -21,15 +21,15 @@ export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { user, profile, signOut, updateProfileName, deleteAccount } = useAuthStore();
-  const [name, setName] = useState(profile?.username || "");
-  const [editingName, setEditingName] = useState(!profile?.username);
+  const [name, setName] = useState(profile?.display_name || profile?.username || "");
+  const [editingName, setEditingName] = useState(!(profile?.display_name || profile?.username));
   const [savingName, setSavingName] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
-    setName(profile?.username || "");
-    setEditingName(!profile?.username);
-  }, [profile?.username]);
+    setName(profile?.display_name || profile?.username || "");
+    setEditingName(!(profile?.display_name || profile?.username));
+  }, [profile?.display_name, profile?.username]);
 
   const handleSaveName = async () => {
     setSavingName(true);
@@ -86,7 +86,7 @@ export default function ProfileScreen() {
   const memberSince = profile?.created_at
     ? new Date(profile.created_at).toLocaleDateString(i18n.language?.startsWith("es") ? "es-US" : "en-US", { month: "long", year: "numeric" })
     : "";
-  const displayName = profile?.username || t("profile.add_name");
+  const displayName = profile?.display_name || profile?.username || t("profile.add_name");
 
   return (
     <SafeScreen edges={["top"]}>
@@ -95,7 +95,7 @@ export default function ProfileScreen() {
           <View style={styles.avatarRing}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
-                {(profile?.username || user.email || "?")[0].toUpperCase()}
+                {(profile?.display_name || profile?.username || user.email || "?")[0].toUpperCase()}
               </Text>
             </View>
           </View>

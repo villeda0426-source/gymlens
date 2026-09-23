@@ -67,13 +67,13 @@ const MOVES: Record<string, Move> = {
     pattern: "squat", equip: "bodyweight",
     name: { en: "Sit-to-Stand Squat", es: "Sentadilla a silla" }, category: "compound", muscles: ["quads", "glutes"], loaded: false, main: true,
     cue: { en: "Sit back to a chair, touch lightly, and stand up without using your hands.", es: "Siéntate hacia una silla, toca ligeramente y ponte de pie sin usar las manos." },
-    substitutions: [{ en: "Supported Split Squat", es: "Zancada dividida con apoyo" }],
+    substitutions: [],
   },
   split_squat: {
     pattern: "lunge", equip: "bodyweight",
     name: { en: "Supported Split Squat", es: "Zancada dividida con apoyo" }, category: "compound", muscles: ["quads", "glutes"], loaded: false, main: true,
     cue: { en: "Hold a wall or chair for balance, lower straight down, and keep your front foot flat.", es: "Sujétate de una pared o silla para equilibrarte, baja recto y mantén el pie delantero apoyado." },
-    substitutions: [{ en: "Sit-to-Stand Squat", es: "Sentadilla a silla" }],
+    substitutions: [],
   },
   machine_chest_press: {
     pattern: "horizontal_push", equip: "machine",
@@ -103,13 +103,13 @@ const MOVES: Record<string, Move> = {
     pattern: "horizontal_pull", equip: "machine",
     name: { en: "Seated Cable Row", es: "Remo sentado en polea" }, category: "compound", muscles: ["back", "biceps"], loaded: true, main: true,
     cue: { en: "Sit tall, pull your elbows back toward your ribs, and pause briefly before returning.", es: "Siéntate erguido, lleva los codos hacia las costillas y haz una pausa breve antes de regresar." },
-    substitutions: [{ en: "Lat Pulldown", es: "Jalón al pecho" }],
+    substitutions: [],
   },
   lat_pulldown: {
     pattern: "vertical_pull", equip: "machine",
     name: { en: "Lat Pulldown", es: "Jalón al pecho" }, category: "compound", muscles: ["back", "biceps"], loaded: true, main: true,
     cue: { en: "Pull the bar to your upper chest, elbows down and in, without leaning far back.", es: "Lleva la barra a la parte alta del pecho, codos abajo y hacia adentro, sin inclinarte mucho hacia atrás." },
-    substitutions: [{ en: "Seated Cable Row", es: "Remo sentado en polea" }],
+    substitutions: [],
   },
   one_arm_row: {
     pattern: "horizontal_pull", equip: "dumbbell",
@@ -139,13 +139,13 @@ const MOVES: Record<string, Move> = {
     pattern: "vertical_push", equip: "dumbbell",
     name: { en: "Seated Dumbbell Shoulder Press", es: "Press de hombros con mancuernas sentado" }, category: "accessory", muscles: ["shoulders", "triceps"], loaded: true, main: false,
     cue: { en: "Ribs down, press straight up without arching your lower back.", es: "Costillas abajo y empuja recto hacia arriba sin arquear la espalda baja." },
-    substitutions: [{ en: "Dumbbell Lateral Raise", es: "Elevaciones laterales con mancuernas" }],
+    substitutions: [],
   },
   lateral_raise: {
     pattern: "lateral_delt", equip: "dumbbell",
     name: { en: "Dumbbell Lateral Raise", es: "Elevaciones laterales con mancuernas" }, category: "accessory", muscles: ["shoulders"], loaded: true, main: false,
     cue: { en: "Use very light weights, lead with your elbows, and stop at shoulder height.", es: "Usa pesos muy ligeros, guía con los codos y detente a la altura de los hombros." },
-    substitutions: [{ en: "Seated Dumbbell Shoulder Press", es: "Press de hombros con mancuernas sentado" }],
+    substitutions: [],
   },
   db_rdl: {
     pattern: "hinge", equip: "dumbbell",

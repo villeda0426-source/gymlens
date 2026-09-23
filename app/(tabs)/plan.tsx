@@ -633,14 +633,10 @@ function WorkoutDetailModal({
                           key={replacement}
                           style={styles.swapButton}
                           onPress={() => {
-                            Alert.alert(t("plan.save_swap_title"), t("plan.save_swap_message", {
-                              from: exercise.name,
-                              to: replacement,
-                            }), [
-                              { text: t("common.cancel"), style: "cancel" },
-                              { text: t("plan.only_today"), onPress: () => onSwapExercise(exercise, replacement, "today") },
-                              { text: t("plan.plan_forward"), onPress: () => onSwapExercise(exercise, replacement, "permanent") },
-                            ]);
+                            Alert.alert(
+                              t("plan.save_swap_title"),
+                              "Ask Coach to review substitutions so it can verify your account safety context and available equipment."
+                            );
                           }}
                         >
                           <Text style={styles.swapButtonText}>{replacement}</Text>

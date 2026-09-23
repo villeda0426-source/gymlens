@@ -47,6 +47,13 @@ export const NUTRITION = {
   caffeineMaxMgPerDay: 400,
 } as const;
 
+export const NUTRITION_GENERAL_INFORMATION: Record<Language, string> = {
+  en: "General information only, not personal nutrition advice.",
+  es: "Información general únicamente; no es asesoramiento nutricional personal.",
+};
+
+const nutritionEducation = (text: string, language: Language) => `${text}\n\n${NUTRITION_GENERAL_INFORMATION[language]}`;
+
 const inc = (units: Units) => (units === "kg" ? "2.5 kg" : "5 lb");
 
 // ---- Progression -----------------------------------------------------------------
@@ -213,37 +220,29 @@ export function whyExerciseReply(name: string, pattern: MovementPattern, goalTyp
 
 // ---- Nutrition -----------------------------------------------------------------------------------
 
-const roundTo5 = (value: number) => Math.round(value / 5) * 5;
-
-export function proteinReply(weightKg: number | null, language: Language): string {
+export function proteinReply(language: Language): string {
   const [lo, hi] = NUTRITION.proteinGramsPerKg;
-  const personal = weightKg
-    ? language === "es"
-      ? ` (unos ${roundTo5(weightKg * lo)}-${roundTo5(weightKg * hi)} g al día para ${Math.round(weightKg)} kg)`
-      : ` (about ${roundTo5(weightKg * lo)}-${roundTo5(weightKg * hi)} g a day for ${Math.round(weightKg)} kg)`
-    : "";
-  return language === "es"
-    ? `Para metas enfocadas en ganar músculo, el rango bien respaldado es de aproximadamente ${lo}-${hi} gramos de proteína por kilogramo de peso corporal al día${personal}. No se espera beneficio extra por encima de unos ${hi} g/kg. Repártela entre tus comidas. Si tienes una condición médica o tomas medicamentos, consúltalo antes con un profesional de salud.`
-    : `For muscle-focused goals, the well-supported range is about ${lo}-${hi} grams of protein per kilogram of body weight per day${personal}. No extra benefit is expected above about ${hi} g/kg. Spread it across your meals. If you have a medical condition or take medication, check with a healthcare professional first.`;
+  return nutritionEducation(language === "es"
+    ? `Para metas enfocadas en ganar músculo, un rango educativo general es aproximadamente ${lo}-${hi} gramos de proteína por kilogramo de peso corporal al día. No se espera beneficio extra por encima de unos ${hi} g/kg. Si tienes una condición médica o tomas medicamentos, consulta primero con un profesional de salud.`
+    : `For muscle-focused goals, a general educational range is about ${lo}-${hi} grams of protein per kilogram of body weight per day. No extra benefit is expected above about ${hi} g/kg. If you have a medical condition or take medication, check with a healthcare professional first.`, language);
 }
 
 export function mealTimingReply(language: Language): string {
   const [b0, b1] = NUTRITION.preTrainingHours;
-  const [p0, p1] = NUTRITION.postTrainingHoursIfFasted;
-  return language === "es"
-    ? `Lo que más importa es cuánta proteína comes en todo el día, no el minuto exacto después de entrenar; el llamado "período crítico" de una hora no es un límite real. Un horario sencillo: come proteína y carbohidratos entre ${b0} y ${b1} horas antes de entrenar, y una comida normal con proteína después, dentro de las horas siguientes. Solo si entrenas en ayunas o comiste muy poco antes, procura comer proteína dentro de ${p0}-${p1} horas después.`
-    : `What matters most is how much protein you eat across the whole day, not the exact minute after training; there is no real one-hour cutoff. A simple schedule: eat protein and carbs ${b0}-${b1} hours before training, then a normal meal with protein sometime in the hours after. Only if you train fasted or ate very little beforehand, aim to get protein within about ${p0}-${p1} hours afterward.`;
+  return nutritionEducation(language === "es"
+    ? `Lo que más importa es cuánta proteína comes en todo el día, no el minuto exacto después de entrenar; no hay un límite real de una hora. Una guía sencilla: come proteína y carbohidratos entre ${b0} y ${b1} horas antes de entrenar y luego una comida normal con proteína en las horas siguientes. Solo si entrenas en ayunas o comiste muy poco antes, procura comer proteína dentro de ${NUTRITION.postTrainingHoursIfFasted[0]}-${NUTRITION.postTrainingHoursIfFasted[1]} horas después.`
+    : `What matters most is how much protein you eat across the whole day, not the exact minute after training; there is no real one-hour cutoff. A simple guide: eat protein and carbohydrates ${b0}-${b1} hours before training, then a normal protein-containing meal sometime in the hours after. Only if you train fasted or ate very little beforehand, aim to get protein within about ${NUTRITION.postTrainingHoursIfFasted[0]}-${NUTRITION.postTrainingHoursIfFasted[1]} hours afterward.`, language);
 }
 
 export function creatineReply(language: Language): string {
   const [lo, hi] = NUTRITION.creatineGramsPerDay;
-  return language === "es"
+  return nutritionEducation(language === "es"
     ? `La creatina monohidratada a ${lo}-${hi} gramos al día es la dosis estándar y bien respaldada. No necesitas fase de carga; tómala todos los días a la hora que te sea fácil recordar. Se acumula en unas semanas, así que dale tiempo. Si tienes una enfermedad renal u otra condición médica, o tomas medicamentos, consúltalo antes con un profesional de salud.`
-    : `Creatine monohydrate at ${lo}-${hi} grams a day is the standard, well-supported dose. You do not need a loading phase; just take it daily at any time that is easy to remember. It builds up over a few weeks, so give it time. If you have kidney disease or another medical condition, or take medication, check with a healthcare professional first.`;
+    : `Creatine monohydrate at ${lo}-${hi} grams a day is the standard, well-supported dose. You do not need a loading phase; just take it daily at any time that is easy to remember. It builds up over a few weeks, so give it time. If you have kidney disease or another medical condition, or take medication, check with a healthcare professional first.`, language);
 }
 
 export function caffeineReply(language: Language): string {
-  return language === "es"
+  return nutritionEducation(language === "es"
     ? `Hasta unos ${NUTRITION.caffeineMaxMgPerDay} mg de cafeína al día es la zona general de comodidad máxima para adultos sanos. Trata de evitarla después de la primera parte de la tarde para que no afecte tu sueño, que es clave para recuperarte. Si te pone nervioso o te altera el sueño, toma menos.`
-    : `Up to about ${NUTRITION.caffeineMaxMgPerDay} mg of caffeine a day is the general upper comfort zone for healthy adults. Try to avoid it after early afternoon so it does not cut into your sleep, which is a big part of recovery. If it makes you jittery or disturbs your sleep, go lower.`;
+    : `Up to about ${NUTRITION.caffeineMaxMgPerDay} mg of caffeine a day is the general upper comfort zone for healthy adults. Try to avoid it after early afternoon so it does not cut into your sleep, which is a big part of recovery. If it makes you jittery or disturbs your sleep, go lower.`, language);
 }

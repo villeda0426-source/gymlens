@@ -6,7 +6,7 @@ Code: `coachRouter.ts` (risk screen + intake routing), `coachIntents.ts` (ongoin
 
 ## Stage one: plan creation
 
-`beginner_plan` (intake): rules only when the conversation confirms all of: beginner, "no injuries/limitations", **2-3 days/week**, one clear equipment type (full gym / dumbbells at home / bodyweight), a clear goal, and no risk signal in any turn. Template plan: first week, 2-3 sets, **8-12 reps** (core 6-10 per side), RPE 6, EN/ES, kg/lbs. Requests for 4+ days go to the AI (the router never nudges beginners toward more, and the AI honors what they asked for).
+`beginner_plan` (intake): rules only when the conversation confirms all of: beginner, "no injuries/limitations", **2-3 days/week**, one clear equipment type (full gym / dumbbells at home / bodyweight), a clear goal, and no risk signal in any turn. If exactly one of those details is absent, the rules path asks one bilingual clarification; multiple gaps go to AI. Template plan: first week, 2-3 sets, **8-12 reps** (core 6-10 per side), RPE 6, EN/ES, kg/lbs. Requests for 4+ days go to the AI (the router never nudges beginners toward more, and the AI honors what they asked for).
 
 ## Stage two: ongoing coaching
 
@@ -20,9 +20,9 @@ Every number lives in `coachKnowledge.ts` constants (`PROGRESSION`, `BEGINNER_VO
 | `soreness` | normal DOMS | Peaks ~day 2, eases by day 3-4: reassure. **Sharp, swelling, worsening, or > 5 days: AI.** |
 | `frequency_volume` | "should I do more?" | Beginners: 2-3 sessions/week, 1-3 sets, 8-12 reps; more is not better early on. Non-beginner plans: AI. |
 | `substitution` | "I can't do X" / "instead of X" | Options match **movement pattern AND available equipment** (not muscle label). Voluntary swaps get a "keep the same exercises: coordination and confidence" nudge. |
-| `swap_applied` | "swap X for Y" | Applied only when Y matches X's pattern and the plan's equipment; keeps sets/reps; unique exercise ids. A mismatch gets a reason and fitting options. Unknown exercises: AI. |
+| `swap_applied` | "I don't have X; swap X for Y" | Applied only for a stated non-pain equipment/space reason when Y matches X's pattern and the plan's equipment; keeps sets/reps; unique exercise ids. A mismatch gets a reason and fitting options. Unknown or pain-ambiguous swaps: AI. |
 | `why_exercise` | "why is X in my plan" | One plain-language reason (movement pattern) tied to the plan's goal. |
-| `nutrition` | protein, meal timing, creatine, caffeine | Protein 1.6-2.2 g/kg (personalised if body weight is stated); carbs+protein 1-4 h before training, then protein sometime in the hours after (no strict 1-hour window; only calls out 2-4 h if training fasted); creatine 3-5 g/day, no loading; caffeine up to ~400 mg/day, avoid after early afternoon. |
+| `nutrition` | protein, meal timing, creatine, caffeine | General education only: protein 1.6-2.2 g/kg; food timing 1-4 h before and roughly 1 h after if convenient; creatine 3-5 g/day, no loading; caffeine up to ~400 mg/day, avoid after early afternoon. Every reply says it is not personal nutrition advice. Diet, calorie, food-prescription, and weight-loss requests go to AI. |
 | `view_plan`, `progression_rule` | (stage one carry-over) | Lists the current plan / states the rule. |
 
 Reply-only intents never change the plan. `swap_applied` is the one plan change, and only on an explicit "swap X for Y" from the user.
@@ -34,14 +34,16 @@ A risk screen runs first on every message and turn: injury, pain, symptoms (dizz
 ## Operations
 
 - Kill switch: `COACH_RULES_ROUTER=off` on the server sends everything to the AI.
+- Authenticated production routes load a minimal account context before routing. Missing/unreadable/stale safety data, an active limitation, under-18, over-59, unconfirmed age band, recent soreness, or a message/profile conflict can only force AI; history never loosens an AI decision.
 - Rules-handled jobs complete before `POST /jobs` responds.
-- Metrics (metadata only, never message text): `[coach-router]` log line, and `coach_trainer_jobs.timings.rulesHandled` / `routeReason`. The most common `routeReason` values for AI-routed messages show which rules to tune.
+- Metrics (metadata only, never message text): `[coach-router]` log line, `coach_trainer_jobs.timings.rulesHandled` / `routeReason`, and structured `coach_events`. Job `payload` and `result` are intentionally null. Rules replies expose a one-time “That wasn't right” action which records only a route code and opaque response id.
 
 ## Checks (offline, no AI, no network)
 
 ```
 node_modules/.bin/ts-node scripts/check-coach-router.ts        # routing, every intent, escalations, adversarial sweep, template validity
-node_modules/.bin/ts-node scripts/check-coach-route-rules.ts   # real Express route, rules paths
+node_modules/.bin/ts-node scripts/check-coach-route-rules.ts   # real route (auth gate) + runCoachRequest with account-history fixtures
+npm run check:rls                                               # migration policy static checks; optional local two-user proof
 ```
 The paid AI baselines (`coach-safety-baseline.ts`, `coach-quality-baseline.ts`) still test the AI path directly.
 

@@ -116,12 +116,15 @@ router.post("/", async (req: Request, res: Response) => {
 
     const { data: existing, error: lookupError } = await supabase
       .from("app_installations")
-      .select("id, platform, app_version, build_number, locale, created_at, notification_sent_at")
+      .select("id, user_id, platform, app_version, build_number, locale, created_at, notification_sent_at")
       .eq("installation_id", installationId)
       .maybeSingle();
     if (lookupError) throw lookupError;
 
     if (existing) {
+      if (existing.user_id && existing.user_id !== userId) {
+        return res.status(403).json({ error: "This installation belongs to a different account." });
+      }
       const update = userId ? record : { ...record, user_id: undefined };
       const { error } = await supabase
         .from("app_installations")

@@ -23,6 +23,7 @@ import {
   callCoachTrainer,
   CoachMessage,
   CoachResponse,
+  flagRulesCoachResponse,
   getCoachTrainerJob,
   makeFreeformWorkoutLog,
   startCoachTrainerJob,
@@ -31,7 +32,6 @@ import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { useAuthStore } from "@/store/authStore";
 import {
   adjustSessionForToday,
-  buildReliableStarterPlan,
   hasCoachMedicalRedFlag,
   ReliableSession,
   SessionChange,
@@ -147,6 +147,7 @@ export default function TrainerScreen() {
     setIntakeHistory,
     conversation,
     addConversationMessage,
+    markConversationFeedbackFlagged,
     resetChatSession,
     clearTrainer,
     hasLoaded,
@@ -230,12 +231,16 @@ export default function TrainerScreen() {
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
   }, [conversation.length, notice]);
 
-  const visibleConversation = useMemo<CoachMessage[]>(() => {
+  const visibleConversation = useMemo(() => {
     if (conversation.length > 0) return conversation;
     return [
       {
-        role: "assistant",
+        role: "assistant" as const,
         content: t("trainer.starter_message"),
+        id: "starter",
+        createdAt: "",
+        rulesMetadata: undefined,
+        feedbackFlaggedAt: undefined,
       },
     ];
   }, [conversation, t]);
@@ -314,7 +319,7 @@ export default function TrainerScreen() {
     const assistantJson = stringifyCoachResponse(response);
     const assistantText = getCoachResponseText(response);
 
-    addConversationMessage({ role: "assistant", content: assistantText });
+    addConversationMessage({ role: "assistant", content: assistantText }, response.rulesMetadata);
 
     if (nextIntakeHistory) {
       setIntakeHistory([...nextIntakeHistory, { role: "assistant", content: assistantJson }]);
@@ -328,6 +333,18 @@ export default function TrainerScreen() {
       setNotice(t("trainer.plan_ready_notice"));
     } else {
       setNotice("");
+    }
+  };
+
+  const flagRulesReply = async (message: { id: string; rulesMetadata?: CoachResponse["rulesMetadata"] }) => {
+    if (!message.rulesMetadata) return;
+    const { data } = await supabase.auth.getSession();
+    if (!data.session?.access_token) return;
+    try {
+      await flagRulesCoachResponse(message.rulesMetadata, { authToken: data.session.access_token });
+      markConversationFeedbackFlagged(message.id);
+    } catch {
+      setNotice(t("trainer.coach_connect_error"));
     }
   };
 
@@ -420,18 +437,9 @@ export default function TrainerScreen() {
               ]
             : [...intakeHistory, { role: "user" as const, content: text }];
 
-        const reliablePlan = buildReliableStarterPlan(
-          nextHistory.map((message) => message.content).join("\n"),
-          units,
-          coachLanguage
-        );
-        if (reliablePlan) {
-          setPlan(reliablePlan.plan);
-          addConversationMessage({ role: "assistant", content: reliablePlan.summary });
-          setNotice(t("trainer.reliable_plan_enhancing"));
-        } else {
-          setNotice(t("trainer.coach_building_plan"));
-        }
+        // Only the authenticated server route can create a plan. It loads the
+        // account safety context before its rules/AI decision.
+        setNotice(t("trainer.coach_building_plan"));
         const response = await runCoachJob({
           mode: "intake",
           units,
@@ -480,18 +488,9 @@ export default function TrainerScreen() {
         setDraft(text);
         setNotice(t("trainer.chat_interrupted"));
       } else {
-        if (!plan && buildReliableStarterPlan(
-          [...intakeHistory.map((message) => message.content), text].join("\n"),
-          units
-        )) {
-          setFailedPrompt(null);
-          setDraft("");
-          setNotice(t("trainer.reliable_plan_fallback"));
-        } else {
-          setFailedPrompt(text);
-          setDraft(text);
-          setNotice(t("trainer.coach_connect_error"));
-        }
+        setFailedPrompt(text);
+        setDraft(text);
+        setNotice(t("trainer.coach_connect_error"));
       }
     } finally {
       setLoading(false);
@@ -637,7 +636,18 @@ export default function TrainerScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {visibleConversation.map((message, index) => (
-            <ChatBubble key={`${message.role}-${index}-${message.content.slice(0, 12)}`} message={message} />
+            <View key={message.id ?? `${message.role}-${index}-${message.content.slice(0, 12)}`}>
+              <ChatBubble message={message} />
+              {message.role === "assistant" && message.rulesMetadata && !message.feedbackFlaggedAt ? (
+                <TouchableOpacity
+                  style={styles.rulesFeedbackButton}
+                  onPress={() => void flagRulesReply(message)}
+                  accessibilityLabel={coachLanguage === "es" ? "Esto no fue correcto" : "That wasn't right"}
+                >
+                  <Text style={styles.rulesFeedbackText}>{coachLanguage === "es" ? "Esto no fue correcto" : "That wasn't right"}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           ))}
 
           {loading ? (
@@ -1082,6 +1092,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   sendButtonDisabled: { opacity: 0.5 },
+  rulesFeedbackButton: { alignSelf: "flex-start", marginLeft: 52, marginTop: -2, marginBottom: 8, paddingVertical: 5, paddingHorizontal: 8 },
+  rulesFeedbackText: { color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 11, textDecorationLine: "underline" },
   resetButton: { alignSelf: "center", paddingVertical: 8, marginBottom: 4 },
   resetText: { color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
 });

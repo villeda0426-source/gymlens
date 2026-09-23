@@ -2,13 +2,15 @@ import { normalizePlanTimeline } from "@/shared/planTimeline";
 import { migrateCompletionIds } from "@/shared/completionKeys";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
-import { CoachMessage, CoachPlan, Units } from "@/lib/coachTrainer";
+import { CoachMessage, CoachPlan, CoachRulesMetadata, Units } from "@/lib/coachTrainer";
 
 const STORAGE_KEY = "coachlift_ai_trainer_state_v1";
 
-type TrainerConversation = CoachMessage & {
+export type TrainerConversation = CoachMessage & {
   id: string;
   createdAt: string;
+  rulesMetadata?: CoachRulesMetadata;
+  feedbackFlaggedAt?: string;
 };
 
 export type CoachAvatarConfig = {
@@ -40,17 +42,19 @@ interface CoachTrainerState {
   markExerciseCompleted: (exerciseId: string) => void;
   unmarkExerciseCompleted: (exerciseId: string) => void;
   setIntakeHistory: (history: CoachMessage[]) => void;
-  addConversationMessage: (message: CoachMessage) => void;
+  addConversationMessage: (message: CoachMessage, rulesMetadata?: CoachRulesMetadata) => void;
+  markConversationFeedbackFlagged: (id: string) => void;
   resetChatSession: () => void;
   clearTrainer: () => void;
   loadTrainer: () => Promise<void>;
 }
 
-function makeConversationMessage(message: CoachMessage): TrainerConversation {
+function makeConversationMessage(message: CoachMessage, rulesMetadata?: CoachRulesMetadata): TrainerConversation {
   return {
     ...message,
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
     createdAt: new Date().toISOString(),
+    rulesMetadata,
   };
 }
 
@@ -142,8 +146,13 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
     persist(get());
   },
 
-  addConversationMessage: (message) => {
-    set((state) => ({ conversation: [...state.conversation, makeConversationMessage(message)] }));
+  addConversationMessage: (message, rulesMetadata) => {
+    set((state) => ({ conversation: [...state.conversation, makeConversationMessage(message, rulesMetadata)] }));
+    persist(get());
+  },
+
+  markConversationFeedbackFlagged: (id) => {
+    set((state) => ({ conversation: state.conversation.map((message) => message.id === id ? { ...message, feedbackFlaggedAt: new Date().toISOString() } : message) }));
     persist(get());
   },
 
@@ -157,7 +166,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
     const next = {
       units: get().units,
       plan: null,
-      coachAvatar: get().coachAvatar,
+      coachAvatar: null,
       hasEnteredCoachChat: false,
       failedPrompt: null,
       completedExerciseIds: [],

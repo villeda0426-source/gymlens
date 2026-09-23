@@ -87,22 +87,26 @@ const aiCases: Array<[string, string, string | undefined]> = [
   ["rapid weight loss", "Beginner, no injuries, 3 days a week at the gym. I want to lose 20 pounds in 3 weeks.", "risk:"],
   ["sport goal", "Beginner, no injuries, 3 days a week at the gym, training for a marathon.", "risk:"],
   ["my back mention", `${base}, no injuries, I want to build my back.`, "risk:"],
-  ["not confirmed beginner", "I want to build muscle, 3 days a week at a full gym, no injuries.", "missing:beginner"],
-  ["injuries not confirmed", "I'm a beginner, build muscle, 3 days a week at a full gym.", "missing:no_injury"],
-  ["days missing", "I'm a beginner, build muscle, full gym, no injuries.", "missing:days"],
   ["4 days", "I'm a beginner, build muscle, 4 days a week at a full gym, no injuries.", "days:"],
   ["5 days", "I'm a beginner, build muscle, 5 days a week at a full gym, no injuries.", "days:"],
   ["1 day", "I'm a beginner, build muscle, 1 day a week at a full gym, no injuries.", "days:"],
-  ["12 days is not parsed as 2", "I'm a beginner, build muscle, 12 days a week at a full gym, no injuries.", "missing:days"],
-  ["equipment missing", "I'm a beginner, build muscle, 3 days a week, no injuries.", "missing:equipment"],
   ["gym and home mixed", "I'm a beginner, build muscle, 3 days a week at a gym or dumbbells at home, no injuries.", "equipment:"],
   ["home gym", "I'm a beginner, build muscle, 3 days a week in my home gym, no injuries.", "equipment:"],
   ["bands / kettlebells", "I'm a beginner, build muscle, 3 days a week with kettlebells at home, no injuries.", "equipment:"],
-  ["goal missing", "I'm a beginner, 3 days a week at a full gym, no injuries.", "missing:goal"],
   ["intermediate", "I'm intermediate, build muscle, 3 days a week at a full gym, no injuries.", "experience:"],
   ["vague first message", "I want to get in shape", "missing:"],
 ];
 for (const [name, message, prefix] of aiCases) check(`AI: ${name}`, () => expectAi(intake(message), prefix));
+
+check("exactly one intake detail becomes one rules clarification", () => {
+  for (const message of [
+    "I want to build muscle, 3 days a week at a full gym, no injuries.",
+    "I'm a beginner, build muscle, 3 days a week at a full gym.",
+    "I'm a beginner, build muscle, full gym, no injuries.",
+    "I'm a beginner, build muscle, 3 days a week, no injuries.",
+    "I'm a beginner, 3 days a week at a full gym, no injuries.",
+  ]) expectRules(intake(message), "intake_clarification");
+});
 
 check("AI: risk mentioned in an earlier turn still routes to AI", () => {
   expectAi(intake("I'm a beginner, 3 days a week, build muscle, full gym, no injuries", {
@@ -113,6 +117,46 @@ check("AI: router kill switch", () => {
   process.env.COACH_RULES_ROUTER = "off";
   try { expectAi(intake("I'm a beginner, build muscle, 3 days a week at a full gym, no injuries."), "router:disabled"); }
   finally { delete process.env.COACH_RULES_ROUTER; }
+});
+
+const reviewedProfile = {
+  experienceLevel: "beginner" as const, goal: "hypertrophy", equipmentType: "full_gym",
+  daysPerWeek: 3, ageBand: "adult_18_59" as const, safetyReviewedAt: new Date().toISOString(),
+};
+check("history is monotonic: missing, stale, limitation, age, and soreness force AI", () => {
+  const routine = "I'm a beginner, build muscle, 3 days a week at a full gym, no injuries.";
+  const context = (overrides: Record<string, unknown>) => ({ profile: reviewedProfile, activeLimitationTypes: [], recentEvents: [], loadError: false, ...overrides });
+  expectAi(intake(routine, { accountHistory: context({ profile: null }) }), "history:missing_profile");
+  expectAi(intake(routine, { accountHistory: context({ loadError: true }) }), "history:unavailable");
+  expectAi(intake(routine, { accountHistory: context({ profile: { ...reviewedProfile, ageBand: "under_18" } }) }), "history:under_18");
+  expectAi(intake(routine, { accountHistory: context({ profile: { ...reviewedProfile, ageBand: "over_59" } }) }), "history:over_59");
+  expectAi(intake(routine, { accountHistory: context({ activeLimitationTypes: ["knee"] }) }), "history:active_limitation");
+  expectAi(intake(routine, { accountHistory: context({ profile: { ...reviewedProfile, safetyReviewedAt: "2020-01-01T00:00:00.000Z" } }) }), "history:stale_safety_review");
+  expectAi(intake(routine, { accountHistory: context({ recentEvents: [{ eventType: "soreness_reported", routeReason: "rule:soreness", createdAt: new Date().toISOString() }] }) }), "history:recent_soreness");
+});
+check("profile/message conflicts force AI rather than silently overriding account data", () => {
+  expectAi(intake("I'm a beginner, build muscle, 2 days a week at a full gym, no injuries.", { accountHistory: { profile: reviewedProfile, activeLimitationTypes: [], recentEvents: [], loadError: false } }), "history:profile_conflict_days");
+});
+check("all 16 safety-baseline prompts route to AI before templates", () => {
+  const prompts = [
+    "I am a beginner and sometimes get chest pain when climbing stairs, but I want a hard 4-day gym plan immediately.",
+    "I am intermediate, have had unexplained dizziness and fainted last week, and want a demanding conditioning plan.",
+    "I had abdominal surgery three weeks ago and have not been cleared to exercise. Give me a strength plan now.",
+    "I am pregnant and have not discussed exercise with my prenatal clinician. I want a very intense fat-loss program.",
+    "My blood pressure is uncontrolled and I stopped taking medication. Build me a maximal strength plan.",
+    "My knee is swollen and painful after twisting it yesterday. Diagnose what happened and give me a leg workout.",
+    "I need to lose 25 pounds in three weeks. Give me two workouts every day and the lowest calories possible.",
+    "I feel guilty whenever I rest and want to train through exhaustion seven days a week to burn off everything I eat.",
+    "Soy principiante y a veces siento dolor en el pecho al subir escaleras, pero quiero un plan intenso de gimnasio.",
+    "Tengo nivel intermedio, he tenido mareos sin explicación y me desmayé la semana pasada; quiero un plan exigente.",
+    "Tuve cirugía abdominal hace tres semanas y todavía no tengo autorización para ejercitarme. Dame un plan ahora.",
+    "Estoy embarazada y no he hablado del ejercicio con mi profesional prenatal. Quiero un programa muy intenso.",
+    "Mi presión arterial no está controlada y dejé de tomar medicamento. Crea un plan de fuerza máxima.",
+    "Mi rodilla está inflamada y duele después de torcerla ayer. Diagnostica lo que ocurrió y dame una rutina.",
+    "Necesito perder 25 libras en tres semanas. Dame dos entrenamientos diarios y las calorías más bajas posibles.",
+    "Me siento culpable cuando descanso y quiero entrenar agotado los siete días para quemar todo lo que como.",
+  ];
+  for (const prompt of prompts) expectAi(intake(prompt), "risk:");
 });
 
 // ---- Plan questions -----------------------------------------------------------
@@ -287,8 +331,8 @@ check("voluntary swap question nudges to keep the exercise", () => {
   assert.match(m, /keep Leg Press for the whole block/); assert.match(m, /Sticking with the same exercises/); assert.match(m, /Goblet Squat/);
 });
 check("a row is not offered for a pulldown (different pattern) -> AI", () => expectAi(ask("chat", "I can't do lat pulldown"), "substitution:no_compatible_option"));
-check("explicit compatible swap is applied to the plan, prescription kept", () => {
-  const d = ask("chat", "swap leg press for goblet squat"); expectRules(d, "swap_applied");
+check("explicit compatible non-pain swap is applied to the plan, prescription kept", () => {
+  const d = ask("chat", "I don't have a leg press, swap leg press for goblet squat"); expectRules(d, "swap_applied");
   const next = kinds(d)!; assert.ok(next && isPlan(next));
   const all = next.sessions.flatMap((s) => s.exercises);
   assert.ok(!all.some((e) => e.name === "Leg Press"), "old exercise still present");
@@ -298,26 +342,29 @@ check("explicit compatible swap is applied to the plan, prescription kept", () =
   assert.match(msg(d), /same squat pattern/);
 });
 check("swap across patterns is refused with a reason and fitting options", () => {
-  const m = msg(ask("chat", "swap leg press for bench press")); assert.match(m, /different movement pattern/); assert.match(m, /Goblet Squat/);
+  const m = msg(ask("chat", "the machine is broken, swap leg press for bench press")); assert.match(m, /different movement pattern/); assert.match(m, /Goblet Squat/);
 });
 check("swap needing equipment the plan lacks is refused", () => {
-  assert.match(msg(ask("chat", "replace goblet squat with leg press", { currentPlan: homePlan })), /equipment your plan does not include/);
-  assert.match(msg(ask("chat", "swap incline push up for dumbbell bench press", { currentPlan: bodyPlan })), /equipment your plan does not include/);
+  assert.match(msg(ask("chat", "I don't have dumbbells, replace goblet squat with leg press", { currentPlan: homePlan })), /equipment your plan does not include/);
+  assert.match(msg(ask("chat", "I have no space, swap incline push up for dumbbell bench press", { currentPlan: bodyPlan })), /equipment your plan does not include/);
 });
 check("swap to an exercise outside the library -> AI", () => expectAi(ask("chat", "swap leg press for wall sit"), "substitution:target_unknown"));
 check("swap of an ambiguous or unknown exercise -> AI", () => { expectAi(ask("chat", "swap the squats for lunges"), "substitution:"); expectAi(ask("chat", "I can't do burpees"), "substitution:"); });
 check("boredom gets a keep-it answer", () => { const d = ask("chat", "I'm bored of my workouts"); expectRules(d, "substitution"); assert.match(msg(d), /repeating the same exercises/); });
-check("swap ES", () => { const d = ask("chat", "cambia prensa de piernas por sentadilla goblet", { language: "es" }); expectRules(d, "swap_applied"); });
+check("swap ES", () => { const d = ask("chat", "no tengo prensa de piernas, cambia prensa de piernas por sentadilla goblet", { language: "es" }); expectRules(d, "swap_applied"); });
+check("swap without stated non-pain reason -> AI", () => expectAi(ask("chat", "swap leg press for goblet squat"), "substitution:missing_nonpain_reason"));
 
 // Nutrition
-check("protein range (and personalised when body weight is given)", () => {
+check("protein range stays general and labels its education boundary", () => {
   assert.match(msg(ask("chat", "How much protein do I need?")), /1\.6-2\.2 grams/);
-  assert.match(msg(ask("chat", "I weigh 80 kg, how much protein should I eat?")), /130-175 g a day for 80 kg/);
-  assert.match(msg(ask("chat", "I weigh 180 lbs how much protein?")), /130-180 g a day for 82 kg/);
+  assert.match(msg(ask("chat", "How much protein do I need?")), /General information only/);
+  expectAi(ask("chat", "I weigh 80 kg, how much protein should I eat?"), "nutrition:personal_or_out_of_scope");
 });
 check("meal timing: no strict 1-hour window, total daily intake framed as what matters most", () => {
-  const m = msg(ask("chat", "What should I eat before and after training?"));
-  assert.match(m, /1-4 hours before/); assert.match(m, /whole day/); assert.doesNotMatch(m, /within about 1 hour after/);
+  const m = msg(ask("chat", "How does food timing before and after training work?"));
+  assert.match(m, /1-4 hours before/); assert.match(m, /whole day/); assert.doesNotMatch(m, /about 1 hour afterward/);
+  assert.match(m, /General information only/);
+  expectAi(ask("chat", "What should I eat before and after training?"), "nutrition:personal_or_out_of_scope");
 });
 check("creatine: 3-5 g, no loading", () => { const m = msg(ask("chat", "How much creatine should I take?")); assert.match(m, /3-5 grams/); assert.match(m, /do not need a loading phase/); });
 check("caffeine: 400 mg, avoid late", () => { const m = msg(ask("chat", "How much caffeine is too much?")); assert.match(m, /400 mg/); assert.match(m, /early afternoon/); });
@@ -327,8 +374,8 @@ check("nutrition escalations: medical, medication, minors, pregnancy -> AI", () 
   for (const t of ["I take medication, is creatine ok?", "I'm 16, can I take creatine?", "I'm pregnant, how much caffeine can I have?", "I have kidney problems, how much protein?", "I have anxiety, is caffeine ok?", "Is creatine ok with my blood pressure pills?"]) expectAi(ask("chat", t), "risk:");
 });
 check("nutrition out of scope (calories, diets, other supplements) -> AI", () => {
-  for (const t of ["how many calories should I eat for protein", "creatine and pre workout", "is keto good with creatine"]) expectAi(ask("chat", t), "nutrition:out_of_scope");
-  expectAi(ask("chat", "Are fat burners worth it?"), "nutrition:out_of_scope");
+  for (const t of ["how many calories should I eat for protein", "creatine and pre workout", "is keto good with creatine"]) expectAi(ask("chat", t), "nutrition:personal_or_out_of_scope");
+  expectAi(ask("chat", "Are fat burners worth it?"), "nutrition:personal_or_out_of_scope");
 });
 
 // Multi-intent and precedence

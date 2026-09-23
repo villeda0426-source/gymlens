@@ -177,11 +177,18 @@ export type Plan = {
   safety_flags: string[];
 };
 
-export type CoachResponse =
+export type CoachRulesMetadata = {
+  rulesHandled: true;
+  routeReason: string;
+  responseId?: string;
+};
+
+export type CoachResponse = (
   | { status: "gathering"; message: string }
   | { status: "reply"; message: string }
   | { status: "plan_ready"; summary: string; plan: Plan }
-  | { status: "plan_updated"; summary: string; changes: string[]; plan: Plan };
+  | { status: "plan_updated"; summary: string; changes: string[]; plan: Plan }
+) & { rulesMetadata?: CoachRulesMetadata };
 
 export type CoachCallOptions = {
   primaryTimeoutMs?: number;
@@ -189,6 +196,10 @@ export type CoachCallOptions = {
   primaryModel?: string;
   maxTokens?: number;
   temperature?: number;
+  // A stored safety concern may force AI, but an AI failure must not then fall
+  // back to a static plan that bypasses that account-level safety gate.
+  allowStaticFallback?: boolean;
+  forceSafetyReview?: boolean;
 };
 
 export function getCoachTimeoutsForBuild(
@@ -285,6 +296,8 @@ export function isPlan(value: unknown): value is Plan {
   const goalTypes = ["strength", "hypertrophy", "fat_loss", "endurance", "general_fitness", "sport_specific"];
   const experienceLevels = ["beginner", "intermediate", "advanced"];
 
+  const sessions = Array.isArray(value.sessions) ? value.sessions : [];
+  const ids = sessions.flatMap((session) => isSession(session) ? session.exercises.map((exercise) => exercise.exercise_id) : []);
   return (
     typeof value.goal === "string" &&
     typeof value.goal_type === "string" &&
@@ -300,6 +313,7 @@ export function isPlan(value: unknown): value is Plan {
     typeof value.progression_strategy === "string" &&
     Array.isArray(value.sessions) &&
     value.sessions.every(isSession) &&
+    ids.length === new Set(ids).size &&
     typeof value.weekly_notes === "string" &&
     isStringArray(value.safety_flags)
   );
@@ -444,13 +458,21 @@ export function isCoachFallbackEligibleError(error: unknown): boolean {
   const status = (error as { status?: unknown }).status;
   if (typeof status === "number" && RECOVERABLE_PROVIDER_STATUSES.has(status)) return true;
 
+  // The OpenAI SDK's error classes (APIUserAbortError, APIConnectionError,
+  // APIConnectionTimeoutError, ...) don't set `.name` to match their class -
+  // it stays the generic "Error". The real type is only on the constructor.
   const name = error.name.toLowerCase();
-  if (name.includes("abort") || name.includes("apiconnection") || name.includes("timeout")) return true;
+  const ctorName = (error.constructor?.name ?? "").toLowerCase();
+  if (
+    name.includes("abort") || name.includes("apiconnection") || name.includes("timeout") ||
+    ctorName.includes("abort") || ctorName.includes("apiconnection") || ctorName.includes("timeout")
+  ) return true;
 
   const message = error.message.toLowerCase();
   return (
     message.includes("expected schema") ||
     message.includes("timed out") ||
+    message.includes("was aborted") ||
     message.includes("json") ||
     message.includes("array element") ||
     message.includes("overloaded") ||
@@ -463,7 +485,7 @@ export function isCoachFallbackEligibleError(error: unknown): boolean {
 
 async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {}): Promise<CoachResponse> {
   const fallbackResponse = fallbackCoachResponse(messages);
-  const allowStaticFallback = canUseStaticFallback(messages);
+  const allowStaticFallback = options.allowStaticFallback ?? canUseStaticFallback(messages);
   const primaryTimeoutMs = options.primaryTimeoutMs ?? COACH_TRAINER_PRIMARY_TIMEOUT_MS;
   const fallbackTimeoutMs = options.fallbackTimeoutMs ?? COACH_TRAINER_FALLBACK_TIMEOUT_MS;
   const primaryModel = options.primaryModel ?? COACH_TRAINER_MODEL;
@@ -486,8 +508,12 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
 
   const isRecoverableFormatError = isCoachFallbackEligibleError;
 
+  const safetyMessages: CoachMessage[] = options.forceSafetyReview
+    ? [...messages, { role: "user", content: "ACCOUNT SAFETY CONTEXT: A stored account safety review requires a cautious response. Do not prescribe or revise a workout plan until the user has appropriate professional guidance and clear exercise restrictions. Do not assume the missing details." }]
+    : messages;
+
   try {
-    return await run(messages, primaryModel, primaryTimeoutMs);
+    return await run(safetyMessages, primaryModel, primaryTimeoutMs);
   } catch (error) {
     // A depleted provider balance affects every model. Intake and chat can
     // degrade safely without paying for a second request that must also fail.
@@ -505,7 +531,7 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
     // malformed response is not worth re-asking the expensive model for.
     try {
       const strictMessages: CoachMessage[] = [
-        ...messages,
+        ...safetyMessages,
         {
           role: "user",
           content:

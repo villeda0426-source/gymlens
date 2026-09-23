@@ -75,3 +75,15 @@ Use this file for consequential decisions. A decision can be revised, but the or
 - Journey stage covered: active workout updates and workout changes.
 - Result: pass for one founder session.
 - Action: keep the workflow unchanged for now; continue collecting device/build/language and repeat-session evidence. Prioritize any future regression only if it is reproducible or repeated.
+
+### 2026-09-22 — Coach account history is a one-way safety gate
+
+- Status: accepted
+- Decision: load minimal authenticated account metadata before each Coach rules decision. Missing, stale, uncertain-age, under-18, over-59, active-limitation, recent-soreness, and profile-conflict states force AI; history never changes an AI decision into a rules reply.
+- Evidence: the client had a local plan preview and global persisted Coach state, while the server router had no account context. Both could bypass stored limitations.
+- Assumptions: the migration is applied before deploying the history-aware server path, and health-data consent/legal copy receives product review.
+- Alternatives considered: infer safety from ordinary profile edits, persist raw messages for context, or let client rules proceed while history loads.
+- Expected effect: fewer unsafe deterministic recommendations and no cross-account Coach-state leakage.
+- Measurement date: before release, with a local Supabase RLS run and device regression.
+- Result: static migration and offline routing checks passed; dynamic RLS proof pending local Supabase credentials.
+- Follow-up: resolve source/deployed schema drift and age/under-13, retention, JWT, and third-party-AI disclosure decisions before migration application.

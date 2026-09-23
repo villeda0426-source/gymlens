@@ -34,7 +34,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   guestAccessEnabled: false,
   guestUses: 0,
 
-  setUser: (user) => set({ user, isGuest: !user }),
+  setUser: (user) => {
+    // Coach plans, messages, avatar choices, and completion state are account
+    // scoped. Never let them cross a sign-in/sign-out or account switch.
+    if (get().user?.id !== user?.id) useCoachTrainerStore.getState().clearTrainer();
+    set({ user, isGuest: !user });
+  },
 
   setProfile: (profile) => set({ profile }),
 
@@ -84,7 +89,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     const { error } = await supabase
       .from("profiles")
-      .update({ username: cleanName, language: profile?.language || "en" })
+      .update({ username: cleanName, display_name: cleanName, language: profile?.language || "en", preferred_language: profile?.preferred_language || profile?.language || "en" })
       .eq("id", user.id)
       .select("*")
       .maybeSingle();
@@ -100,7 +105,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.warn("[updateProfileName] auth metadata update error:", authError.message);
     }
 
-    set({ profile: { ...(profile || { id: user.id }), username: cleanName } });
+    set({ profile: { ...(profile || { id: user.id }), username: cleanName, display_name: cleanName } });
     return {};
   },
 
@@ -121,7 +126,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
-    useCoachTrainerStore.getState().resetChatSession();
+    useCoachTrainerStore.getState().clearTrainer();
     await supabase.auth.signOut();
     await AsyncStorage.removeItem(GUEST_ACCESS_KEY);
     set({ user: null, profile: null, isGuest: true, guestAccessEnabled: false });

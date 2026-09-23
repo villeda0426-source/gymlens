@@ -14,7 +14,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import SafeScreen from "@/components/Layout/SafeScreen";
 import { apiFetch } from "@/lib/api";
-import { useAuthStore } from "@/store/authStore";
+import { supabase } from "@/lib/supabase";
 import { colors, fonts } from "@/constants/theme";
 
 const CATEGORIES = ["wrong_id", "missing_info", "video_quality", "other"] as const;
@@ -23,7 +23,6 @@ export default function FeedbackScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { identificationId } = useLocalSearchParams<{ identificationId?: string }>();
-  const { user } = useAuthStore();
 
   const [rating, setRating] = useState(0);
   const [category, setCategory] = useState<string>("other");
@@ -41,11 +40,11 @@ export default function FeedbackScreen() {
     if (rating === 0) return;
     setLoading(true);
     try {
+      const { data } = await supabase.auth.getSession();
       await apiFetch("/api/feedback", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(data.session?.access_token ? { Authorization: `Bearer ${data.session.access_token}` } : {}) },
         body: JSON.stringify({
-          userId: user?.id || null,
           identificationId: identificationId || null,
           rating,
           category,

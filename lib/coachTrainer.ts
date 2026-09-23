@@ -46,11 +46,14 @@ export type CoachPlan = {
   safety_flags: string[];
 };
 
-export type CoachResponse =
+export type CoachRulesMetadata = { rulesHandled: true; routeReason: string; responseId?: string };
+
+export type CoachResponse = (
   | { status: "gathering"; message: string }
   | { status: "reply"; message: string }
   | { status: "plan_ready"; summary: string; plan: CoachPlan }
-  | { status: "plan_updated"; summary: string; changes: string[]; plan: CoachPlan };
+  | { status: "plan_updated"; summary: string; changes: string[]; plan: CoachPlan }
+) & { rulesMetadata?: CoachRulesMetadata };
 
 type TrainerRequest =
   | { mode: "intake"; units: Units; language?: CoachLanguage; history: CoachMessage[]; userMessage: string }
@@ -121,6 +124,21 @@ export async function getCoachTrainerJob(
     headers: {
       ...(options.authToken ? { Authorization: `Bearer ${options.authToken}` } : {}),
     },
+    signal: options.signal,
+  }, 15000);
+}
+
+export async function flagRulesCoachResponse(
+  metadata: CoachRulesMetadata,
+  options: CoachTrainerRequestOptions = {}
+): Promise<{ recorded: boolean }> {
+  return apiFetch<{ recorded: boolean }>("/api/coach-trainer/feedback", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.authToken ? { Authorization: `Bearer ${options.authToken}` } : {}),
+    },
+    body: JSON.stringify({ routeReason: metadata.routeReason, responseId: metadata.responseId }),
     signal: options.signal,
   }, 15000);
 }

@@ -9,14 +9,24 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+async function authenticatedUserId(req: Request): Promise<string | null> {
+  const token = req.header("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!token) return null;
+  const { data, error } = await supabase.auth.getUser(token);
+  return error || !data.user ? null : data.user.id;
+}
+
 router.post("/", async (req: Request, res: Response) => {
   try {
-    const { userId, rating, category, message } = req.body;
+    const { rating, category, message } = req.body;
 
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({ error: "Rating must be between 1 and 5" });
     }
 
+    // Anonymous product feedback remains allowed, but an authenticated identity
+    // is always derived from the verified bearer token—not caller JSON.
+    const userId = await authenticatedUserId(req);
     const { data, error } = await supabase
       .from("feedback")
       .insert({
