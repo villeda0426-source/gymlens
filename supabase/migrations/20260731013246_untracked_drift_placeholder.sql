@@ -1,0 +1,8 @@
+-- Placeholder: a migration was applied directly to the database at this
+-- version timestamp, outside this repository's tracked migration history
+-- (discovered via "supabase migration list" drift on 2026-09-26; see
+-- docs/roadmap/ for the reconciliation note). The original SQL is not
+-- recoverable from this repo. This empty file exists only so
+-- "supabase migration repair --status applied" can record this version;
+-- it is intentionally a no-op and must never be edited to "backfill" guessed
+-- SQL, since that would misrepresent what actually ran against production.
