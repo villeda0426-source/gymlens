@@ -253,9 +253,30 @@
     "chat_with_me": "Chatear conmigo",
     "sign_in_to_chat": "Inicia sesión para chatear con Coach",
     "go_to_sign_in": "Ir a iniciar sesión",
-    "chat_title": "Chat con Coach",
+    "coach_header_title": "Coach",
+    "coach_header_subtitle": "Conoce tu plan, tu gimnasio y tu progreso",
     "starter_message": "Soy Coach. Cuéntame para qué estás entrenando, cuántos días puedes levantar, qué equipo tienes y si hay algo que te molesta o duele. Lo convertiré en un plan de 21 a 24 días que podrás usar en la pestaña Plan.",
     "plan_ready_notice": "Tu plan de 21 a 24 días está listo en la pestaña Plan.",
+    "feeling_check_in": {
+      "title": "¿Cómo se siente tu cuerpo hoy?",
+      "fresh": "Con energía",
+      "okay": "Bien",
+      "sore": "Algo adolorido",
+      "fresh_message": "Hoy me siento con energía y listo para entrenar.",
+      "okay_message": "Hoy me siento bien.",
+      "sore_message": "Hoy me siento algo adolorido."
+    },
+    "coach_suggestion": {
+      "eyebrow": "Cambio sugerido",
+      "apply": "Aplicar hoy",
+      "keep": "Mantener plan",
+      "applied_notice": "Aplicado. Tu plan guardado ahora usa este cambio.",
+      "kept_notice": "Mantendremos tu plan como está."
+    },
+    "coach_composer": {
+      "camera": "Preguntar sobre una máquina con la cámara",
+      "send": "Enviar"
+    },
     "session_expired_page": "Tu sesión expiró. Continúa desde tu página de Coach.",
     "session_expired_send": "Tu sesión expiró. Inicia sesión de nuevo antes de enviar esto a Coach.",
     "chat_interrupted": "El chat se interrumpió. Puedes reenviar tu último mensaje cuando quieras.",

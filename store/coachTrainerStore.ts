@@ -2,7 +2,7 @@ import { normalizePlanTimeline } from "@/shared/planTimeline";
 import { migrateCompletionIds } from "@/shared/completionKeys";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
-import { CoachMessage, CoachPlan, CoachRulesMetadata, Units } from "@/lib/coachTrainer";
+import { CoachMessage, CoachPlan, CoachResponse, CoachRulesMetadata, Units } from "@/lib/coachTrainer";
 
 const STORAGE_KEY = "coachlift_ai_trainer_state_v1";
 
@@ -12,6 +12,11 @@ export type TrainerConversation = CoachMessage & {
   rulesMetadata?: CoachRulesMetadata;
   feedbackFlaggedAt?: string;
 };
+
+// A Coach-suggested edit to the saved plan, staged from the chat/adapt/
+// update_goals path. Never applied to `plan` until the user explicitly taps
+// "Apply today" (CoachSuggestionCard) — see Phase 3 of the Coach Forward plan.
+export type PendingPlanChange = Extract<CoachResponse, { status: "plan_updated" }>;
 
 export type CoachAvatarConfig = {
   skinTone: "light" | "medium" | "deep";
@@ -31,6 +36,7 @@ interface CoachTrainerState {
   completedExerciseIds: string[];
   intakeHistory: CoachMessage[];
   conversation: TrainerConversation[];
+  pendingPlanChange: PendingPlanChange | null;
   hasLoaded: boolean;
   setUnits: (units: Units) => void;
   setPlan: (plan: CoachPlan | null) => void;
@@ -44,6 +50,9 @@ interface CoachTrainerState {
   setIntakeHistory: (history: CoachMessage[]) => void;
   addConversationMessage: (message: CoachMessage, rulesMetadata?: CoachRulesMetadata) => void;
   markConversationFeedbackFlagged: (id: string) => void;
+  setPendingPlanChange: (change: PendingPlanChange | null) => void;
+  applyPendingPlanChange: () => void;
+  dismissPendingPlanChange: () => void;
   resetChatSession: () => void;
   clearTrainer: () => void;
   loadTrainer: () => Promise<void>;
@@ -75,6 +84,7 @@ async function persist(
     | "completedExerciseIds"
     | "intakeHistory"
     | "conversation"
+    | "pendingPlanChange"
   >
 ) {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -89,6 +99,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
   completedExerciseIds: [],
   intakeHistory: [],
   conversation: [],
+  pendingPlanChange: null,
   hasLoaded: false,
 
   setUnits: (units) => {
@@ -156,8 +167,25 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
     persist(get());
   },
 
+  setPendingPlanChange: (pendingPlanChange) => {
+    set({ pendingPlanChange });
+    persist(get());
+  },
+
+  applyPendingPlanChange: () => {
+    const { pendingPlanChange } = get();
+    if (!pendingPlanChange) return;
+    set({ plan: normalizePlanTimeline(pendingPlanChange.plan), pendingPlanChange: null });
+    persist(get());
+  },
+
+  dismissPendingPlanChange: () => {
+    set({ pendingPlanChange: null });
+    persist(get());
+  },
+
   resetChatSession: () => {
-    const next = { conversation: [], intakeHistory: [], hasEnteredCoachChat: false, failedPrompt: null };
+    const next = { conversation: [], intakeHistory: [], hasEnteredCoachChat: false, failedPrompt: null, pendingPlanChange: null };
     set(next);
     persist(get());
   },
@@ -172,6 +200,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
       completedExerciseIds: [],
       intakeHistory: [],
       conversation: [],
+      pendingPlanChange: null,
     };
     set(next);
     persist(next);
@@ -198,6 +227,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
         ),
         intakeHistory: Array.isArray(saved.intakeHistory) ? saved.intakeHistory : [],
         conversation: Array.isArray(saved.conversation) ? saved.conversation : [],
+        pendingPlanChange: saved.pendingPlanChange?.status === "plan_updated" ? saved.pendingPlanChange : null,
         hasLoaded: true,
       });
     } catch {

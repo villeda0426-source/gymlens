@@ -253,9 +253,30 @@
     "chat_with_me": "Chat with me",
     "sign_in_to_chat": "Sign in to chat with Coach",
     "go_to_sign_in": "Go to sign in",
-    "chat_title": "Coach chat",
+    "coach_header_title": "Coach",
+    "coach_header_subtitle": "Knows your plan, your gym and your progress",
     "starter_message": "I am Coach. Tell me what you are training for, how many days you can lift, what equipment you have, and anything that hurts. I will turn it into a 21-24 day plan you can use in the Plan tab.",
     "plan_ready_notice": "Your 21-24 day plan is ready in the Plan tab.",
+    "feeling_check_in": {
+      "title": "How does your body feel today?",
+      "fresh": "Fresh",
+      "okay": "Okay",
+      "sore": "A bit sore",
+      "fresh_message": "I'm feeling fresh and ready to train today.",
+      "okay_message": "I'm feeling okay today.",
+      "sore_message": "I'm feeling a bit sore today."
+    },
+    "coach_suggestion": {
+      "eyebrow": "Suggested change",
+      "apply": "Apply today",
+      "keep": "Keep plan",
+      "applied_notice": "Applied. Your saved plan now uses this change.",
+      "kept_notice": "Keeping your plan as it is."
+    },
+    "coach_composer": {
+      "camera": "Ask about a machine with the camera",
+      "send": "Send"
+    },
     "session_expired_page": "Your session expired. Please continue from your Coach page.",
     "session_expired_send": "Your session expired. Please sign in again before sending this to Coach.",
     "chat_interrupted": "Your chat was interrupted. You can resend your last message when you are ready.",

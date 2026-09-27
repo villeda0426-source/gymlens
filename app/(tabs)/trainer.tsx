@@ -16,7 +16,13 @@ import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import SafeScreen from "@/components/Layout/SafeScreen";
-import { colors, fonts } from "@/constants/theme";
+import { colors, coachColors, coachFonts, fonts, radii, spacing } from "@/constants/theme";
+import CoachComposer from "@/components/Coach/CoachComposer";
+import CoachMessageBubble from "@/components/Coach/CoachMessageBubble";
+import CoachSuggestionCard from "@/components/Coach/CoachSuggestionCard";
+import FeelingCheckIn, { Feeling } from "@/components/Coach/FeelingCheckIn";
+import SafetyNote from "@/components/Coach/SafetyNote";
+import SuggestedPrompts from "@/components/Coach/SuggestedPrompts";
 import { supabase } from "@/lib/supabase";
 import { createIdempotencyKey } from "@/lib/api";
 import {
@@ -88,13 +94,11 @@ function stringifyCoachResponse(response: CoachResponse): string {
 }
 
 function getCoachResponseText(response: CoachResponse): string {
-  if (response.status === "plan_ready" || response.status === "plan_updated") {
-    const changes =
-      response.status === "plan_updated" && response.changes.length > 0
-        ? `\n\nChanges:\n${response.changes.map((change) => `- ${change}`).join("\n")}`
-        : "";
-    return `${response.summary}${changes}`;
-  }
+  if (response.status === "plan_ready") return response.summary;
+  // plan_updated's changes are rendered by CoachSuggestionCard, not repeated
+  // as chat text (the card is staged alongside this bubble — see
+  // handleResponse below).
+  if (response.status === "plan_updated") return response.summary;
 
   return response.message;
 }
@@ -106,24 +110,6 @@ function formatStoredCoachMessage(content: string): string {
   } catch {
     return content;
   }
-}
-
-function ChatBubble({ message }: { message: CoachMessage }) {
-  const isUser = message.role === "user";
-  const text = isUser ? message.content : formatStoredCoachMessage(message.content);
-
-  return (
-    <View style={[styles.bubbleRow, isUser && styles.bubbleRowUser]}>
-      {!isUser ? (
-        <View style={styles.coachAvatar}>
-          <Ionicons name="fitness" size={17} color={colors.white} />
-        </View>
-      ) : null}
-      <View style={[styles.bubble, isUser ? styles.userBubble : styles.coachBubble]}>
-        <Text style={[styles.bubbleText, isUser && styles.userBubbleText]}>{text}</Text>
-      </View>
-    </View>
-  );
 }
 
 export default function TrainerScreen() {
@@ -148,6 +134,10 @@ export default function TrainerScreen() {
     conversation,
     addConversationMessage,
     markConversationFeedbackFlagged,
+    pendingPlanChange,
+    setPendingPlanChange,
+    applyPendingPlanChange,
+    dismissPendingPlanChange,
     resetChatSession,
     clearTrainer,
     hasLoaded,
@@ -165,6 +155,7 @@ export default function TrainerScreen() {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [listening, setListening] = useState(false);
+  const [feeling, setFeeling] = useState<Feeling | null>(null);
 
   useEffect(() => {
     const speechModule = loadSpeechRecognitionModule();
@@ -326,14 +317,28 @@ export default function TrainerScreen() {
     }
 
     if (response.status === "plan_ready") {
+      // The very first plan (onboarding) applies immediately — it's not a
+      // "change" to an existing plan, so there's nothing to stage.
       setPlan(response.plan);
       setNotice(t("trainer.plan_ready_notice"));
     } else if (response.status === "plan_updated") {
-      updatePlan(response.plan);
-      setNotice(t("trainer.plan_ready_notice"));
+      // Stage it: CoachSuggestionCard renders it, and only "Apply today"
+      // (applyPendingPlanChange) edits the saved plan.
+      setPendingPlanChange(response);
+      setNotice("");
     } else {
       setNotice("");
     }
+  };
+
+  const handleApplyPendingPlanChange = () => {
+    applyPendingPlanChange();
+    addConversationMessage({ role: "assistant", content: t("trainer.coach_suggestion.applied_notice") });
+  };
+
+  const handleDismissPendingPlanChange = () => {
+    dismissPendingPlanChange();
+    addConversationMessage({ role: "assistant", content: t("trainer.coach_suggestion.kept_notice") });
   };
 
   const flagRulesReply = async (message: { id: string; rulesMetadata?: CoachResponse["rulesMetadata"] }) => {
@@ -388,6 +393,11 @@ export default function TrainerScreen() {
       signal,
     });
     return waitForCoachJob(job.jobId, authToken, signal);
+  };
+
+  const handleFeelingSelect = (nextFeeling: Feeling) => {
+    setFeeling(nextFeeling);
+    submitMessage(t(`trainer.feeling_check_in.${nextFeeling}_message`));
   };
 
   const submitMessage = async (messageText?: string) => {
@@ -537,7 +547,14 @@ export default function TrainerScreen() {
   const confirmReset = () => {
     Alert.alert(t("trainer.reset_title"), t("trainer.reset_message"), [
       { text: t("common.cancel"), style: "cancel" },
-      { text: t("trainer.reset"), style: "destructive", onPress: clearTrainer },
+      {
+        text: t("trainer.reset"),
+        style: "destructive",
+        onPress: () => {
+          setFeeling(null);
+          clearTrainer();
+        },
+      },
     ]);
   };
 
@@ -615,18 +632,29 @@ export default function TrainerScreen() {
   }
 
   return (
-    <SafeScreen edges={["top"]}>
+    <SafeScreen edges={["top"]} style={styles.chatScreen}>
       <KeyboardAvoidingView
         style={styles.keyboard}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
       >
         <View style={styles.header}>
-          <View>
-            <Text style={styles.eyebrow}>{t("trainer.personal_trainer")}</Text>
-            <Text style={styles.title}>{t("trainer.chat_title")}</Text>
+          <View style={styles.headerAvatar}>
+            <Ionicons name="star" size={22} color={coachColors.coachGold} />
           </View>
+          <View style={styles.headerCopy}>
+            <Text style={styles.headerTitle}>{t("trainer.coach_header_title")}</Text>
+            <Text style={styles.headerSubtitle}>{t("trainer.coach_header_subtitle")}</Text>
+          </View>
+          {/* Weekly check-in entry point lands here in Phase 4, once
+              app/coach-week.tsx exists — no dead link in the meantime. */}
         </View>
+
+        {plan ? (
+          <View style={styles.feelingCheckInWrap}>
+            <FeelingCheckIn selected={feeling} onSelect={handleFeelingSelect} />
+          </View>
+        ) : null}
 
         <ScrollView
           ref={scrollRef}
@@ -637,7 +665,7 @@ export default function TrainerScreen() {
         >
           {visibleConversation.map((message, index) => (
             <View key={message.id ?? `${message.role}-${index}-${message.content.slice(0, 12)}`}>
-              <ChatBubble message={message} />
+              <CoachMessageBubble message={message} />
               {message.role === "assistant" && message.rulesMetadata && !message.feedbackFlaggedAt ? (
                 <TouchableOpacity
                   style={styles.rulesFeedbackButton}
@@ -650,16 +678,29 @@ export default function TrainerScreen() {
             </View>
           ))}
 
+          {pendingPlanChange ? (
+            <View style={styles.suggestionWrap}>
+              <CoachSuggestionCard
+                response={pendingPlanChange}
+                onApply={handleApplyPendingPlanChange}
+                onKeep={handleDismissPendingPlanChange}
+              />
+              {pendingPlanChange.plan.safety_flags.length > 0 ? (
+                <SafetyNote text={pendingPlanChange.plan.safety_flags[0]} />
+              ) : null}
+            </View>
+          ) : null}
+
           {loading ? (
             <View style={styles.thinkingCard}>
-              <ActivityIndicator color={colors.ndGold} size="small" />
+              <ActivityIndicator color={coachColors.coachGold} size="small" />
               <Text style={styles.thinkingText}>{t("trainer.coach_thinking")}</Text>
             </View>
           ) : null}
 
           {notice ? (
             <View style={styles.noticeCard}>
-              <Ionicons name="sparkles" size={17} color={colors.ndGold} />
+              <Ionicons name="sparkles" size={17} color={coachColors.coachGoldText} />
               <Text style={styles.noticeText}>{notice}</Text>
               {failedPrompt ? (
                 <TouchableOpacity style={styles.resendButton} onPress={() => submitMessage(failedPrompt)} disabled={loading}>
@@ -761,52 +802,27 @@ export default function TrainerScreen() {
         ) : null}
 
         <View style={styles.quickActions}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickActionsInner}>
-            {QUICK_ACTIONS.map((action) => (
-              <TouchableOpacity
-                key={action}
-                style={styles.quickChip}
-                onPress={() =>
-                  action === "trainer.quick_actions.adjust_today"
-                    ? setAdjustOpen((open) => !open)
-                    : submitMessage(t(action))
-                }
-              >
-                <Text style={styles.quickChipText}>{t(action)}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <SuggestedPrompts
+            prompts={QUICK_ACTIONS.map((action) => ({ key: action, label: t(action) }))}
+            onPress={(action) =>
+              action === "trainer.quick_actions.adjust_today"
+                ? setAdjustOpen((open) => !open)
+                : submitMessage(t(action))
+            }
+          />
         </View>
 
         <View style={styles.composerWrap}>
-          <TouchableOpacity
-            style={[styles.voiceButton, listening && styles.voiceButtonActive]}
-            onPress={toggleVoiceInput}
-            disabled={loading}
-            accessibilityRole="button"
-            accessibilityLabel={listening ? t("trainer.voice_stop") : t("trainer.voice_start")}
-          >
-            <Ionicons name={listening ? "mic" : "mic-outline"} size={19} color={listening ? colors.white : colors.ndGold} />
-          </TouchableOpacity>
-          <TextInput
+          <CoachComposer
             value={draft}
             onChangeText={setDraft}
+            onSend={() => submitMessage()}
+            onCameraPress={() => router.push("/(tabs)/scan")}
+            onVoicePress={toggleVoiceInput}
+            listening={listening}
+            loading={loading}
             placeholder={plan ? t("trainer.placeholder_plan") : t("trainer.placeholder_intake")}
-            placeholderTextColor={colors.textMuted}
-            multiline
-            style={styles.composer}
           />
-          <TouchableOpacity
-            style={[styles.sendButton, (!draft.trim() || loading) && styles.sendButtonDisabled]}
-            onPress={() => submitMessage()}
-            disabled={!draft.trim() || loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.white} size="small" />
-            ) : (
-              <Ionicons name="send" size={18} color={colors.white} />
-            )}
-          </TouchableOpacity>
         </View>
 
         {conversation.length > 0 ? (
@@ -884,14 +900,26 @@ const styles = StyleSheet.create({
   chatWithMeText: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 16 },
   authLinkButton: { alignItems: "center", paddingVertical: 14 },
   authLinkText: { color: colors.ndNavy, fontFamily: fonts.bold, fontSize: 14 },
+  chatScreen: { backgroundColor: coachColors.bg },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: spacing.md,
   },
+  headerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: radii.pill,
+    backgroundColor: coachColors.coachNavy,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerCopy: { flex: 1 },
+  headerTitle: { color: coachColors.text, fontFamily: coachFonts.heading, fontSize: 26 },
+  headerSubtitle: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 13, marginTop: 1 },
   eyebrow: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 12, textTransform: "uppercase" },
   title: { color: colors.text, fontFamily: fonts.heading, fontSize: 34 },
   headerControls: { alignItems: "flex-end", gap: 8 },
@@ -919,36 +947,10 @@ const styles = StyleSheet.create({
   unitButtonActive: { backgroundColor: colors.ndGold },
   unitText: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 12 },
   unitTextActive: { color: colors.white },
+  feelingCheckInWrap: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
   messages: { flex: 1 },
   messagesContent: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 18, gap: 12 },
-  bubbleRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
-  bubbleRowUser: { justifyContent: "flex-end" },
-  coachAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    backgroundColor: colors.text,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bubble: {
-    maxWidth: "82%",
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-  },
-  coachBubble: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderBottomLeftRadius: 6,
-  },
-  userBubble: {
-    backgroundColor: colors.ndNavy,
-    borderBottomRightRadius: 6,
-  },
-  bubbleText: { color: colors.text, fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
-  userBubbleText: { color: colors.white },
+  suggestionWrap: { gap: spacing.sm },
   noticeCard: {
     flexDirection: "row",
     gap: 8,
@@ -982,10 +984,10 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   resendText: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 12 },
-  quickActions: { borderTopWidth: 1, borderTopColor: colors.cardBorder, paddingTop: 10 },
+  quickActions: { borderTopWidth: 1, borderTopColor: coachColors.border, paddingTop: 10 },
   adjustPanel: {
     borderTopWidth: 1,
-    borderTopColor: colors.cardBorder,
+    borderTopColor: coachColors.border,
     paddingTop: 12,
     paddingHorizontal: 4,
     gap: 8,
@@ -1035,64 +1037,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     backgroundColor: colors.card,
   },
-  quickActionsInner: { paddingHorizontal: 20, gap: 8, paddingBottom: 10 },
-  quickChip: {
-    minHeight: 36,
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    backgroundColor: colors.ndNavy + "08",
-    borderWidth: 1,
-    borderColor: colors.ndGold + "35",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  quickChipText: { color: colors.ndNavy, fontFamily: fonts.semiBold, fontSize: 12 },
   composerWrap: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "flex-end",
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-  },
-  voiceButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.ndGold + "45",
-    backgroundColor: colors.card,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  voiceButtonActive: {
-    backgroundColor: colors.coral,
-    borderColor: colors.coral,
-  },
-  composer: {
-    flex: 1,
-    maxHeight: 110,
-    minHeight: 48,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.ndGold + "45",
-    backgroundColor: colors.card,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: colors.text,
-    fontFamily: fonts.body,
-    fontSize: 14,
-    textAlignVertical: "top",
-  },
-  sendButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: colors.ndGold,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.sm,
   },
   sendButtonDisabled: { opacity: 0.5 },
-  rulesFeedbackButton: { alignSelf: "flex-start", marginLeft: 52, marginTop: -2, marginBottom: 8, paddingVertical: 5, paddingHorizontal: 8 },
+  rulesFeedbackButton: { alignSelf: "flex-start", marginLeft: spacing.sm, marginTop: -2, marginBottom: 8, paddingVertical: 5, paddingHorizontal: 8 },
   rulesFeedbackText: { color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 11, textDecorationLine: "underline" },
   resetButton: { alignSelf: "center", paddingVertical: 8, marginBottom: 4 },
   resetText: { color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },

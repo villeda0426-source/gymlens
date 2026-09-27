@@ -182,11 +182,15 @@ export function swapMismatchReply(oldName: string, newName: string, reason: "pat
     : `I would not swap ${oldName} for ${newName} because it ${why}.${tail} ${KEEP_EXERCISES_NOTE.en}`;
 }
 
+// Despite the name (kept for the "swap_applied" rules intent it backs), this
+// is a proposal, not a done deed: the client stages it and only applies it
+// to the saved plan once the user taps "Apply today" (Coach Forward Phase
+// 3), so the copy has to read as a suggestion rather than a completed edit.
 export function swapAppliedSummary(oldName: string, newName: string, pattern: MovementPattern, language: Language): string {
   const label = PATTERN_LABEL[pattern][language];
   return language === "es"
-    ? `Listo: cambié ${oldName} por ${newName}, que trabaja el mismo ${label} y encaja con tu equipo. Mantuve tus series y repeticiones. ${KEEP_EXERCISES_NOTE.es}`
-    : `Done: I swapped ${oldName} for ${newName}, which trains the same ${label} and fits your equipment. I kept your sets and reps. ${KEEP_EXERCISES_NOTE.en}`;
+    ? `Te sugiero cambiar ${oldName} por ${newName}, que trabaja el mismo ${label} y encaja con tu equipo. Mantendría tus series y repeticiones. ${KEEP_EXERCISES_NOTE.es}`
+    : `I'd suggest swapping ${oldName} for ${newName}, which trains the same ${label} and fits your equipment. I'd keep your sets and reps. ${KEEP_EXERCISES_NOTE.en}`;
 }
 
 // ---- Why this exercise ------------------------------------------------------------------------
