@@ -17,12 +17,15 @@
   "tabs": {
     "home": "Inicio",
     "trainer": "Coach",
+    "coach": "Coach",
     "plan": "Plan",
     "scan": "Escanear",
     "search": "Buscar",
     "saved": "Guardado",
     "avatar": "Avatar",
-    "profile": "Perfil"
+    "profile": "Perfil",
+    "you": "Tú",
+    "coach_unread_badge": "actualización nueva"
   },
   "camera": {
     "title": "SpotLift",
