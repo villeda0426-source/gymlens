@@ -646,8 +646,16 @@ export default function TrainerScreen() {
             <Text style={styles.headerTitle}>{t("trainer.coach_header_title")}</Text>
             <Text style={styles.headerSubtitle}>{t("trainer.coach_header_subtitle")}</Text>
           </View>
-          {/* Weekly check-in entry point lands here in Phase 4, once
-              app/coach-week.tsx exists — no dead link in the meantime. */}
+          {plan ? (
+            <TouchableOpacity
+              style={styles.weekButton}
+              onPress={() => router.push("/coach-week")}
+              accessibilityRole="button"
+              accessibilityLabel={t("trainer.coach_week_button")}
+            >
+              <Ionicons name="bar-chart-outline" size={20} color={coachColors.text} />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {plan ? (
@@ -918,6 +926,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerCopy: { flex: 1 },
+  weekButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.pill,
+    backgroundColor: coachColors.card,
+    alignItems: "center",
+    justifyContent: "center",
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 3, shadowOffset: { width: 0, height: 1 } },
+      android: { elevation: 2 },
+      default: { boxShadow: "0 1px 3px rgba(12,35,64,0.1)" },
+    }),
+  },
   headerTitle: { color: coachColors.text, fontFamily: coachFonts.heading, fontSize: 26 },
   headerSubtitle: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 13, marginTop: 1 },
   eyebrow: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 12, textTransform: "uppercase" },

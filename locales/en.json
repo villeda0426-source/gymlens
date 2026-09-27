@@ -255,6 +255,7 @@
     "go_to_sign_in": "Go to sign in",
     "coach_header_title": "Coach",
     "coach_header_subtitle": "Knows your plan, your gym and your progress",
+    "coach_week_button": "Weekly check-in",
     "starter_message": "I am Coach. Tell me what you are training for, how many days you can lift, what equipment you have, and anything that hurts. I will turn it into a 21-24 day plan you can use in the Plan tab.",
     "plan_ready_notice": "Your 21-24 day plan is ready in the Plan tab.",
     "feeling_check_in": {
@@ -356,6 +357,17 @@
       "adjust_today": "Adjust today's workout",
       "explain": "Explain this exercise"
     }
+  },
+  "coach_week": {
+    "back": "Back to Coach chat",
+    "eyebrow": "Weekly check-in",
+    "week": "Week {{number}}",
+    "ratio": "{{done}} of {{total}}",
+    "what_i_noticed": "What I noticed",
+    "changes_title": "Changes for next week",
+    "approve": "Approve changes",
+    "edit": "Edit",
+    "approved_notice": "Approved. Coach will use these changes starting next week."
   },
   "plan": {
     "title": "This Week",

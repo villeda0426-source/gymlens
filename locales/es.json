@@ -255,6 +255,7 @@
     "go_to_sign_in": "Ir a iniciar sesión",
     "coach_header_title": "Coach",
     "coach_header_subtitle": "Conoce tu plan, tu gimnasio y tu progreso",
+    "coach_week_button": "Revisión semanal",
     "starter_message": "Soy Coach. Cuéntame para qué estás entrenando, cuántos días puedes levantar, qué equipo tienes y si hay algo que te molesta o duele. Lo convertiré en un plan de 21 a 24 días que podrás usar en la pestaña Plan.",
     "plan_ready_notice": "Tu plan de 21 a 24 días está listo en la pestaña Plan.",
     "feeling_check_in": {
@@ -356,6 +357,17 @@
       "adjust_today": "Ajustar la rutina de hoy",
       "explain": "Explicar este ejercicio"
     }
+  },
+  "coach_week": {
+    "back": "Volver al chat con Coach",
+    "eyebrow": "Revisión semanal",
+    "week": "Semana {{number}}",
+    "ratio": "{{done}} de {{total}}",
+    "what_i_noticed": "Lo que noté",
+    "changes_title": "Cambios para la próxima semana",
+    "approve": "Aprobar cambios",
+    "edit": "Editar",
+    "approved_notice": "Aprobado. Coach usará estos cambios a partir de la próxima semana."
   },
   "plan": {
     "title": "Esta semana",
