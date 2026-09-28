@@ -11,6 +11,7 @@
     "back": "Back",
     "next": "Next",
     "done": "Done",
+    "continue": "Continue",
     "or": "or",
     "and": "and"
   },
@@ -38,7 +39,18 @@
     "permission_title": "Camera Access Required",
     "permission_message": "SpotLift needs camera access to identify gym equipment.",
     "permission_button": "Grant Access",
+    "permission_denied_title": "Camera access is off",
+    "permission_denied_message": "Turn on camera access in Settings to scan equipment, or search for it by name instead.",
+    "open_settings": "Open Settings",
+    "search_manually": "Search manually instead",
     "no_camera": "No camera available"
+  },
+  "scan_result": {
+    "looks_like": "Looks like",
+    "strong_match": "Strong match",
+    "possible_match": "Possible match",
+    "not_this_one": "Not this one",
+    "show_me": "Show me"
   },
   "home": {
     "good_morning": "Good morning",
@@ -143,6 +155,13 @@
     "calc_note": "Use this as a first set estimate. If form breaks or RPE jumps past 8, lower the load.",
     "personalized_tip": "Personalized for {{name}} based on your body weight",
     "add_weight_tip": "Add your body weight above and this updates instantly.",
+    "ask_coach_title": "Ask Coach about this machine",
+    "ask_coach_starting_weight": "What weight should I start with?",
+    "ask_coach_easier_option": "Is there an easier variation?",
+    "ask_coach_context": "{{question}} (asking about {{equipment}})",
+    "add_to_todays_workout": "Add to today's workout",
+    "safety_pain_caution": "Stop if you feel sharp pain.",
+    "beginner_friendly": "Beginner friendly",
     "sets_reps_by_level": {
       "Beginner": "3 sets × 10–12 reps",
       "Intermediate": "4 sets × 8–10 reps",
@@ -376,6 +395,32 @@
       "adjust_today": "Adjust today's workout",
       "explain": "Explain this exercise"
     }
+  },
+  "workout_session": {
+    "end_workout": "End workout",
+    "pause": "Pause",
+    "resume": "Resume",
+    "quick_session": "Quick session",
+    "set_label": "Set {{current}} of {{total}}",
+    "kg": "KG",
+    "lbs": "LBS",
+    "reps": "REPS",
+    "decrease_weight": "Decrease weight",
+    "increase_weight": "Increase weight",
+    "decrease_reps": "Decrease reps",
+    "increase_reps": "Increase reps",
+    "ask_coach_about_exercise": "Ask Coach about this exercise",
+    "ask_coach_prefill": "Any tips for {{exercise}}?",
+    "log_set": "Log set",
+    "next_label": "Next: {{name}}",
+    "rest_label": "Rest {{time}}",
+    "empty_title": "No workout to start",
+    "empty_body": "Build a plan with Coach, or scan a machine, to start a session here.",
+    "talk_to_coach": "Talk to Coach",
+    "complete_title": "Workout complete",
+    "complete_body_plan": "Nice work. Your progress is saved.",
+    "complete_body_adhoc": "Nice work.",
+    "done_button": "Done"
   },
   "coach_week": {
     "back": "Back to Coach chat",

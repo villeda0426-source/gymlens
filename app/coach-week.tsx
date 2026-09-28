@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { coachColors, coachFonts, radii, spacing } from "@/constants/theme";
@@ -45,6 +46,7 @@ export default function CoachWeekScreen() {
 
   return (
     <View style={styles.screen}>
+      <StatusBar style="light" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <WeekProgressHeader
           weekNumber={summary.weekNumber}
