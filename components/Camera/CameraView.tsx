@@ -1,3 +1,4 @@
+// Coach Forward Scan viewfinder — Phase 6.
 import React, { useRef, useState, useEffect } from "react";
 import {
   View,
@@ -9,13 +10,14 @@ import {
   Easing,
   Linking,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { CameraView as ExpoCameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import LanguageToggle from "@/components/UI/LanguageToggle";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachDark, coachFonts } from "@/constants/theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -25,6 +27,7 @@ interface CameraViewComponentProps {
 
 export default function CameraViewComponent({ onCapture }: CameraViewComponentProps) {
   const { t } = useTranslation();
+  const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<ExpoCameraView>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -76,6 +79,16 @@ export default function CameraViewComponent({ onCapture }: CameraViewComponentPr
             {t(canRequestPermission ? "common.continue" : "camera.open_settings")}
           </Text>
         </TouchableOpacity>
+        {/* Camera access denied and can't be re-prompted (or the settings
+            round-trip doesn't come back granted): scanning is a dead end
+            without this, so search-by-name has to stay reachable. */}
+        <TouchableOpacity
+          onPress={() => router.push("/(tabs)/search")}
+          style={styles.searchManuallyButton}
+          accessibilityRole="button"
+        >
+          <Text style={styles.searchManuallyText}>{t("camera.search_manually")}</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -102,7 +115,7 @@ export default function CameraViewComponent({ onCapture }: CameraViewComponentPr
         <View style={styles.controls}>
           <TouchableOpacity onPress={handleUpload} style={styles.uploadButton}>
             <View style={styles.uploadIconWrap}>
-              <Ionicons name="images-outline" size={26} color={colors.white} />
+              <Ionicons name="images-outline" size={26} color={coachDark.text} />
             </View>
             <Text style={styles.uploadLabel}>{t("camera.upload")}</Text>
           </TouchableOpacity>
@@ -125,25 +138,28 @@ const CORNER_THICKNESS = 3;
 const VF_SIZE = width * 0.75;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0A0A0A" },
+  container: { flex: 1, backgroundColor: coachDark.bg },
   camera: { flex: 1 },
   overlay: { ...StyleSheet.absoluteFillObject },
   permissionContainer: {
     flex: 1,
-    backgroundColor: "#0A0A0A",
+    backgroundColor: coachDark.bg,
     alignItems: "center",
     justifyContent: "center",
     padding: 32,
+    gap: 8,
   },
-  permissionTitle: { color: "#F5F5F5", fontSize: 22, fontFamily: fonts.bold, marginBottom: 12, textAlign: "center" },
-  permissionMessage: { color: "rgba(255,255,255,0.6)", fontSize: 15, fontFamily: fonts.body, textAlign: "center", marginBottom: 24, lineHeight: 22 },
+  permissionTitle: { color: coachDark.text, fontSize: 22, fontFamily: coachFonts.headingSemiBold, marginBottom: 4, textAlign: "center" },
+  permissionMessage: { color: coachDark.textSecondary, fontSize: 15, fontFamily: coachFonts.body, textAlign: "center", marginBottom: 16, lineHeight: 22 },
   permissionButton: {
-    backgroundColor: colors.coral,
-    borderRadius: 12,
+    backgroundColor: coachColors.coralPressed,
+    borderRadius: 999,
     paddingHorizontal: 28,
     paddingVertical: 14,
   },
-  permissionButtonText: { color: colors.white, fontSize: 15, fontFamily: fonts.bold },
+  permissionButtonText: { color: coachDark.text, fontSize: 15, fontFamily: coachFonts.bodyBold },
+  searchManuallyButton: { marginTop: 8, paddingVertical: 10, paddingHorizontal: 12 },
+  searchManuallyText: { color: coachDark.textSecondary, fontSize: 14, fontFamily: coachFonts.bodySemiBold, textDecorationLine: "underline" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -152,7 +168,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
   },
-  headerTitle: { color: colors.white, fontSize: 24, fontFamily: fonts.heading, letterSpacing: 1 },
   viewfinder: {
     width: VF_SIZE,
     height: VF_SIZE,
@@ -165,13 +180,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: CORNER_SIZE,
     height: CORNER_SIZE,
-    borderColor: colors.coral,
+    borderColor: coachDark.limeOnDark,
   },
   topLeft: { top: 0, left: 0, borderTopWidth: CORNER_THICKNESS, borderLeftWidth: CORNER_THICKNESS },
   topRight: { top: 0, right: 0, borderTopWidth: CORNER_THICKNESS, borderRightWidth: CORNER_THICKNESS },
   bottomLeft: { bottom: 0, left: 0, borderBottomWidth: CORNER_THICKNESS, borderLeftWidth: CORNER_THICKNESS },
   bottomRight: { bottom: 0, right: 0, borderBottomWidth: CORNER_THICKNESS, borderRightWidth: CORNER_THICKNESS },
-  hint: { color: "rgba(255,255,255,0.7)", fontFamily: fonts.body, textAlign: "center", marginTop: 16, fontSize: 13 },
+  hint: { color: coachDark.textSecondary, fontFamily: coachFonts.body, textAlign: "center", marginTop: 16, fontSize: 13 },
   controls: {
     position: "absolute",
     bottom: 40,
@@ -194,14 +209,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.25)",
   },
-  uploadLabel: { color: "rgba(255,255,255,0.8)", fontSize: 11, fontFamily: fonts.body },
+  uploadLabel: { color: coachDark.textSecondary, fontSize: 11, fontFamily: coachFonts.body },
   captureOuter: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.coral + "40",
+    backgroundColor: coachColors.coralPressed + "40",
     borderWidth: 3,
-    borderColor: colors.coral,
+    borderColor: coachColors.coralPressed,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -209,6 +224,6 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: colors.coral,
+    backgroundColor: coachColors.coralPressed,
   },
 });

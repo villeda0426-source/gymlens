@@ -194,7 +194,7 @@ export default function HomeScreen() {
                   {t("home.today_progress", { done: completedExerciseIds.length, total: totalExercises })}
                 </Text>
               ) : null}
-              <TouchableOpacity style={styles.startWorkoutButton} onPress={() => router.push("/plan")}>
+              <TouchableOpacity style={styles.startWorkoutButton} onPress={() => router.push("/workout-session")}>
                 <Ionicons name="play" size={16} color={coachColors.card} />
                 <Text style={styles.startWorkoutText}>{t("home.start_workout")}</Text>
               </TouchableOpacity>

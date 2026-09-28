@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import SafeScreen from "@/components/Layout/SafeScreen";
 import { colors, coachColors, coachFonts, fonts, radii, spacing } from "@/constants/theme";
@@ -99,6 +99,7 @@ function getCoachResponseText(response: CoachResponse): string {
 export default function TrainerScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const { ask } = useLocalSearchParams<{ ask?: string }>();
   const scrollRef = useRef<ScrollView>(null);
   const abortRef = useRef<AbortController | null>(null);
   const voiceDraftSeedRef = useRef("");
@@ -211,6 +212,16 @@ export default function TrainerScreen() {
       }
     });
   }, [addConversationMessage, conversation.length, enterCoachChat, hasLoaded, latestWorkoutReview, setLatestWorkoutReview, t, user]);
+
+  useEffect(() => {
+    // Coach Forward Phase 6: AskCoachCard (Equipment) navigates here with a
+    // pre-composed question. Pre-fill the composer rather than auto-sending
+    // — the existing chat-send path is still the user's own tap.
+    if (!ask) return;
+    if (!hasEnteredCoachChat) enterCoachChat();
+    setDraft(ask);
+    router.setParams({ ask: undefined });
+  }, [ask]);
 
   useEffect(() => {
     if (authLoading || user) return;

@@ -1,3 +1,13 @@
+// Coach Forward Equipment detail — Phase 6.
+//
+// Keeps every existing feature (save/share, confidence badge, category +
+// difficulty tags, tutorial/safety/videos/workout-calculator tabs) — the
+// mockup's single scroll with no tabs is a simplified illustration; the
+// real screen has more to show than that mockup depicts, so tabs stay.
+// Restyled inline (this screen doesn't use the shared DetailTabBar/
+// TutorialSteps/SafetyTips/VideoList components — Plan and Avatar do, and
+// those two screens are outside this redesign, so those shared files are
+// deliberately left untouched rather than restyled here).
 import React, { useEffect, useState, useRef } from "react";
 import {
   View,
@@ -13,25 +23,28 @@ import {
   TextInput,
   Switch,
   Alert,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import * as Haptics from "expo-haptics";
 import * as Sharing from "expo-sharing";
 import { captureScreen } from "react-native-view-shot";
-import SafeScreen from "@/components/Layout/SafeScreen";
 import MuscleGroupTags from "@/components/Equipment/MuscleGroupTags";
 import MuscleMapView from "@/components/Equipment/MuscleMapView";
+import AskCoachCard from "@/components/Coach/AskCoachCard";
 import { useEquipmentStore } from "@/store/equipmentStore";
 import { useAuthStore } from "@/store/authStore";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts, radii, spacing } from "@/constants/theme";
 import { apiFetch } from "@/lib/api";
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  beginner: colors.lime,
-  intermediate: "#f59e0b",
-  advanced: colors.coral,
+  beginner: coachColors.limeText,
+  intermediate: "#c99700",
+  advanced: coachColors.coral,
 };
 
 const TABS = ["tutorial", "safety", "videos", "workout"] as const;
@@ -42,6 +55,7 @@ export default function EquipmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const isEs = i18n.language === "es";
 
   const { currentResult, toggleSave, loadSavedIds, savedIds } = useEquipmentStore();
@@ -188,6 +202,13 @@ export default function EquipmentDetailScreen() {
     }
   };
 
+  const handleAddToTodaysWorkout = () => {
+    router.push({
+      pathname: "/workout-session",
+      params: { exercise: name, muscles: (equipment.muscle_groups || []).join(",") },
+    });
+  };
+
   const calcWeight = (): string => {
     const bw = parseFloat(bodyWeight);
     if (!bw || !weightFactor) return "—";
@@ -198,39 +219,35 @@ export default function EquipmentDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeScreen>
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.coral} size="large" />
-        </View>
-      </SafeScreen>
+      <View style={styles.center}>
+        <ActivityIndicator color={coachColors.coral} size="large" />
+      </View>
     );
   }
 
   if (!equipment) {
     return (
-      <SafeScreen>
-        <View style={styles.center}>
-          <Text style={styles.errorEmoji}>⚠️</Text>
-          <Text style={styles.errorText}>{t("equipment.could_not_load_equipment")}</Text>
-          {fetchError && (
-            <Text style={styles.errorDetail}>{fetchError}</Text>
-          )}
-          <View style={styles.errorActions}>
-            <TouchableOpacity onPress={fetchEquipment} style={styles.backButton}>
-              <Text style={styles.backText}>{t("equipment.retry")}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButtonOutline}>
-              <Text style={styles.backButtonOutlineText}>{t("equipment.go_back")}</Text>
-            </TouchableOpacity>
-          </View>
+      <View style={styles.center}>
+        <Text style={styles.errorEmoji}>⚠️</Text>
+        <Text style={styles.errorText}>{t("equipment.could_not_load_equipment")}</Text>
+        {fetchError && (
+          <Text style={styles.errorDetail}>{fetchError}</Text>
+        )}
+        <View style={styles.errorActions}>
+          <TouchableOpacity onPress={fetchEquipment} style={styles.backButton}>
+            <Text style={styles.backText}>{t("equipment.retry")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButtonOutline}>
+            <Text style={styles.backButtonOutlineText}>{t("equipment.go_back")}</Text>
+          </TouchableOpacity>
         </View>
-      </SafeScreen>
+      </View>
     );
   }
 
   const name = isEs && equipment.name_es ? equipment.name_es : equipment.name;
   const description = isEs && equipment.description_es ? equipment.description_es : equipment.description;
-  const difficultyColor = DIFFICULTY_COLORS[equipment.difficulty] || "#888888";
+  const difficultyColor = DIFFICULTY_COLORS[equipment.difficulty] || coachColors.textSecondary;
   const saved = equipment.id ? savedIds.includes(equipment.id) : false;
 
   const tutorials = equipment.tutorial_steps || [];
@@ -244,39 +261,34 @@ export default function EquipmentDetailScreen() {
   };
 
   return (
-    <SafeScreen edges={["top"]} style={{ flex: 1 }}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backIcon}>‹</Text>
+    <View style={styles.screen}>
+      <StatusBar style="light" />
+      {/* Navy hero — muscle diagram with back/save overlaid, per the mockup */}
+      <View style={styles.hero}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={[styles.heroBackBtn, { top: insets.top + spacing.sm }]}
+        >
+          <Ionicons name="chevron-back" size={20} color={coachColors.card} />
         </TouchableOpacity>
-        <View style={styles.headerActions}>
-          <TouchableOpacity onPress={handleSave} style={[styles.actionBtn, saved && styles.actionBtnSaved]}>
-            <Ionicons
-              name={saved ? "bookmark" : "bookmark-outline"}
-              size={21}
-              color={saved ? colors.coral : colors.textMuted}
-            />
-            <Text style={[styles.actionLabel, saved && styles.actionLabelSaved]}>
-              {saved ? t("equipment.saved") : t("common.save")}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleShare} style={styles.actionBtn}>
-            <Ionicons name="share-outline" size={22} color={colors.textMuted} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          onPress={handleSave}
+          style={[styles.heroSaveBtn, { top: insets.top + spacing.sm }]}
+          accessibilityRole="button"
+        >
+          <Ionicons name={saved ? "bookmark" : "bookmark-outline"} size={20} color={coachColors.card} />
+        </TouchableOpacity>
+        <MuscleMapView muscleGroups={equipment.muscle_groups || []} category={equipment.category} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Hero — muscle diagram */}
-        <View style={styles.heroMuscle}>
-          <MuscleMapView
-            muscleGroups={equipment.muscle_groups || []}
-            category={equipment.category}
-          />
-        </View>
-
+      <ScrollView style={styles.sheet} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={handleShare} style={styles.shareBtn}>
+              <Ionicons name="share-outline" size={20} color={coachColors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
           {equipment.confidence && (
             <View style={styles.confidenceBadge}>
               <Text style={styles.confidenceText}>
@@ -345,9 +357,7 @@ export default function EquipmentDetailScreen() {
                   activeOpacity={0.8}
                 >
                   <View style={styles.stepHeader}>
-                    <View style={styles.stepNumber}>
-                      <Text style={styles.stepNumberText}>{step.step || index + 1}</Text>
-                    </View>
+                    <Text style={styles.stepNumberText}>{String(step.step || index + 1).padStart(2, "0")}</Text>
                     <Text style={styles.stepInstruction} numberOfLines={expandedStep === index ? undefined : 2}>
                       {isEs && step.instruction_es ? step.instruction_es : step.instruction}
                     </Text>
@@ -376,7 +386,7 @@ export default function EquipmentDetailScreen() {
             <View style={styles.tabContent}>
               {videosLoading ? (
                 <View style={styles.videosLoading}>
-                  <ActivityIndicator color={colors.coral} />
+                  <ActivityIndicator color={coachColors.coral} />
                   <Text style={styles.videosLoadingText}>{t("equipment.videos_loading")}</Text>
                 </View>
               ) : videos.length === 0 && videosFetched ? (
@@ -429,7 +439,7 @@ export default function EquipmentDetailScreen() {
             <View style={styles.tabContent}>
               {weightFactorLoading ? (
                 <View style={styles.videosLoading}>
-                  <ActivityIndicator color={colors.coral} />
+                  <ActivityIndicator color={coachColors.coral} />
                   <Text style={styles.videosLoadingText}>{t("equipment.calculating")}</Text>
                 </View>
               ) : (
@@ -440,7 +450,7 @@ export default function EquipmentDetailScreen() {
                       <TextInput
                         style={styles.calcInput}
                         placeholder={t("equipment.body_weight_placeholder")}
-                        placeholderTextColor={colors.textMuted}
+                        placeholderTextColor={coachColors.textSecondary}
                         keyboardType="numeric"
                         value={bodyWeight}
                         onChangeText={setBodyWeight}
@@ -450,8 +460,8 @@ export default function EquipmentDetailScreen() {
                         <Switch
                           value={!useLbs}
                           onValueChange={(v) => setUseLbs(!v)}
-                          trackColor={{ false: colors.coral, true: colors.coral }}
-                          thumbColor={colors.white}
+                          trackColor={{ false: coachColors.coral, true: coachColors.coral }}
+                          thumbColor={coachColors.card}
                         />
                         <Text style={[styles.unitText, !useLbs && styles.unitActive]}>kg</Text>
                       </View>
@@ -502,8 +512,22 @@ export default function EquipmentDetailScreen() {
               )}
             </View>
           )}
+
+          <View style={styles.askCoachWrap}>
+            <AskCoachCard equipmentName={name} />
+          </View>
         </View>
       </ScrollView>
+
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.lg }]}>
+        <View style={styles.safetyRow}>
+          <Ionicons name="shield-checkmark-outline" size={18} color={coachColors.amberIcon} />
+          <Text style={styles.safetyRowText}>{t("equipment.safety_pain_caution")}</Text>
+        </View>
+        <TouchableOpacity style={styles.addToWorkoutButton} onPress={handleAddToTodaysWorkout}>
+          <Text style={styles.addToWorkoutText}>{t("equipment.add_to_todays_workout")}</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Toast */}
       <Animated.View
@@ -518,63 +542,71 @@ export default function EquipmentDetailScreen() {
       >
         <Text style={styles.toastText}>{toastMsg}</Text>
       </Animated.View>
-    </SafeScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
+  screen: { flex: 1, backgroundColor: coachColors.coachNavy },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, backgroundColor: coachColors.bg },
   errorEmoji: { fontSize: 48, marginBottom: 16 },
-  errorText: { color: colors.text, fontSize: 18, fontFamily: fonts.bold, marginBottom: 8, textAlign: "center" },
-  errorDetail: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.body, textAlign: "center", marginBottom: 24, lineHeight: 18 },
+  errorText: { color: coachColors.text, fontSize: 18, fontFamily: coachFonts.bodyBold, marginBottom: 8, textAlign: "center" },
+  errorDetail: { color: coachColors.textSecondary, fontSize: 13, fontFamily: coachFonts.body, textAlign: "center", marginBottom: 24, lineHeight: 18 },
   errorActions: { flexDirection: "row", gap: 12 },
-  backButton: { backgroundColor: colors.coral, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 },
-  backText: { color: colors.white, fontFamily: fonts.bold },
-  backButtonOutline: { borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 },
-  backButtonOutlineText: { color: colors.textSecondary, fontFamily: fonts.bold },
-  header: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: 16, paddingVertical: 12,
+  backButton: { backgroundColor: coachColors.coralPressed, borderRadius: radii.pill, paddingHorizontal: 20, paddingVertical: 10 },
+  backText: { color: coachColors.card, fontFamily: coachFonts.bodyBold },
+  backButtonOutline: { borderWidth: 1, borderColor: coachColors.border, borderRadius: radii.pill, paddingHorizontal: 20, paddingVertical: 10 },
+  backButtonOutlineText: { color: coachColors.textSecondary, fontFamily: coachFonts.bodyBold },
+  hero: { height: 220, position: "relative", alignItems: "center", justifyContent: "center" },
+  heroBackBtn: {
+    position: "absolute",
+    left: spacing.xl,
+    width: 44,
+    height: 44,
+    borderRadius: radii.pill,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
   },
-  backBtn: { padding: 8 },
-  backIcon: { color: colors.text, fontSize: 32, fontWeight: "300", lineHeight: 32 },
-  headerActions: { flexDirection: "row", gap: 8 },
-  actionBtn: {
-    padding: 8, borderRadius: 10, flexDirection: "row", alignItems: "center", gap: 4,
+  heroSaveBtn: {
+    position: "absolute",
+    right: spacing.xl,
+    width: 44,
+    height: 44,
+    borderRadius: radii.pill,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
   },
-  actionBtnSaved: { backgroundColor: colors.coral + "18", borderWidth: 1, borderColor: colors.coral + "40" },
-  actionLabel: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.semiBold },
-  actionLabelSaved: { color: colors.coral },
-  heroMuscle: {
-    backgroundColor: colors.bg,
-    paddingTop: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-  },
-  content: { padding: 20 },
+  sheet: { flex: 1, backgroundColor: coachColors.bg, borderTopLeftRadius: radii.sheet, borderTopRightRadius: radii.sheet },
+  content: { padding: spacing.xl, paddingBottom: 180 },
+  headerRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 4 },
+  shareBtn: { padding: 8 },
   confidenceBadge: {
-    backgroundColor: colors.coral + "18", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4,
+    backgroundColor: coachColors.coral + "18", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4,
     alignSelf: "flex-start", marginBottom: 12,
   },
-  confidenceText: { color: colors.coral, fontSize: 11, fontFamily: fonts.semiBold },
-  name: { color: colors.text, fontSize: 28, fontFamily: fonts.heading, marginBottom: 8, lineHeight: 34 },
-  description: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body, lineHeight: 22, marginBottom: 16 },
-  metaRow: { flexDirection: "row", gap: 8, marginBottom: 20 },
+  confidenceText: { color: coachColors.coral, fontSize: 11, fontFamily: coachFonts.bodySemiBold },
+  name: { color: coachColors.text, fontSize: 32, fontFamily: coachFonts.headingExtraBold, marginBottom: 8, lineHeight: 36, letterSpacing: -0.5 },
+  description: { color: coachColors.textSecondary, fontSize: 14, fontFamily: coachFonts.body, lineHeight: 22, marginBottom: 16 },
+  metaRow: { flexDirection: "row", gap: 8, marginBottom: 20, flexWrap: "wrap" },
   categoryTag: {
-    backgroundColor: colors.input, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5,
+    backgroundColor: coachColors.coral, borderRadius: radii.pill, paddingHorizontal: 12, paddingVertical: 6,
   },
-  categoryText: { color: colors.text, fontSize: 12, fontFamily: fonts.semiBold, textTransform: "uppercase" },
-  difficultyTag: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5 },
-  difficultyText: { fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase" },
+  categoryText: { color: coachColors.card, fontSize: 13, fontFamily: coachFonts.bodyExtraBold },
+  difficultyTag: { borderRadius: radii.pill, borderWidth: 1.5, paddingHorizontal: 12, paddingVertical: 5 },
+  difficultyText: { fontSize: 13, fontFamily: coachFonts.bodySemiBold },
   section: { marginBottom: 20 },
-  sectionTitle: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 },
+  sectionTitle: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.bodyExtraBold, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 },
   tabBarWrap: {
     flexDirection: "row",
-    backgroundColor: colors.input,
-    borderRadius: 12,
+    backgroundColor: coachColors.card,
+    borderRadius: radii.card,
     padding: 4,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: coachColors.border,
     marginBottom: 20,
     gap: 3,
   },
@@ -583,118 +615,136 @@ const styles = StyleSheet.create({
     height: 42,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 9,
+    borderRadius: radii.card - 4,
     paddingHorizontal: 4,
   },
   tabActive: {
-    backgroundColor: colors.coral,
-    shadowColor: colors.coral,
-    shadowOpacity: 0.18,
-    shadowRadius: 7,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    backgroundColor: coachColors.coralPressed,
+    ...Platform.select({
+      ios: { shadowColor: coachColors.coral, shadowOpacity: 0.25, shadowRadius: 7, shadowOffset: { width: 0, height: 3 } },
+      android: { elevation: 2 },
+      default: {},
+    }),
   },
-  tabText: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.semiBold, textAlign: "center" },
-  tabTextActive: { color: colors.white },
+  tabText: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.bodySemiBold, textAlign: "center" },
+  tabTextActive: { color: coachColors.card },
   tabContent: { gap: 12 },
   stepCard: {
-    backgroundColor: colors.card, borderRadius: 12, padding: 16,
-    borderWidth: 1, borderColor: colors.cardBorder,
+    backgroundColor: coachColors.card, borderRadius: radii.card, padding: spacing.lg,
+    borderWidth: 1, borderColor: coachColors.border,
   },
-  stepHeader: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
-  stepNumber: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: colors.coral, alignItems: "center", justifyContent: "center", flexShrink: 0,
-  },
-  stepNumberText: { color: colors.white, fontSize: 14, fontFamily: fonts.extraBold },
-  stepInstruction: { color: colors.text, fontSize: 14, fontFamily: fonts.body, lineHeight: 22, flex: 1 },
+  stepHeader: { flexDirection: "row", alignItems: "baseline", gap: spacing.md },
+  stepNumberText: { width: 30, color: coachColors.coral, fontSize: 20, fontFamily: coachFonts.headingExtraBold },
+  stepInstruction: { color: coachColors.text, fontSize: 14, fontFamily: coachFonts.body, lineHeight: 22, flex: 1 },
   safetyItem: {
     flexDirection: "row", gap: 12,
-    backgroundColor: colors.coral + "0f", borderRadius: 12, padding: 16,
-    borderWidth: 1, borderColor: colors.coral + "30",
+    backgroundColor: "#faf1d9", borderRadius: radii.card, padding: spacing.lg,
   },
   safetyIcon: { fontSize: 18, flexShrink: 0 },
-  safetyText: { color: colors.text, fontSize: 14, fontFamily: fonts.body, lineHeight: 22, flex: 1 },
+  safetyText: { color: coachColors.text, fontSize: 14, fontFamily: coachFonts.body, lineHeight: 22, flex: 1 },
   toast: {
     position: "absolute",
-    bottom: 100,
+    bottom: 130,
     alignSelf: "center",
-    backgroundColor: colors.text,
+    backgroundColor: coachColors.text,
     borderRadius: 24,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
+      android: { elevation: 4 },
+      default: { boxShadow: "0 4px 8px rgba(0,0,0,0.15)" },
+    }),
   },
-  toastText: { color: colors.white, fontSize: 14, fontFamily: fonts.semiBold },
-  noVideos: { color: colors.textMuted, fontFamily: fonts.body, textAlign: "center", paddingVertical: 16 },
+  toastText: { color: coachColors.card, fontSize: 14, fontFamily: coachFonts.bodySemiBold },
+  noVideos: { color: coachColors.textSecondary, fontFamily: coachFonts.body, textAlign: "center", paddingVertical: 16 },
   videosLoading: { alignItems: "center", paddingVertical: 40, gap: 12 },
-  videosLoadingText: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.body },
+  videosLoadingText: { color: coachColors.textSecondary, fontSize: 13, fontFamily: coachFonts.body },
   videosEmpty: { alignItems: "center", paddingVertical: 32, gap: 16 },
-  retryVideos: { backgroundColor: colors.card, borderRadius: 10, borderWidth: 1, borderColor: colors.cardBorder, paddingHorizontal: 20, paddingVertical: 8 },
-  retryVideosText: { color: colors.coral, fontSize: 13, fontFamily: fonts.bold },
+  retryVideos: { backgroundColor: coachColors.card, borderRadius: 10, borderWidth: 1, borderColor: coachColors.border, paddingHorizontal: 20, paddingVertical: 8 },
+  retryVideosText: { color: coachColors.coral, fontSize: 13, fontFamily: coachFonts.bodyBold },
   videoCard: {
-    flexDirection: "row", backgroundColor: colors.card,
-    borderRadius: 12, overflow: "hidden",
-    borderWidth: 1, borderColor: colors.cardBorder,
+    flexDirection: "row", backgroundColor: coachColors.card,
+    borderRadius: radii.card, overflow: "hidden",
+    borderWidth: 1, borderColor: coachColors.border,
   },
   videoThumb: { width: 120, height: 80 },
   videoThumbPlaceholder: {
     width: 120, height: 80,
-    backgroundColor: colors.input, alignItems: "center", justifyContent: "center",
+    backgroundColor: coachColors.bg, alignItems: "center", justifyContent: "center",
   },
   videoInfo: { flex: 1, padding: 12, justifyContent: "space-between" },
   curatedBadge: {
-    backgroundColor: colors.lime + "18", borderRadius: 4,
+    backgroundColor: "#eef6e0", borderRadius: 4,
     paddingHorizontal: 6, paddingVertical: 2, alignSelf: "flex-start", marginBottom: 4,
   },
-  curatedText: { color: colors.lime, fontSize: 10, fontFamily: fonts.bold },
-  videoTitle: { color: colors.text, fontSize: 13, fontFamily: fonts.body, lineHeight: 18 },
-  videoDuration: { color: colors.textMuted, fontSize: 11, fontFamily: fonts.body, marginTop: 4 },
+  curatedText: { color: coachColors.limeText, fontSize: 10, fontFamily: coachFonts.bodyBold },
+  videoTitle: { color: coachColors.text, fontSize: 13, fontFamily: coachFonts.body, lineHeight: 18 },
+  videoDuration: { color: coachColors.textSecondary, fontSize: 11, fontFamily: coachFonts.body, marginTop: 4 },
 
   // Workout calculator styles
   calcCard: {
-    backgroundColor: colors.card, borderRadius: 14, padding: 16,
-    borderWidth: 1, borderColor: colors.cardBorder,
+    backgroundColor: coachColors.card, borderRadius: radii.card, padding: spacing.lg,
+    borderWidth: 1, borderColor: coachColors.border,
   },
   calcLabel: {
-    color: colors.textMuted, fontSize: 11, fontFamily: fonts.bold,
+    color: coachColors.textSecondary, fontSize: 11, fontFamily: coachFonts.bodyExtraBold,
     textTransform: "uppercase", letterSpacing: 1, marginBottom: 10,
   },
   calcInputRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   calcInput: {
-    flex: 1, backgroundColor: colors.input, borderRadius: 10,
+    flex: 1, backgroundColor: coachColors.bg, borderRadius: 10,
     paddingHorizontal: 14, paddingVertical: 12,
-    color: colors.text, fontSize: 18, fontFamily: fonts.bold,
-    borderWidth: 1, borderColor: colors.cardBorder,
+    color: coachColors.text, fontSize: 18, fontFamily: coachFonts.bodyBold,
+    borderWidth: 1, borderColor: coachColors.border,
   },
   unitToggle: { flexDirection: "row", alignItems: "center", gap: 6 },
-  unitText: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.semiBold },
-  unitActive: { color: colors.coral, fontFamily: fonts.bold },
+  unitText: { color: coachColors.textSecondary, fontSize: 13, fontFamily: coachFonts.bodySemiBold },
+  unitActive: { color: coachColors.coral, fontFamily: coachFonts.bodyBold },
   levelRow: { flexDirection: "row", gap: 8 },
   levelBtn: {
     flex: 1, paddingVertical: 10, alignItems: "center",
-    backgroundColor: colors.input, borderRadius: 10,
-    borderWidth: 1, borderColor: colors.cardBorder,
+    backgroundColor: coachColors.bg, borderRadius: 10,
+    borderWidth: 1, borderColor: coachColors.border,
   },
-  levelBtnActive: { backgroundColor: colors.coral, borderColor: colors.coral },
-  levelBtnText: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.semiBold },
-  levelBtnTextActive: { color: colors.white, fontFamily: fonts.bold },
+  levelBtnActive: { backgroundColor: coachColors.coralPressed, borderColor: coachColors.coralPressed },
+  levelBtnText: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.bodySemiBold },
+  levelBtnTextActive: { color: coachColors.card, fontFamily: coachFonts.bodyBold },
   resultsCard: {
-    backgroundColor: colors.coral + "0d", borderRadius: 14, padding: 20,
-    borderWidth: 1, borderColor: colors.coral + "30",
+    backgroundColor: coachColors.coral + "0d", borderRadius: radii.card, padding: 20,
+    borderWidth: 1, borderColor: coachColors.coral + "30",
   },
-  resultsTitle: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 },
-  resultsWeight: { color: colors.coral, fontSize: 40, fontFamily: fonts.heading, marginBottom: 16 },
-  resultsDivider: { height: 1, backgroundColor: colors.coral + "30", marginBottom: 16 },
+  resultsTitle: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.bodyExtraBold, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 },
+  resultsWeight: { color: coachColors.coral, fontSize: 40, fontFamily: coachFonts.headingExtraBold, marginBottom: 16 },
+  resultsDivider: { height: 1, backgroundColor: coachColors.coral + "30", marginBottom: 16 },
   resultRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  resultKey: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.body },
-  resultVal: { color: colors.text, fontSize: 13, fontFamily: fonts.bold },
+  resultKey: { color: coachColors.textSecondary, fontSize: 13, fontFamily: coachFonts.body },
+  resultVal: { color: coachColors.text, fontSize: 13, fontFamily: coachFonts.bodyBold },
   tipBox: {
-    marginTop: 12, backgroundColor: colors.lime + "12", borderRadius: 10,
-    padding: 12, borderWidth: 1, borderColor: colors.lime + "30",
+    marginTop: 12, backgroundColor: "#eef6e0", borderRadius: 10,
+    padding: 12,
   },
-  tipBoxText: { color: colors.lime, fontSize: 12, fontFamily: fonts.body, lineHeight: 18 },
+  tipBoxText: { color: coachColors.limeText, fontSize: 12, fontFamily: coachFonts.body, lineHeight: 18 },
+
+  askCoachWrap: { marginTop: 20 },
+  bottomBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: coachColors.bg,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    gap: spacing.sm,
+  },
+  safetyRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  safetyRowText: { color: coachColors.amberText, fontSize: 13, fontFamily: coachFonts.body },
+  addToWorkoutButton: {
+    height: 56,
+    borderRadius: radii.pill,
+    backgroundColor: coachColors.coralPressed,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addToWorkoutText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 17 },
 });

@@ -12,6 +12,7 @@
     "back": "Atrás",
     "next": "Siguiente",
     "done": "Listo",
+    "continue": "Continuar",
     "or": "o",
     "and": "y"
   },
@@ -41,7 +42,15 @@
     "permission_denied_title": "El acceso a la cámara está desactivado",
     "permission_denied_message": "Para escanear equipos, permite el acceso a la cámara para SpotLift en Configuración. Puedes seguir usando el resto de la app sin activarlo.",
     "open_settings": "Abrir Configuración",
+    "search_manually": "Buscar manualmente",
     "no_camera": "Cámara no disponible"
+  },
+  "scan_result": {
+    "looks_like": "Parece ser",
+    "strong_match": "Coincidencia fuerte",
+    "possible_match": "Posible coincidencia",
+    "not_this_one": "No es este",
+    "show_me": "Mostrar"
   },
   "home": {
     "good_morning": "Buenos días",
@@ -146,6 +155,13 @@
     "calc_note": "Úsalo como estimación para la primera serie. Si la técnica se rompe o el RPE pasa de 8, baja la carga.",
     "personalized_tip": "Personalizado para {{name}} según tu peso corporal",
     "add_weight_tip": "Agrega tu peso corporal arriba y esto se actualizará al instante.",
+    "ask_coach_title": "Pregúntale a Coach sobre esta máquina",
+    "ask_coach_starting_weight": "¿Con qué peso debería empezar?",
+    "ask_coach_easier_option": "¿Hay una variante más fácil?",
+    "ask_coach_context": "{{question}} (pregunta sobre {{equipment}})",
+    "add_to_todays_workout": "Agregar a la rutina de hoy",
+    "safety_pain_caution": "Detente si sientes dolor agudo.",
+    "beginner_friendly": "Apto para principiantes",
     "sets_reps_by_level": {
       "Beginner": "3 series × 10–12 reps",
       "Intermediate": "4 series × 8–10 reps",
@@ -392,6 +408,32 @@
     "workout_privacy": "Esta actualización semanal usa las reglas de progresión de SpotLift. Solo se consulta a OpenAI cuando tus comentarios requieren el criterio de Coach.",
     "build_next": "Revisar el bloque y crear mi próximo plan",
     "save_review": "Guardar y revisar la semana"
+  },
+  "workout_session": {
+    "end_workout": "Terminar rutina",
+    "pause": "Pausar",
+    "resume": "Reanudar",
+    "quick_session": "Sesión rápida",
+    "set_label": "Serie {{current}} de {{total}}",
+    "kg": "KG",
+    "lbs": "LBS",
+    "reps": "REPS",
+    "decrease_weight": "Disminuir peso",
+    "increase_weight": "Aumentar peso",
+    "decrease_reps": "Disminuir repeticiones",
+    "increase_reps": "Aumentar repeticiones",
+    "ask_coach_about_exercise": "Pregúntale a Coach sobre este ejercicio",
+    "ask_coach_prefill": "¿Algún consejo para {{exercise}}?",
+    "log_set": "Registrar serie",
+    "next_label": "Siguiente: {{name}}",
+    "rest_label": "Descanso {{time}}",
+    "empty_title": "No hay rutina para empezar",
+    "empty_body": "Crea un plan con Coach, o escanea una máquina, para empezar una sesión aquí.",
+    "talk_to_coach": "Hablar con Coach",
+    "complete_title": "Rutina completa",
+    "complete_body_plan": "Buen trabajo. Tu progreso está guardado.",
+    "complete_body_adhoc": "Buen trabajo.",
+    "done_button": "Listo"
   },
   "plan": {
     "title": "Esta semana",
