@@ -24,7 +24,9 @@
   "dependencies": {
     "@expo-google-fonts/barlow-condensed": "latest",
     "@expo-google-fonts/dm-sans": "latest",
+    "@expo-google-fonts/figtree": "^0.4.1",
     "@expo-google-fonts/nunito": "^0.4.2",
+    "@expo-google-fonts/outfit": "^0.4.3",
     "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo-google-fonts/space-mono": "latest",
     "@expo/vector-icons": "^15.1.1",
