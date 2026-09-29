@@ -174,10 +174,24 @@ export async function runCoachRequest(
     return response;
   }
 
-  const safetyForced = routeDecision.reason.startsWith("history:");
-  const guardedOptions = safetyForced
-    ? { ...coachOptions, allowStaticFallback: false, forceSafetyReview: true }
-    : coachOptions;
+  if (routeDecision.route === "needs_review") {
+    // This account has never completed plan-setup's safety-triage step (or
+    // its profile is unreadable). No AI call: send the person back to
+    // plan-setup step 5 instead of silently asking the model to "be
+    // careful". Not persisted as a coach_event — it isn't a Coach reply,
+    // and the fixed event_type enum has no slot for it.
+    const resolvedLanguage = language ?? detectReliableLanguage(
+      [req.body?.userMessage, req.body?.question, req.body?.newGoal].filter((v): v is string => typeof v === "string").join(" ")
+    );
+    const message = resolvedLanguage === "es"
+      ? "Una pregunta rápida antes de armar tu plan."
+      : "One quick question before I build your plan.";
+    return { status: "needs_safety_review" as const, message };
+  }
+
+  const staticFallbackAllowed = !routeDecision.reason.startsWith("history:");
+  const guardedOptions = staticFallbackAllowed ? coachOptions : { ...coachOptions, allowStaticFallback: false };
+  const ageBand = history?.profile?.ageBand;
 
   if (mode === "intake") {
     const userMessage = typeof req.body?.userMessage === "string" ? req.body.userMessage.trim() : "";
@@ -185,13 +199,13 @@ export async function runCoachRequest(
       throw new CoachRequestError("userMessage is required for intake.");
     }
 
-    const response = await intakeTurn(units, getHistory(req.body?.history), userMessage, guardedOptions, language);
+    const response = await intakeTurn(units, getHistory(req.body?.history), userMessage, guardedOptions, language, ageBand);
     if (context?.userId && responseHasPlan(response)) void persistCoachPlan(supabase, context.userId, response.plan, "ai").catch(() => console.warn("[coach-history] AI plan persistence failed"));
     return response;
   }
 
   if (mode === "adapt") {
-    const response = await adaptPlan(units, getPlan(req.body?.currentPlan), req.body?.logs ?? [], guardedOptions, language);
+    const response = await adaptPlan(units, getPlan(req.body?.currentPlan), req.body?.logs ?? [], guardedOptions, language, ageBand);
     if (context?.userId && responseHasPlan(response)) void persistCoachPlan(supabase, context.userId, response.plan, "ai").catch(() => console.warn("[coach-history] AI plan persistence failed"));
     return response;
   }
@@ -202,7 +216,7 @@ export async function runCoachRequest(
       throw new CoachRequestError("newGoal is required for update_goals.");
     }
 
-    const response = await updateGoals(units, getPlan(req.body?.currentPlan), newGoal, guardedOptions, language);
+    const response = await updateGoals(units, getPlan(req.body?.currentPlan), newGoal, guardedOptions, language, ageBand);
     if (context?.userId && responseHasPlan(response)) void persistCoachPlan(supabase, context.userId, response.plan, "ai").catch(() => console.warn("[coach-history] AI plan persistence failed"));
     return response;
   }
@@ -215,7 +229,7 @@ export async function runCoachRequest(
   const currentPlan = req.body?.currentPlan === undefined || req.body?.currentPlan === null
     ? null
     : getPlan(req.body.currentPlan);
-  return chatWithCoach(units, question, currentPlan, guardedOptions, language);
+  return chatWithCoach(units, question, currentPlan, guardedOptions, language, ageBand);
 }
 
 const JOB_RESULT_TTL_MS = 15 * 60 * 1000;
@@ -350,17 +364,19 @@ router.post("/jobs", async (req: Request, res: Response) => {
 
     if (error || !data) throw error || new Error("Coach job insert returned no data.");
 
-    // Rules-routed requests finish in milliseconds (no model call), so await
-    // them here: the client's first poll already sees the completed result
-    // instead of waiting out a poll interval for an already-finished job.
+    // Rules-routed and needs-review requests finish in milliseconds (no model
+    // call), so await them here: the client's first poll already sees the
+    // completed result instead of waiting out a poll interval for an
+    // already-finished job.
     const history = await loadCoachHistory(supabase, userId);
-    let routedToRules = false;
+    let routeShortCircuits = false;
     try {
-      routedToRules = routeBeforeCoachCall(req, mode, req.body.units, req.body?.language === "es" ? "es" : req.body?.language === "en" ? "en" : undefined, history).route === "rules";
+      const route = routeBeforeCoachCall(req, mode, req.body.units, req.body?.language === "es" ? "es" : req.body?.language === "en" ? "en" : undefined, history).route;
+      routeShortCircuits = route === "rules" || route === "needs_review";
     } catch {
-      routedToRules = false;
+      routeShortCircuits = false;
     }
-    if (routedToRules) {
+    if (routeShortCircuits) {
       await processCoachJob(data.id, userId, req.body, history);
     } else {
       void processCoachJob(data.id, userId, req.body, history);

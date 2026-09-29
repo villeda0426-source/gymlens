@@ -48,8 +48,13 @@ const PLANNING_SIGNAL =
   /\b(plan|program|workout|train|training|strength|stronger|muscle|hypertrophy|weight loss|lose weight|fat loss|fitness|lift|lifting|programa|entrenar|entrenamiento|entrenamientos|fuerza|m[uú]sculo|m[uú]sculos|musculatura|hipertrofia|adelgazar|perder peso|bajar de peso|grasa|acondicionamiento|levantar|gimnasio|ejercicio|ejercicios)\b/i;
 const DETAIL_SIGNAL =
   /\b(\d\s*(day|days|d[ií]a|d[ií]as|veces)|gym|home|bodyweight|dumbbell|barbell|machine|beginner|intermediate|advanced|injur|pain|limit|equipment|gimnasio|casa|peso corporal|sin equipo|mancuerna|mancuernas|barra|m[aá]quina|m[aá]quinas|principiante|intermedio|avanzad[oa]|lesi[oó]n|lesiones|dolor|limitaci[oó]n|equipo)\b/i;
+// This used to also match recent surgery, pregnancy, and uncontrolled
+// conditions and hard-stop on all of them. The plan-setup safety triage
+// (shared/planSetupTriage.ts) now handles those as "build cautiously, don't
+// withhold" cases instead — only acute, exercise-related emergency symptoms
+// (chest pain, fainting, dizziness) stay a hard stop everywhere else.
 const MEDICAL_RED_FLAG =
-  /\b(chest pain|faint(?:ed|ing)?|dizz(?:y|iness)|recent surgery|pregnan(?:t|cy)|uncontrolled (?:heart|cardiac|blood pressure|diabetes)|dolor (?:en el|de) pecho|dolor tor[aá]cico|desmay(?:o|os|ar|arme|é)|mareo|mareos|mare(?:ado|ada)|cirug[ií]a reciente|operaci[oó]n reciente|embaraz(?:o|ada)|(?:presi[oó]n|diabetes|coraz[oó]n|problema card[ií]aco)[^.]{0,20}(?:descontrolad[oa]|sin control|no controlad[oa]))\b/i;
+  /\b(chest pain|faint(?:ed|ing)?|dizz(?:y|iness)|dolor (?:en el|de) pecho|dolor tor[aá]cico|desmay(?:o|os|ar|arme|é)|mareo|mareos|mare(?:ado|ada))\b/i;
 
 const SPANISH_MARKER = /"language"\s*:\s*"es(?:-[A-Za-z]{2})?"/i;
 const SPANISH_SIGNAL =

@@ -1,11 +1,11 @@
 // Coach Forward chat bubble — Phase 3.
 //
-// User bubble: near-black, tail bottom-right. Assistant bubble: white card,
-// tail bottom-left. Matches the Coach.html mockup; no per-message avatar
-// (the screen header already carries the coach star, so repeating it on
-// every assistant row would be noise the mockup doesn't have either).
+// User bubble: navy, tail bottom-right. Assistant bubble: white card with a
+// 26pt coach avatar, tail bottom-left. Matches the Chat.png mockup. Max
+// bubble width 80%.
 import React from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { coachColors, coachFonts, radii } from "@/constants/theme";
 import { CoachMessage } from "@/lib/coachTrainer";
 
@@ -14,6 +14,11 @@ export default function CoachMessageBubble({ message }: { message: CoachMessage 
 
   return (
     <View style={[styles.row, isUser && styles.rowUser]}>
+      {!isUser ? (
+        <View style={styles.avatar}>
+          <Ionicons name="star" size={12} color={coachColors.coachGold} />
+        </View>
+      ) : null}
       <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
         <Text style={[styles.text, isUser && styles.userText]}>{message.content}</Text>
       </View>
@@ -22,10 +27,19 @@ export default function CoachMessageBubble({ message }: { message: CoachMessage 
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row" },
+  row: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
   rowUser: { justifyContent: "flex-end" },
+  avatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 999,
+    backgroundColor: coachColors.coachNavy,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
   bubble: {
-    maxWidth: "82%",
+    maxWidth: "80%",
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
@@ -43,7 +57,7 @@ const styles = StyleSheet.create({
     }),
   },
   userBubble: {
-    backgroundColor: coachColors.text,
+    backgroundColor: coachColors.coachNavy,
     borderTopLeftRadius: radii.card,
     borderTopRightRadius: radii.card,
     borderBottomLeftRadius: radii.card,

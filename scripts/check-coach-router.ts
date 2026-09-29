@@ -123,15 +123,27 @@ const reviewedProfile = {
   experienceLevel: "beginner" as const, goal: "hypertrophy", equipmentType: "full_gym",
   daysPerWeek: 3, ageBand: "adult_18_59" as const, safetyReviewedAt: new Date().toISOString(),
 };
-check("history is monotonic: missing, stale, limitation, age, and soreness force AI", () => {
+const expectNeedsReview = (d: RouteDecision, reasonPrefix?: string) => {
+  assert.equal(d.route, "needs_review", d.route === "rules" ? "was handled by rules but should need review" : d.route === "ai" ? `went to AI: ${d.reason}` : "");
+  if (d.route === "needs_review" && reasonPrefix) assert.ok(d.reason.startsWith(reasonPrefix), `reason was ${d.reason}`);
+};
+check("history is monotonic: an incomplete safety review always short-circuits before the AI, age never forces anything, limitation/soreness still force AI", () => {
   const routine = "I'm a beginner, build muscle, 3 days a week at a full gym, no injuries.";
   const context = (overrides: Record<string, unknown>) => ({ profile: reviewedProfile, activeLimitationTypes: [], recentEvents: [], loadError: false, ...overrides });
-  expectAi(intake(routine, { accountHistory: context({ profile: null }) }), "history:missing_profile");
+  // No profile at all, or a profile that has never completed (or has a null)
+  // safety_reviewed_at: no AI call at all, straight to plan-setup step 5.
+  expectNeedsReview(intake(routine, { accountHistory: context({ profile: null }) }), "history:needs_safety_review");
+  expectNeedsReview(intake(routine, { accountHistory: context({ profile: { ...reviewedProfile, safetyReviewedAt: null } }) }), "history:needs_safety_review");
+  // A stale-but-non-null review is no longer distinguished from "reviewed" —
+  // only null forces the detour, per the plan-setup decision.
+  expectRules(intake(routine, { accountHistory: context({ profile: { ...reviewedProfile, safetyReviewedAt: "2020-01-01T00:00:00.000Z" } }) }), "beginner_plan");
   expectAi(intake(routine, { accountHistory: context({ loadError: true }) }), "history:unavailable");
-  expectAi(intake(routine, { accountHistory: context({ profile: { ...reviewedProfile, ageBand: "under_18" } }) }), "history:under_18");
-  expectAi(intake(routine, { accountHistory: context({ profile: { ...reviewedProfile, ageBand: "over_59" } }) }), "history:over_59");
+  // Age never forces anything through account history anymore — it travels
+  // as plain CONTEXT into the model instead (see coachTrainerService.ts).
+  expectRules(intake(routine, { accountHistory: context({ profile: { ...reviewedProfile, ageBand: "under_18" } }) }), "beginner_plan");
+  expectRules(intake(routine, { accountHistory: context({ profile: { ...reviewedProfile, ageBand: "over_59" } }) }), "beginner_plan");
+  expectRules(intake(routine, { accountHistory: context({ profile: { ...reviewedProfile, ageBand: "unknown" } }) }), "beginner_plan");
   expectAi(intake(routine, { accountHistory: context({ activeLimitationTypes: ["knee"] }) }), "history:active_limitation");
-  expectAi(intake(routine, { accountHistory: context({ profile: { ...reviewedProfile, safetyReviewedAt: "2020-01-01T00:00:00.000Z" } }) }), "history:stale_safety_review");
   expectAi(intake(routine, { accountHistory: context({ recentEvents: [{ eventType: "soreness_reported", routeReason: "rule:soreness", createdAt: new Date().toISOString() }] }) }), "history:recent_soreness");
 });
 check("profile/message conflicts force AI rather than silently overriding account data", () => {

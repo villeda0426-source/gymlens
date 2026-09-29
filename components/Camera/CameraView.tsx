@@ -17,6 +17,7 @@ import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import LanguageToggle from "@/components/UI/LanguageToggle";
+import { useTabBarSpace } from "@/components/Navigation/FloatingTabBar";
 import { coachColors, coachDark, coachFonts } from "@/constants/theme";
 
 const { width, height } = Dimensions.get("window");
@@ -31,6 +32,7 @@ export default function CameraViewComponent({ onCapture }: CameraViewComponentPr
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<ExpoCameraView>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const tabBarSpace = useTabBarSpace();
 
   useEffect(() => {
     Animated.loop(
@@ -112,7 +114,7 @@ export default function CameraViewComponent({ onCapture }: CameraViewComponentPr
 
         <Text style={styles.hint}>{t("camera.capture")}</Text>
 
-        <View style={styles.controls}>
+        <View style={[styles.controls, { bottom: tabBarSpace }]}>
           <TouchableOpacity onPress={handleUpload} style={styles.uploadButton}>
             <View style={styles.uploadIconWrap}>
               <Ionicons name="images-outline" size={26} color={coachDark.text} />
@@ -189,7 +191,6 @@ const styles = StyleSheet.create({
   hint: { color: coachDark.textSecondary, fontFamily: coachFonts.body, textAlign: "center", marginTop: 16, fontSize: 13 },
   controls: {
     position: "absolute",
-    bottom: 40,
     left: 0,
     right: 0,
     flexDirection: "row",

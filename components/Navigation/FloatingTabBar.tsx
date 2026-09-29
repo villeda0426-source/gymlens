@@ -1,21 +1,30 @@
-// "Coach Forward" floating pill tab bar — Phase 2.
+// "Coach Forward" floating pill tab bar.
 //
-// Replaces the previous edge-to-edge tab bar with a floating white pill
-// (72pt tall, 16pt side inset, 22pt + safe-area from the bottom, soft
-// shadow). Labels are always visible (not just on the active tab). Scan is
-// a raised 56px coral circle in the center; Coach gets a gold star and an
-// optional unread-news dot badge.
+// Fully custom, absolutely-positioned floating bar (not a docked/reserved
+// layout slot — see useTabBarSpace below for why every tab screen has to
+// reserve its own bottom padding instead). 5 equal-width slots; Scan is a
+// 56px coral circle centered inside the pill; Coach gets a gold sparkle
+// icon and an optional unread-news dot.
 import React from "react";
 import { AccessibilityState, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
-import { coachColors, coachFonts, radii } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
-export const FLOATING_TAB_BAR_HEIGHT = 72;
-export const FLOATING_TAB_BAR_BOTTOM_INSET = 22;
-export const FLOATING_TAB_BAR_SIDE_INSET = 16;
+export const TAB_BAR_HEIGHT = 72;
+const SIDE = 16;
+const GAP_ABOVE_SAFE_AREA = 6;
+
+// The bar floats via `position: absolute`, so React Navigation reserves no
+// space for it — every tab screen has to add this as its own scroll
+// container's paddingBottom so content doesn't render underneath the pill.
+export function useTabBarSpace(): number {
+  const insets = useSafeAreaInsets();
+  return TAB_BAR_HEIGHT + Math.max(insets.bottom, 12) + GAP_ABOVE_SAFE_AREA + 16;
+}
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -24,11 +33,11 @@ type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
 // app/(tabs)/_layout.tsx, so file/route names don't need to change.
 const TAB_ORDER = ["index", "plan", "scan", "trainer", "profile"] as const;
 
-const ICONS: Record<string, { outline: IoniconsName; filled: IoniconsName }> = {
-  index: { outline: "home-outline", filled: "home" },
-  plan: { outline: "calendar-outline", filled: "calendar" },
-  trainer: { outline: "star-outline", filled: "star" },
-  profile: { outline: "person-outline", filled: "person" },
+const ICONS: Record<string, [IoniconsName, IoniconsName]> = {
+  index: ["home", "home-outline"],
+  plan: ["calendar", "calendar-outline"],
+  trainer: ["sparkles", "sparkles-outline"],
+  profile: ["person", "person-outline"],
 };
 
 const LABEL_KEYS: Record<string, string> = {
@@ -43,16 +52,12 @@ interface FloatingTabBarProps extends BottomTabBarProps {
   // No coach "unread news" source exists yet (Phase 3/4 introduce the real
   // suggestion/weekly-check-in state this should reflect). Defaults to no
   // badge rather than inventing a fake signal.
-  hasUnreadCoachNews?: boolean;
+  hasCoachNews?: boolean;
 }
 
-export default function FloatingTabBar({
-  state,
-  navigation,
-  insets,
-  hasUnreadCoachNews = false,
-}: FloatingTabBarProps) {
+export default function FloatingTabBar({ state, navigation, hasCoachNews = false }: FloatingTabBarProps) {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   const handlePress = (routeName: string, routeKey: string, isFocused: boolean) => {
     const event = navigation.emit({ type: "tabPress", target: routeKey, canPreventDefault: true });
@@ -62,19 +67,10 @@ export default function FloatingTabBar({
     }
   };
 
-  // Docked, not an absolute overlay: the navigator lays this component out
-  // as a normal flex sibling below the screen content (see BottomTabView),
-  // so reserving real height here is what keeps every tab screen's content
-  // from being covered by the pill. The pill itself is visually inset from
-  // the reserved slot's edges to read as "floating."
-  const bottomInset = insets.bottom + FLOATING_TAB_BAR_BOTTOM_INSET;
-
   return (
     <View
-      style={[
-        styles.wrapper,
-        { height: FLOATING_TAB_BAR_HEIGHT + bottomInset, paddingBottom: bottomInset },
-      ]}
+      pointerEvents="box-none"
+      style={[styles.wrap, { bottom: Math.max(insets.bottom, 12) + GAP_ABOVE_SAFE_AREA }]}
     >
       <View style={styles.bar}>
         {TAB_ORDER.map((name) => {
@@ -87,65 +83,49 @@ export default function FloatingTabBar({
 
           if (name === "scan") {
             return (
-              <Pressable
-                key={route.key}
-                accessibilityRole="button"
-                accessibilityLabel={label}
-                accessibilityState={accessibilityState}
-                hitSlop={8}
-                onPress={() => handlePress(route.name, route.key, isFocused)}
-                style={styles.item}
-              >
-                {({ pressed }) => (
-                  <>
-                    <View style={[styles.scanCircle, pressed && styles.scanCirclePressed]}>
-                      <Ionicons name="scan" size={26} color={coachColors.card} />
-                    </View>
-                    <Text style={styles.label} numberOfLines={1} maxFontSizeMultiplier={1.4}>
-                      {label}
-                    </Text>
-                  </>
-                )}
-              </Pressable>
+              <View key={route.key} style={styles.slot}>
+                <Pressable
+                  onPress={() => handlePress(route.name, route.key, isFocused)}
+                  accessibilityRole="button"
+                  accessibilityLabel={label}
+                  hitSlop={8}
+                  style={({ pressed }) => [styles.scan, pressed && styles.scanPressed]}
+                >
+                  <Ionicons name="scan" size={26} color={coachColors.card} />
+                </Pressable>
+              </View>
             );
           }
 
           const isCoach = name === "trainer";
-          const icon = ICONS[name][isFocused ? "filled" : "outline"];
-          const iconColor = isCoach
-            ? coachColors.coachGoldText
-            : isFocused
-              ? coachColors.coral
-              : coachColors.textSecondary;
+          const [on, off] = ICONS[name];
+          const tint = isFocused
+            ? (isCoach ? coachColors.coachNavy : coachColors.coralPressed)
+            : (isCoach ? coachColors.coachNavy : coachColors.textSecondary);
 
           return (
             <Pressable
               key={route.key}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isCoach && hasUnreadCoachNews
-                  ? `${label}, ${t("tabs.coach_unread_badge")}`
-                  : label
-              }
-              accessibilityState={accessibilityState}
-              hitSlop={8}
               onPress={() => handlePress(route.name, route.key, isFocused)}
-              style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+              style={styles.slot}
+              accessibilityRole="tab"
+              accessibilityState={accessibilityState}
+              accessibilityLabel={isCoach && hasCoachNews ? `${label}, ${t("tabs.coach_unread_badge")}` : label}
+              hitSlop={8}
             >
-              <View style={styles.iconWrap}>
-                <Ionicons name={icon} size={22} color={iconColor} />
-                {isCoach && hasUnreadCoachNews ? (
-                  <View style={styles.badgeDot} accessibilityElementsHidden importantForAccessibility="no" />
+              <View>
+                <Ionicons name={isFocused ? on : off} size={22} color={isCoach && isFocused ? coachColors.coachGold : tint} />
+                {isCoach && hasCoachNews ? (
+                  <View style={styles.dot} accessibilityElementsHidden importantForAccessibility="no" />
                 ) : null}
               </View>
               <Text
-                style={[
-                  styles.label,
-                  isFocused && !isCoach && styles.labelActive,
-                  isCoach && styles.labelCoach,
-                ]}
                 numberOfLines={1}
                 maxFontSizeMultiplier={1.4}
+                style={[
+                  styles.label,
+                  { color: tint, fontFamily: isFocused ? coachFonts.bodyExtraBold : coachFonts.bodySemiBold },
+                ]}
               >
                 {label}
               </Text>
@@ -158,103 +138,55 @@ export default function FloatingTabBar({
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    paddingHorizontal: FLOATING_TAB_BAR_SIDE_INSET,
-    backgroundColor: "transparent",
-  },
+  wrap: { position: "absolute", left: SIDE, right: SIDE },
   bar: {
-    flexDirection: "row",
-    // Stretch (not center): each item fills the full bar height so its own
-    // `justifyContent: "flex-end"` can bottom-anchor icon+label consistently
-    // across items of different content height (see `item`/`scanCircle`).
-    alignItems: "stretch",
-    justifyContent: "space-between",
-    height: FLOATING_TAB_BAR_HEIGHT,
-    borderRadius: radii.pill,
+    height: TAB_BAR_HEIGHT,
+    borderRadius: 999,
     backgroundColor: coachColors.card,
-    paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: coachColors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 6,
     ...Platform.select({
       ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.12,
-        shadowRadius: 16,
-        shadowOffset: { width: 0, height: 6 },
+        shadowColor: coachColors.coachNavy,
+        shadowOpacity: 0.16,
+        shadowRadius: 15,
+        shadowOffset: { width: 0, height: 10 },
       },
-      android: { elevation: 10 },
-      default: {
-        boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
-      },
+      android: { elevation: 12 },
+      default: { boxShadow: `0 10px 15px ${coachColors.coachNavy}29` },
     }),
   },
-  item: {
-    flex: 1,
-    alignItems: "center",
-    // Bottom-anchored (not centered) so every item's label sits on the same
-    // baseline regardless of content height above it — needed because the
-    // Scan item's 56px circle is much taller than the other items' 22px
-    // icons and pokes up above the pill via a negative margin.
-    justifyContent: "flex-end",
-    gap: 3,
-    minHeight: 44,
-    paddingBottom: 10,
-  },
-  itemPressed: {
-    opacity: 0.7,
-  },
-  iconWrap: {
-    position: "relative",
-  },
-  badgeDot: {
-    position: "absolute",
-    top: -2,
-    right: -6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: coachColors.coachGold,
-    borderWidth: 1.5,
-    borderColor: coachColors.card,
-  },
-  label: {
-    fontSize: 10,
-    fontFamily: coachFonts.bodySemiBold,
-    color: coachColors.textSecondary,
-  },
-  labelActive: {
-    color: coachColors.coral,
-  },
-  labelCoach: {
-    color: coachColors.coachGoldText,
-  },
-  scanCircle: {
+  slot: { flex: 1, height: 56, alignItems: "center", justifyContent: "center", gap: 3 },
+  scan: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: coachColors.coral,
+    backgroundColor: coachColors.coralPressed,
     alignItems: "center",
     justifyContent: "center",
-    // Raises the circle so it pokes above the pill's top edge, FAB-style,
-    // while the label below it stays on the same baseline as the other
-    // (bottom-anchored) items.
-    marginTop: -18,
-    borderWidth: 4,
-    borderColor: coachColors.card,
     ...Platform.select({
       ios: {
         shadowColor: coachColors.coral,
         shadowOpacity: 0.35,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: 7,
+        shadowOffset: { width: 0, height: 6 },
       },
       android: { elevation: 6 },
-      default: {
-        boxShadow: `0 4px 10px ${coachColors.coralPressed}55`,
-      },
+      default: { boxShadow: `0 6px 7px ${coachColors.coral}59` },
     }),
   },
-  scanCirclePressed: {
-    backgroundColor: coachColors.coralPressed,
+  scanPressed: { transform: [{ scale: 0.96 }] },
+  label: { fontSize: 12, lineHeight: 15 },
+  dot: {
+    position: "absolute",
+    top: -2,
+    right: -5,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: coachColors.coachGold,
+    borderWidth: 2,
+    borderColor: coachColors.card,
   },
 });

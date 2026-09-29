@@ -19,6 +19,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import SafeScreen from "@/components/Layout/SafeScreen";
+import { useTabBarSpace } from "@/components/Navigation/FloatingTabBar";
 import GuestPromptModal from "@/components/UI/GuestPromptModal";
 import WeeklyMuscleCartoon from "@/components/Avatar/WeeklyMuscleCartoon";
 import MuscleDetailModal from "@/components/Avatar/MuscleDetailModal";
@@ -774,6 +775,7 @@ export default function PlanScreen() {
   const [exerciseGuide, setExerciseGuide] = useState<ExerciseGuide | null>(null);
   const [exerciseGuideLoading, setExerciseGuideLoading] = useState(false);
   const planScrollRef = useRef<ScrollView>(null);
+  const tabBarSpace = useTabBarSpace();
 
   useEffect(() => {
     loadTrainer();
@@ -1046,7 +1048,7 @@ export default function PlanScreen() {
   return (
     <SafeScreen edges={["top"]} style={styles.safe}>
       <MuscleGainToast gains={gains} />
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace }]} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
             <Text style={styles.eyebrow}>{t("plan.eyebrow")}</Text>
@@ -1273,7 +1275,7 @@ export default function PlanScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: PLAN_DARK },
   scroll: { flex: 1, backgroundColor: PLAN_DARK },
-  content: { paddingHorizontal: 20, paddingBottom: 34 },
+  content: { paddingHorizontal: 20 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: {
     paddingTop: 12,

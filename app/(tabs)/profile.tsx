@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import SafeScreen from "@/components/Layout/SafeScreen";
+import { useTabBarSpace } from "@/components/Navigation/FloatingTabBar";
 import { useAuthStore } from "@/store/authStore";
 import LanguageToggle from "@/components/UI/LanguageToggle";
 import { colors, fonts } from "@/constants/theme";
@@ -25,6 +26,7 @@ export default function ProfileScreen() {
   const [editingName, setEditingName] = useState(!(profile?.display_name || profile?.username));
   const [savingName, setSavingName] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const tabBarSpace = useTabBarSpace();
 
   useEffect(() => {
     setName(profile?.display_name || profile?.username || "");
@@ -90,7 +92,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeScreen edges={["top"]}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: tabBarSpace }}>
         <View style={styles.heroCard}>
           <View style={styles.avatarRing}>
             <View style={styles.avatar}>

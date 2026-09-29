@@ -31,10 +31,8 @@ interface CoachTrainerState {
   units: Units;
   plan: CoachPlan | null;
   coachAvatar: CoachAvatarConfig | null;
-  hasEnteredCoachChat: boolean;
   failedPrompt: string | null;
   completedExerciseIds: string[];
-  intakeHistory: CoachMessage[];
   conversation: TrainerConversation[];
   pendingPlanChange: PendingPlanChange | null;
   hasLoaded: boolean;
@@ -42,12 +40,9 @@ interface CoachTrainerState {
   setPlan: (plan: CoachPlan | null) => void;
   updatePlan: (plan: CoachPlan) => void;
   setCoachAvatar: (avatar: Omit<CoachAvatarConfig, "createdAt">) => void;
-  enterCoachChat: () => void;
-  leaveCoachChat: () => void;
   setFailedPrompt: (prompt: string | null) => void;
   markExerciseCompleted: (exerciseId: string) => void;
   unmarkExerciseCompleted: (exerciseId: string) => void;
-  setIntakeHistory: (history: CoachMessage[]) => void;
   addConversationMessage: (message: CoachMessage, rulesMetadata?: CoachRulesMetadata) => void;
   markConversationFeedbackFlagged: (id: string) => void;
   setPendingPlanChange: (change: PendingPlanChange | null) => void;
@@ -79,10 +74,8 @@ async function persist(
     | "units"
     | "plan"
     | "coachAvatar"
-    | "hasEnteredCoachChat"
     | "failedPrompt"
     | "completedExerciseIds"
-    | "intakeHistory"
     | "conversation"
     | "pendingPlanChange"
   >
@@ -94,10 +87,8 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
   units: "lbs",
   plan: null,
   coachAvatar: null,
-  hasEnteredCoachChat: false,
   failedPrompt: null,
   completedExerciseIds: [],
-  intakeHistory: [],
   conversation: [],
   pendingPlanChange: null,
   hasLoaded: false,
@@ -118,17 +109,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
   },
 
   setCoachAvatar: (avatar) => {
-    set({ coachAvatar: { ...avatar, createdAt: new Date().toISOString() }, hasEnteredCoachChat: false });
-    persist(get());
-  },
-
-  enterCoachChat: () => {
-    set({ hasEnteredCoachChat: true, failedPrompt: null });
-    persist(get());
-  },
-
-  leaveCoachChat: () => {
-    set({ hasEnteredCoachChat: false });
+    set({ coachAvatar: { ...avatar, createdAt: new Date().toISOString() } });
     persist(get());
   },
 
@@ -149,11 +130,6 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
     set((state) => ({
       completedExerciseIds: state.completedExerciseIds.filter((id) => id !== exerciseId),
     }));
-    persist(get());
-  },
-
-  setIntakeHistory: (intakeHistory) => {
-    set({ intakeHistory });
     persist(get());
   },
 
@@ -185,7 +161,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
   },
 
   resetChatSession: () => {
-    const next = { conversation: [], intakeHistory: [], hasEnteredCoachChat: false, failedPrompt: null, pendingPlanChange: null };
+    const next = { conversation: [], failedPrompt: null, pendingPlanChange: null };
     set(next);
     persist(get());
   },
@@ -195,10 +171,8 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
       units: get().units,
       plan: null,
       coachAvatar: null,
-      hasEnteredCoachChat: false,
       failedPrompt: null,
       completedExerciseIds: [],
-      intakeHistory: [],
       conversation: [],
       pendingPlanChange: null,
     };
@@ -219,13 +193,11 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
         units: saved.units === "kg" ? "kg" : "lbs",
         plan: normalizePlanTimeline(saved.plan ?? null),
         coachAvatar: saved.coachAvatar ?? null,
-        hasEnteredCoachChat: saved.hasEnteredCoachChat === true,
         failedPrompt: typeof saved.failedPrompt === "string" ? saved.failedPrompt : null,
         completedExerciseIds: migrateCompletionIds(
           normalizePlanTimeline(saved.plan ?? null)?.sessions,
           Array.isArray(saved.completedExerciseIds) ? saved.completedExerciseIds : []
         ),
-        intakeHistory: Array.isArray(saved.intakeHistory) ? saved.intakeHistory : [],
         conversation: Array.isArray(saved.conversation) ? saved.conversation : [],
         pendingPlanChange: saved.pendingPlanChange?.status === "plan_updated" ? saved.pendingPlanChange : null,
         hasLoaded: true,

@@ -12,6 +12,7 @@ import { FeedbackProvider } from "@/context/FeedbackContext";
 import AppErrorBoundary from "@/components/UI/AppErrorBoundary";
 import ServiceHealthMonitor from "@/components/UI/ServiceHealthMonitor";
 import ForceUpdateGate from "@/components/UI/ForceUpdateGate";
+import BirthYearGate from "@/components/UI/BirthYearGate";
 import {
   useFonts,
   PlayfairDisplay_700Bold,
@@ -145,14 +146,16 @@ function RootLayout() {
             <FeedbackProvider>
               <ForceUpdateGate>
                 <StatusBar style="dark" />
-                <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen name="(auth)/login" />
-                  <Stack.Screen name="(auth)/register" />
-                  <Stack.Screen name="auth/callback" />
-                  <Stack.Screen name="equipment/[id]" options={{ presentation: "card" }} />
-                  <Stack.Screen name="feedback" options={{ presentation: "modal" }} />
-                </Stack>
+                <BirthYearGate>
+                  <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="(auth)/login" />
+                    <Stack.Screen name="(auth)/register" />
+                    <Stack.Screen name="auth/callback" />
+                    <Stack.Screen name="equipment/[id]" options={{ presentation: "card" }} />
+                    <Stack.Screen name="feedback" options={{ presentation: "modal" }} />
+                  </Stack>
+                </BirthYearGate>
                 <ServiceHealthMonitor />
                 <AuthGate />
               </ForceUpdateGate>

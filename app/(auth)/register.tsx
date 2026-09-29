@@ -16,6 +16,7 @@ import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { getAuthRedirectUrl } from "@/lib/authRedirect";
 import { colors, fonts } from "@/constants/theme";
+import { isBelowMinimumAccountAge, isValidBirthYear, MINIMUM_ACCOUNT_AGE } from "@/shared/ageBand";
 
 function getRegisterErrorAlert(message: string, t: (key: string) => string) {
   const normalized = message.toLowerCase();
@@ -35,16 +36,28 @@ export default function RegisterScreen() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [birthYear, setBirthYear] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
     if (!email.trim() || !password || !username.trim()) return;
+
+    const parsedBirthYear = Number.parseInt(birthYear.trim(), 10);
+    if (!isValidBirthYear(parsedBirthYear)) {
+      Alert.alert(t("common.error"), t("auth.birth_year_invalid"));
+      return;
+    }
+    if (isBelowMinimumAccountAge(parsedBirthYear)) {
+      Alert.alert(t("auth.age_blocked_title"), t("auth.age_blocked_message", { age: MINIMUM_ACCOUNT_AGE }));
+      return;
+    }
+
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
       options: {
-        data: { username: username.trim(), full_name: username.trim() },
+        data: { username: username.trim(), full_name: username.trim(), birth_year: String(parsedBirthYear) },
         emailRedirectTo: getAuthRedirectUrl(),
       },
     });
@@ -103,6 +116,20 @@ export default function RegisterScreen() {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>{t("auth.birth_year")}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={t("auth.birth_year_placeholder")}
+              placeholderTextColor={colors.textMuted}
+              value={birthYear}
+              onChangeText={setBirthYear}
+              keyboardType="number-pad"
+              maxLength={4}
+              accessibilityLabel={t("auth.birth_year")}
             />
           </View>
 

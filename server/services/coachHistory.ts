@@ -1,16 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CoachResponse, Plan } from "./coachTrainerService";
 import type { RulesIntent } from "./coachRouter";
+import type { AgeBand } from "../../shared/ageBand";
 
-// This is intentionally a metadata-only boundary. Limitation details and Coach
-// messages never enter the router, provider context, event ledger, or logs.
+// This is intentionally a metadata-only boundary. Limitation *details* and
+// Coach messages never enter the router, provider context, event ledger, or
+// logs. profile.ageBand is the one exception: coach-trainer.ts forwards it
+// (never the raw birth year) into the model's CONTEXT so it can apply
+// age-appropriate programming — see coachTrainerService.ts's SAFETY — age rule.
 export type CoachHistoryContext = {
   profile: {
     experienceLevel: "beginner" | "intermediate" | "advanced" | null;
     goal: string | null;
     equipmentType: string | null;
     daysPerWeek: number | null;
-    ageBand: "unknown" | "under_18" | "adult_18_59" | "over_59";
+    ageBand: AgeBand;
     safetyReviewedAt: string | null;
   } | null;
   activeLimitationTypes: string[];
@@ -19,7 +23,6 @@ export type CoachHistoryContext = {
 };
 
 export const COACH_HISTORY_POLICY = {
-  safetyReviewStaleAfterDays: 365,
   recentSorenessDays: 7,
   recentEventLimit: 12,
 } as const;
@@ -65,14 +68,21 @@ export async function loadCoachHistory(client: SupabaseClient, userId: string): 
   }
 }
 
+// Age is intentionally NOT part of this gate: an unknown or under/over-typical
+// age band must not permanently force every Coach call through the generic
+// safety path. Age instead travels as plain context (see coach-trainer.ts ->
+// coachTrainerService.ts) so the model itself applies age-appropriate
+// programming (e.g. teen-safe rules for under_18) without blocking anything.
+//
+// The only account-history condition that still forces a detour is "this
+// account has never completed the safety-triage step" (safety_reviewed_at is
+// null, including a missing profile row entirely) — and instead of quietly
+// asking the AI to "be extra careful", the caller now routes the person back
+// to plan-setup step 5 to actually answer it. See routeCoachRequest's
+// "needs_review" route.
 export function historyRouteReason(history: CoachHistoryContext, now = Date.now()): string | null {
   if (history.loadError) return "history:unavailable";
-  if (!history.profile) return "history:missing_profile";
-  if (history.profile.ageBand === "unknown") return "history:age_gate_unconfirmed";
-  if (history.profile.ageBand === "under_18") return "history:under_18";
-  if (history.profile.ageBand === "over_59") return "history:over_59";
-  const reviewedAt = history.profile.safetyReviewedAt ? Date.parse(history.profile.safetyReviewedAt) : NaN;
-  if (!Number.isFinite(reviewedAt) || now - reviewedAt > COACH_HISTORY_POLICY.safetyReviewStaleAfterDays * DAY_MS) return "history:stale_safety_review";
+  if (!history.profile || !history.profile.safetyReviewedAt) return "history:needs_safety_review";
   if (history.activeLimitationTypes.length) return "history:active_limitation";
   if (history.recentEvents.some((event) => event.eventType === "soreness_reported" && Date.parse(event.createdAt) >= now - COACH_HISTORY_POLICY.recentSorenessDays * DAY_MS)) {
     return "history:recent_soreness";

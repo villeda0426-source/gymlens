@@ -16,6 +16,7 @@ import Constants from "expo-constants";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import SafeScreen from "@/components/Layout/SafeScreen";
+import { useTabBarSpace } from "@/components/Navigation/FloatingTabBar";
 import { colors, coachColors, coachFonts, fonts, radii, spacing } from "@/constants/theme";
 import CoachComposer from "@/components/Coach/CoachComposer";
 import CoachMessageBubble from "@/components/Coach/CoachMessageBubble";
@@ -24,18 +25,19 @@ import FeelingCheckIn, { Feeling } from "@/components/Coach/FeelingCheckIn";
 import SafetyNote from "@/components/Coach/SafetyNote";
 import SuggestedPrompts from "@/components/Coach/SuggestedPrompts";
 import { supabase } from "@/lib/supabase";
-import { createIdempotencyKey } from "@/lib/api";
 import {
   callCoachTrainer,
   CoachMessage,
   CoachResponse,
   flagRulesCoachResponse,
-  getCoachTrainerJob,
   makeFreeformWorkoutLog,
-  startCoachTrainerJob,
+  runCoachTrainerJob,
 } from "@/lib/coachTrainer";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
+import { usePlanSetupStore } from "@/store/planSetupStore";
 import { useAuthStore } from "@/store/authStore";
+import CoachHeaderMenu from "@/components/Coach/CoachHeaderMenu";
+import ProfileSummaryChips from "@/components/Coach/ProfileSummaryChips";
 import {
   adjustSessionForToday,
   hasCoachMedicalRedFlag,
@@ -44,25 +46,14 @@ import {
   TodayContext,
 } from "@/shared/reliableCoach";
 
+// Phase 3: one row of 3 chips, matching Chat.png exactly (the other quick
+// actions this used to expose — adjust today, explain, etc. — are still
+// reachable by just typing, or from the adjust-today panel below).
 const QUICK_ACTIONS = [
-  "trainer.quick_actions.create_plan",
-  "trainer.quick_actions.train_today",
-  "trainer.quick_actions.thirty_minutes",
-  "trainer.quick_actions.sore_today",
   "trainer.quick_actions.swap_exercise",
-  "trainer.quick_actions.shorter",
-  "trainer.quick_actions.adjust_today",
-  "trainer.quick_actions.explain",
+  "trainer.quick_actions.something_hurts",
+  "trainer.quick_actions.short_on_time",
 ];
-
-const COACH_JOB_POLL_INTERVAL_MS = 2500;
-const COACH_JOB_MAX_WAIT_MS = 180000;
-
-function makeAbortError() {
-  const error = new Error("Coach job polling aborted.");
-  error.name = "AbortError";
-  return error;
-}
 
 type SpeechRecognitionModule = {
   addListener?: (eventName: string, listener: (event: any) => void) => { remove: () => void };
@@ -89,10 +80,6 @@ function loadSpeechRecognitionModule(): SpeechRecognitionModule | null {
   }
 }
 
-function stringifyCoachResponse(response: CoachResponse): string {
-  return JSON.stringify(response);
-}
-
 function getCoachResponseText(response: CoachResponse): string {
   if (response.status === "plan_ready") return response.summary;
   // plan_updated's changes are rendered by CoachSuggestionCard, not repeated
@@ -116,6 +103,7 @@ export default function TrainerScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { ask } = useLocalSearchParams<{ ask?: string }>();
+  const tabBarSpace = useTabBarSpace();
   const scrollRef = useRef<ScrollView>(null);
   const abortRef = useRef<AbortController | null>(null);
   const voiceDraftSeedRef = useRef("");
@@ -126,12 +114,8 @@ export default function TrainerScreen() {
     plan,
     setPlan,
     updatePlan,
-    hasEnteredCoachChat,
     failedPrompt,
-    enterCoachChat,
     setFailedPrompt,
-    intakeHistory,
-    setIntakeHistory,
     conversation,
     addConversationMessage,
     markConversationFeedbackFlagged,
@@ -157,6 +141,7 @@ export default function TrainerScreen() {
   const [notice, setNotice] = useState("");
   const [listening, setListening] = useState(false);
   const [feeling, setFeeling] = useState<Feeling | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const speechModule = loadSpeechRecognitionModule();
@@ -205,12 +190,13 @@ export default function TrainerScreen() {
   useEffect(() => {
     // Coach Forward Phase 6: AskCoachCard (Equipment) navigates here with a
     // pre-composed question. Pre-fill the composer rather than auto-sending
-    // — the existing chat-send path is still the user's own tap.
-    if (!ask) return;
-    if (!hasEnteredCoachChat) enterCoachChat();
+    // — the existing chat-send path is still the user's own tap. Only
+    // meaningful once a plan exists; without one, the chat screen (and its
+    // composer) isn't rendered at all.
+    if (!ask || !plan) return;
     setDraft(ask);
     router.setParams({ ask: undefined });
-  }, [ask]);
+  }, [ask, plan]);
 
   useEffect(() => {
     if (authLoading || user) return;
@@ -317,15 +303,9 @@ export default function TrainerScreen() {
     setAdjustOpen(false);
   };
 
-  const handleResponse = (response: CoachResponse, nextIntakeHistory?: CoachMessage[]) => {
-    const assistantJson = stringifyCoachResponse(response);
+  const handleResponse = (response: CoachResponse) => {
     const assistantText = getCoachResponseText(response);
-
     addConversationMessage({ role: "assistant", content: assistantText }, response.rulesMetadata);
-
-    if (nextIntakeHistory) {
-      setIntakeHistory([...nextIntakeHistory, { role: "assistant", content: assistantJson }]);
-    }
 
     if (response.status === "plan_ready") {
       // The very first plan (onboarding) applies immediately — it's not a
@@ -337,6 +317,13 @@ export default function TrainerScreen() {
       // (applyPendingPlanChange) edits the saved plan.
       setPendingPlanChange(response);
       setNotice("");
+    } else if (response.status === "needs_safety_review") {
+      // This account has never completed plan-setup's safety-triage step.
+      // No plan change happened server-side — send them to answer it, then
+      // come back and try again.
+      setNotice("");
+      usePlanSetupStore.getState().beginFromProfile(profile);
+      router.push(usePlanSetupStore.getState().isComplete() ? "/plan-setup/limitations" : "/plan-setup/goal");
     } else {
       setNotice("");
     }
@@ -362,48 +349,6 @@ export default function TrainerScreen() {
     } catch {
       setNotice(t("trainer.coach_connect_error"));
     }
-  };
-
-  const waitForCoachJob = async (jobId: string, authToken: string, signal: AbortSignal) => {
-    const startedAt = Date.now();
-
-    while (Date.now() - startedAt < COACH_JOB_MAX_WAIT_MS) {
-      if (signal.aborted) throw makeAbortError();
-
-      const job = await getCoachTrainerJob(jobId, { authToken, signal });
-      if (job.status === "completed" && job.result) return job.result;
-      if (job.status === "failed") {
-        throw new Error(job.error || t("trainer.coach_connect_error"));
-      }
-
-      await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(resolve, COACH_JOB_POLL_INTERVAL_MS);
-        signal.addEventListener(
-          "abort",
-          () => {
-            clearTimeout(timeout);
-            reject(makeAbortError());
-          },
-          { once: true }
-        );
-      });
-    }
-
-    throw new Error(t("trainer.coach_connect_error"));
-  };
-
-  const runCoachJob = async (
-    payload: Parameters<typeof startCoachTrainerJob>[0],
-    authToken: string,
-    idempotencyKey: string,
-    signal: AbortSignal
-  ) => {
-    const job = await startCoachTrainerJob(payload, {
-      authToken,
-      idempotencyKey,
-      signal,
-    });
-    return waitForCoachJob(job.jobId, authToken, signal);
   };
 
   const handleFeelingSelect = (nextFeeling: Feeling) => {
@@ -436,10 +381,16 @@ export default function TrainerScreen() {
       return;
     }
 
+    if (!plan) {
+      // The chat screen only mounts once a plan exists (see the render
+      // branch below) — this is a defensive guard, not a normal path.
+      setLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
     abortRef.current?.abort();
     abortRef.current = controller;
-    const idempotencyKey = createIdempotencyKey("coach-job");
     setLoading(true);
     setNotice("");
     setFailedPrompt(text);
@@ -447,50 +398,26 @@ export default function TrainerScreen() {
     setDraft("");
 
     try {
-      if (!plan) {
-        const nextHistory =
-          intakeHistory.length === 0
-            ? [
-                {
-                  role: "user" as const,
-                  content: `CONTEXT: ${JSON.stringify({ mode: "intake", units, language: coachLanguage })}\n\n${text}`,
-                },
-              ]
-            : [...intakeHistory, { role: "user" as const, content: text }];
-
-        // Only the authenticated server route can create a plan. It loads the
-        // account safety context before its rules/AI decision.
+      if (/goal|constraint|injur|days|equipment|schedule/i.test(text)) {
         setNotice(t("trainer.coach_building_plan"));
-        const response = await runCoachJob({
-          mode: "intake",
-          units,
-          language: coachLanguage,
-          history: intakeHistory,
-          userMessage: text,
-        }, session.access_token, idempotencyKey, controller.signal);
-        setIntakeHistory(nextHistory);
-        handleResponse(response, nextHistory);
-        setFailedPrompt(null);
-      } else if (/goal|constraint|injur|days|equipment|schedule/i.test(text)) {
-        setNotice(t("trainer.coach_building_plan"));
-        const response = await runCoachJob({
+        const response = await runCoachTrainerJob({
           mode: "update_goals",
           units,
           language: coachLanguage,
           currentPlan: plan,
           newGoal: text,
-        }, session.access_token, idempotencyKey, controller.signal);
+        }, { authToken: session.access_token, signal: controller.signal });
         handleResponse(response);
         setFailedPrompt(null);
-      } else if (/shorter|sore|swap|adjust|missed|skipped|rpe|too hard|too easy|workout/i.test(text)) {
+      } else if (/shorter|short on time|sore|hurt|swap|adjust|missed|skipped|rpe|too hard|too easy|workout/i.test(text)) {
         setNotice(t("trainer.coach_building_plan"));
-        const response = await runCoachJob({
+        const response = await runCoachTrainerJob({
           mode: "adapt",
           units,
           language: coachLanguage,
           currentPlan: plan,
           logs: makeFreeformWorkoutLog(text),
-        }, session.access_token, idempotencyKey, controller.signal);
+        }, { authToken: session.access_token, signal: controller.signal });
         handleResponse(response);
         setFailedPrompt(null);
       } else {
@@ -579,16 +506,14 @@ export default function TrainerScreen() {
     );
   }
 
-  if (!hasEnteredCoachChat) {
+  if (!user) {
     return (
       <SafeScreen edges={["top"]}>
-        <ScrollView style={styles.introScroll} contentContainerStyle={styles.introContent} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.introScroll} contentContainerStyle={[styles.introContent, { paddingBottom: tabBarSpace }]} showsVerticalScrollIndicator={false}>
           <View style={styles.introHeader}>
             <Text style={styles.eyebrow}>{t("trainer.personal_trainer")}</Text>
             <Text style={styles.title}>{t("trainer.meet_title")}</Text>
-            <Text style={styles.introSubtitle}>
-              {t("trainer.intro_ready")}
-            </Text>
+            <Text style={styles.introSubtitle}>{t("trainer.intro_ready")}</Text>
           </View>
 
           <View style={styles.coachIntroCard}>
@@ -599,44 +524,52 @@ export default function TrainerScreen() {
             </View>
           </View>
 
-          <View style={styles.backgroundCard}>
-            <View style={styles.backgroundIcon}>
-              <Ionicons name="clipboard" size={20} color={colors.ndGold} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.backgroundTitle}>{t("trainer.training_snapshot")}</Text>
-              <Text style={styles.backgroundText}>
-                {profile?.username ? `${profile.username}, ` : ""}
-                {plan
-                  ? `${plan.goal} · ${t("trainer.days_per_week", { count: plan.days_per_week })} · ${plan.split}`
-                  : t("trainer.no_plan_snapshot")}
-              </Text>
-            </View>
-          </View>
-
-          {notice ? (
-            <View style={styles.introNotice}>
-              <Ionicons name="information-circle" size={18} color={colors.coral} />
-              <Text style={styles.introNoticeText}>{notice}</Text>
-            </View>
-          ) : null}
-
-          <TouchableOpacity
-            style={[styles.chatWithMeButton, !user && styles.sendButtonDisabled]}
-            disabled={!user}
-            onPress={enterCoachChat}
-          >
-            <Text style={styles.chatWithMeText}>
-              {user ? t("trainer.chat_with_me") : t("trainer.sign_in_to_chat")}
-            </Text>
+          <TouchableOpacity style={[styles.chatWithMeButton, styles.sendButtonDisabled]} disabled>
+            <Text style={styles.chatWithMeText}>{t("trainer.sign_in_to_chat")}</Text>
             <Ionicons name="arrow-forward" size={18} color={colors.white} />
           </TouchableOpacity>
 
-          {!user ? (
-            <TouchableOpacity style={styles.authLinkButton} onPress={() => router.push("/(auth)/login")}>
-              <Text style={styles.authLinkText}>{t("trainer.go_to_sign_in")}</Text>
-            </TouchableOpacity>
-          ) : null}
+          <TouchableOpacity style={styles.authLinkButton} onPress={() => router.push("/(auth)/login")}>
+            <Text style={styles.authLinkText}>{t("trainer.go_to_sign_in")}</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeScreen>
+    );
+  }
+
+  if (!plan) {
+    // Coach Forward Phase 1 decision: one entry point, one card. The tap-only
+    // setup wizard (app/plan-setup/*) is the only way to build a plan now —
+    // there's no free-text intake chat to fall back into.
+    return (
+      <SafeScreen edges={["top"]}>
+        <ScrollView style={styles.introScroll} contentContainerStyle={[styles.introContent, { paddingBottom: tabBarSpace }]} showsVerticalScrollIndicator={false}>
+          <View style={styles.introHeader}>
+            <Text style={styles.eyebrow}>{t("trainer.personal_trainer")}</Text>
+            <Text style={styles.title}>{t("trainer.meet_title")}</Text>
+            <Text style={styles.introSubtitle}>{t("trainer.intro_ready")}</Text>
+          </View>
+
+          <View style={styles.coachIntroCard}>
+            <View style={styles.coachIntroCopy}>
+              <Text style={styles.coachIntroEyebrow}>{t("trainer.coach_locked")}</Text>
+              <Text style={styles.coachIntroTitle}>{t("trainer.hi_coach")}</Text>
+              <Text style={styles.coachIntroText}>{t("trainer.no_plan_snapshot")}</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.chatWithMeButton}
+            onPress={() => {
+              usePlanSetupStore.getState().reset();
+              router.push("/plan-setup/goal");
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t("trainer.build_plan_cta")}
+          >
+            <Text style={styles.chatWithMeText}>{t("trainer.build_plan_cta")}</Text>
+            <Ionicons name="arrow-forward" size={18} color={colors.white} />
+          </TouchableOpacity>
         </ScrollView>
       </SafeScreen>
     );
@@ -645,35 +578,52 @@ export default function TrainerScreen() {
   return (
     <SafeScreen edges={["top"]} style={styles.chatScreen}>
       <KeyboardAvoidingView
-        style={styles.keyboard}
+        style={[styles.keyboard, { paddingBottom: tabBarSpace }]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
       >
         <View style={styles.header}>
           <View style={styles.headerAvatar}>
-            <Ionicons name="star" size={22} color={coachColors.coachGold} />
+            <Ionicons name="star" size={16} color={coachColors.coachGold} />
           </View>
-          <View style={styles.headerCopy}>
-            <Text style={styles.headerTitle}>{t("trainer.coach_header_title")}</Text>
-            <Text style={styles.headerSubtitle}>{t("trainer.coach_header_subtitle")}</Text>
-          </View>
-          {plan ? (
-            <TouchableOpacity
-              style={styles.weekButton}
-              onPress={() => router.push("/coach-week")}
-              accessibilityRole="button"
-              accessibilityLabel={t("trainer.coach_week_button")}
-            >
-              <Ionicons name="bar-chart-outline" size={20} color={coachColors.text} />
-            </TouchableOpacity>
-          ) : null}
+          <Text style={styles.headerTitle}>{t("trainer.coach_header_title")}</Text>
+          <TouchableOpacity
+            style={styles.menuButton}
+            onPress={() => setMenuOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t("trainer.coach_menu_button")}
+          >
+            <Ionicons name="ellipsis-horizontal" size={20} color={coachColors.text} />
+          </TouchableOpacity>
         </View>
 
-        {plan ? (
-          <View style={styles.feelingCheckInWrap}>
-            <FeelingCheckIn selected={feeling} onSelect={handleFeelingSelect} />
-          </View>
-        ) : null}
+        <View style={styles.chipsWrap}>
+          <ProfileSummaryChips profile={profile} plan={plan} />
+        </View>
+
+        <CoachHeaderMenu
+          visible={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          items={[
+            { key: "adjust", label: t("trainer.quick_actions.adjust_today"), onPress: () => setAdjustOpen((open) => !open) },
+            { key: "week", label: t("trainer.coach_week_button"), onPress: () => router.push("/coach-week") },
+            {
+              key: "rebuild",
+              label: t("trainer.rebuild_plan"),
+              onPress: () => {
+                usePlanSetupStore.getState().beginFromProfile(profile);
+                router.push("/plan-setup/goal");
+              },
+            },
+            ...(conversation.length > 0
+              ? [{ key: "reset", label: t("trainer.start_fresh"), onPress: confirmReset, destructive: true }]
+              : []),
+          ]}
+        />
+
+        <View style={styles.feelingCheckInWrap}>
+          <FeelingCheckIn selected={feeling} onSelect={handleFeelingSelect} />
+        </View>
 
         <ScrollView
           ref={scrollRef}
@@ -840,15 +790,9 @@ export default function TrainerScreen() {
             onVoicePress={toggleVoiceInput}
             listening={listening}
             loading={loading}
-            placeholder={plan ? t("trainer.placeholder_plan") : t("trainer.placeholder_intake")}
+            placeholder={t("trainer.placeholder_plan")}
           />
         </View>
-
-        {conversation.length > 0 ? (
-          <TouchableOpacity style={styles.resetButton} onPress={confirmReset}>
-            <Text style={styles.resetText}>{t("trainer.start_fresh")}</Text>
-          </TouchableOpacity>
-        ) : null}
       </KeyboardAvoidingView>
     </SafeScreen>
   );
@@ -929,29 +873,22 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   headerAvatar: {
-    width: 48,
-    height: 48,
+    width: 36,
+    height: 36,
     borderRadius: radii.pill,
     backgroundColor: coachColors.coachNavy,
     alignItems: "center",
     justifyContent: "center",
   },
-  headerCopy: { flex: 1 },
-  weekButton: {
+  menuButton: {
     width: 44,
     height: 44,
     borderRadius: radii.pill,
-    backgroundColor: coachColors.card,
     alignItems: "center",
     justifyContent: "center",
-    ...Platform.select({
-      ios: { shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 3, shadowOffset: { width: 0, height: 1 } },
-      android: { elevation: 2 },
-      default: { boxShadow: "0 1px 3px rgba(12,35,64,0.1)" },
-    }),
   },
-  headerTitle: { color: coachColors.text, fontFamily: coachFonts.heading, fontSize: 26 },
-  headerSubtitle: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 13, marginTop: 1 },
+  headerTitle: { flex: 1, color: coachColors.text, fontFamily: coachFonts.heading, fontSize: 20 },
+  chipsWrap: { paddingBottom: spacing.sm },
   eyebrow: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 12, textTransform: "uppercase" },
   title: { color: colors.text, fontFamily: fonts.heading, fontSize: 34 },
   headerControls: { alignItems: "flex-end", gap: 8 },

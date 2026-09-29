@@ -35,7 +35,12 @@ export type CoachRouterInput = {
 
 export type RouteDecision =
   | { route: "rules"; intent: RulesIntent; response: CoachResponse; reason?: string }
-  | { route: "ai"; reason: string };
+  | { route: "ai"; reason: string }
+  // The account has never completed plan-setup's safety-triage step (or its
+  // profile is unreadable). No AI call happens at all — the caller returns a
+  // "needs_safety_review" CoachResponse that sends the person back to
+  // plan-setup step 5 instead of quietly asking the model to "be careful".
+  | { route: "needs_review"; reason: string };
 
 export type RulesIntent = "beginner_plan" | "intake_clarification" | Stage2Intent;
 
@@ -297,10 +302,12 @@ function routePlanQuestion(input: CoachRouterInput): RouteDecision {
 export function routeCoachRequest(input: CoachRouterInput): RouteDecision {
   if (!isRulesRouterEnabled()) return { route: "ai", reason: "router:disabled" };
   try {
-    // Account history is monotonic: it can only force the AI route, never
-    // loosen a risk decision into a deterministic response.
+    // Account history is monotonic: it can only force the AI route (or the
+    // needs-review detour below), never loosen a risk decision into a
+    // deterministic response.
     if (input.accountHistory) {
       const reason = historyRouteReason(input.accountHistory);
+      if (reason === "history:needs_safety_review") return { route: "needs_review", reason };
       if (reason) return { route: "ai", reason };
     }
     const decision = input.mode === "intake" ? routeIntake(input) : routePlanQuestion(input);

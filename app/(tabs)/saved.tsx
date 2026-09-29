@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import SafeScreen from "@/components/Layout/SafeScreen";
+import { useTabBarSpace } from "@/components/Navigation/FloatingTabBar";
 import EquipmentCard from "@/components/Equipment/EquipmentCard";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
@@ -31,6 +32,7 @@ export default function SavedScreen() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const tabBarSpace = useTabBarSpace();
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -117,7 +119,7 @@ export default function SavedScreen() {
           data={filtered}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <EquipmentCard item={item} />}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace }]}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.coral} />
           }
@@ -169,7 +171,7 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: colors.coral, borderColor: colors.coral },
   chipText: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.semiBold },
   chipTextActive: { color: colors.white },
-  list: { paddingHorizontal: 16, paddingBottom: 20 },
+  list: { paddingHorizontal: 16 },
   count: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginBottom: 8 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },

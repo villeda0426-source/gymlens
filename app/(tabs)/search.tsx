@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import EquipmentCard from "@/components/Equipment/EquipmentCard";
 import SafeScreen from "@/components/Layout/SafeScreen";
+import { useTabBarSpace } from "@/components/Navigation/FloatingTabBar";
 import { useEquipmentSearch } from "@/hooks/useEquipmentSearch";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
@@ -33,6 +34,7 @@ export default function SearchScreen() {
   const [recentItems, setRecentItems] = useState<any[]>([]);
   const [recentLoading, setRecentLoading] = useState(false);
   const [recentFetched, setRecentFetched] = useState(false);
+  const tabBarSpace = useTabBarSpace();
 
   const isRecent = activeCategory === RECENT_FILTER;
 
@@ -121,7 +123,7 @@ export default function SearchScreen() {
           data={recentItems}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <EquipmentCard item={item} />}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace }]}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             <Text style={styles.resultCount}>
@@ -176,7 +178,7 @@ export default function SearchScreen() {
         data={results}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <EquipmentCard item={item} />}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace }]}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <Text style={styles.resultCount}>
@@ -285,7 +287,7 @@ const styles = StyleSheet.create({
   chipRecent: { backgroundColor: colors.text, borderColor: colors.text },
   chipText: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.semiBold },
   chipTextActive: { color: colors.white },
-  list: { paddingHorizontal: 16, paddingBottom: 20 },
+  list: { paddingHorizontal: 16 },
   resultCount: { color: colors.textMuted, fontSize: 12, marginBottom: 8, fontFamily: fonts.body },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },

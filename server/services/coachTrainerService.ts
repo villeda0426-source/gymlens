@@ -5,6 +5,7 @@ import {
   hasCoachMedicalRedFlag,
   ReliableLanguage,
 } from "../../shared/reliableCoach";
+import type { AgeBand } from "../../shared/ageBand";
 import { createTextResponse, setOpenAIClientForTests, type OpenAIClient } from "./openaiService";
 
 // Temporary provider swap (2026-09-21): Coach runs on OpenAI while the
@@ -61,7 +62,11 @@ Rules:
 - Don't interrogate. If the first message is already rich, go straight to plan_ready.
 - Once the user has provided experience, days per week, equipment/access, injuries/limitations, and a broad goal, you MUST generate plan_ready. Do not ask follow-up questions for nice-to-have details like exact session length, favorite lifts, swimming technique, or schedule order; choose sensible defaults and mention them in the summary.
 - Keep plans concise: no more than 5 exercises per session, and no more than 4 sessions in the JSON.
-- SAFETY: if the user reports active or exertional chest pain, unexplained dizziness or fainting, a recent surgery without clearance, an uncontrolled medical condition, pregnancy without appropriate prenatal exercise guidance, or another condition that warrants clearance, DO NOT generate a workout plan yet. Return status "gathering" with a concise, calm message telling them to pause and obtain guidance or clearance from the appropriate licensed healthcare professional. Do not diagnose, prescribe rehabilitation, suggest test exercises, or provide loads/RPE targets while clearance is unresolved. Once the user confirms appropriate clearance and supplies any restrictions, keep programming conservative and add a safety flag that reflects those restrictions. You are a coach, not a doctor or physical therapist.
+- SAFETY — acute red flags (hard stop): if the user reports active or exertional chest pain, or unexplained dizziness/fainting when active, DO NOT generate a workout plan yet. Return status "gathering" with a short, calm message telling them to check with a doctor first, and that scanning equipment and browsing exercises still work meanwhile. Do not diagnose or suggest this is nothing to worry about.
+- SAFETY — build cautiously, don't withhold: a heart condition or high blood pressure, another health condition, or pregnancy/postpartum with no acute symptoms are NOT reasons to withhold a plan. Build it at light-to-moderate intensity (lower target RPE, more conservative progression, avoid high-impact/breath-holding moves), and add one safety_flags entry suggesting a doctor check before pushing to high intensity. Never gate the plan on producing paperwork or a clearance letter.
+- SAFETY — joint/muscle pain or a recent injury/surgery: avoid or modify exercises that load the affected area; add a matching constraints entry. Keep the rest of the plan normal.
+- SAFETY — age: the CONTEXT may include "age_band". If it is "under_18", use teen-safe programming: no 1RM or other max-effort testing, no failure training, conservative progression (smaller jumps, more weeks before adding load), technique-first. Never mention "age_band" back to the user.
+- You are a coach, not a doctor or physical therapist. Never use the words "clearance" or "cleared" — describe next steps in plain language instead (e.g. "check with a doctor first").
 - RESPONSIBLE USE: never prescribe extreme calorie restriction, meal skipping, exercise as punishment for eating, or unsafe rapid weight loss. If the user expresses guilt about rest or food, a need to "burn off" everything eaten, training through exhaustion, meal skipping, or another sign of disordered eating or compulsive exercise, DO NOT generate the requested plan yet. Return status "gathering" with a calm, nonjudgmental message that explicitly supports adequate food, rest, and recovery and encourages speaking with an appropriate licensed healthcare or mental-health professional. Never reinforce or optimize the harmful behavior. Once safety is established, use a balanced, sustainable approach.
 While still gathering:
 { "status": "gathering", "message": "<friendly question(s)>" }
@@ -80,13 +85,13 @@ Re-shape the plan to fit the new goal (split, rep ranges, exercise selection, ti
 Keep updated personalized plans inside the same 21-24 day planning window unless the user explicitly asks for a different duration.
 
 ## MODE: chat — a one-off question between sessions
-Answer concisely and practically (form, swaps, soreness, travel, etc.):
-{ "status": "reply", "message": "<answer>" }
+Answer in AT MOST 2 short sentences (form, swaps, soreness, travel, etc.). Never re-ask for anything already in CONTEXT (goal, days, equipment, experience, limitations) — you already have it. If the answer is a change to the plan rather than just information, that's "update_goals"/"adapt" territory (status "plan_updated"), not a wall of chat text:
+{ "status": "reply", "message": "<answer, max 2 sentences>" }
 
 ## PLAN SCHEMA (plan_ready and plan_updated)
 {
   "status": "plan_ready" | "plan_updated",
-  "summary": "<warm 3-6 sentence recap: their goal, your approach, key assumptions, what to expect. For plan_updated, lead with what changed and why.>",
+  "summary": "<plan_ready: warm 3-6 sentence recap — their goal, your approach, key assumptions, what to expect. plan_updated: ONE short sentence naming what changed and why — it renders in a card, not a chat wall.>",
   "changes": ["<plan_updated only: one short bullet per adjustment>"],
   "plan": {
     "goal": "<user's goal, their words>",
@@ -188,6 +193,9 @@ export type CoachResponse = (
   | { status: "reply"; message: string }
   | { status: "plan_ready"; summary: string; plan: Plan }
   | { status: "plan_updated"; summary: string; changes: string[]; plan: Plan }
+  // This account has never completed plan-setup's safety-triage step. No AI
+  // call was made; the client should route to /plan-setup/limitations.
+  | { status: "needs_safety_review"; message: string }
 ) & { rulesMetadata?: CoachRulesMetadata };
 
 export type CoachCallOptions = {
@@ -199,7 +207,6 @@ export type CoachCallOptions = {
   // A stored safety concern may force AI, but an AI failure must not then fall
   // back to a static plan that bypasses that account-level safety gate.
   allowStaticFallback?: boolean;
-  forceSafetyReview?: boolean;
 };
 
 export function getCoachTimeoutsForBuild(
@@ -215,6 +222,12 @@ export function getCoachTimeoutsForBuild(
 function context(obj: Record<string, unknown>): string {
   const entries = Object.entries(obj).filter(([, value]) => value !== undefined);
   return `CONTEXT: ${JSON.stringify(Object.fromEntries(entries))}`;
+}
+
+// "unknown" tells the model nothing actionable — omit it so the prompt only
+// ever mentions age_band when it should actually change the programming.
+function ageBandForPrompt(ageBand?: AgeBand): AgeBand | undefined {
+  return ageBand && ageBand !== "unknown" ? ageBand : undefined;
 }
 
 export function compactPlanForCoach(plan: Plan): Plan {
@@ -385,7 +398,7 @@ export function parseCoachResponse(rawText: string): CoachResponse {
 const FALLBACK_COPY = {
   en: {
     medical:
-      "Before I build a workout, stop and get medical clearance for the symptom or condition you mentioned. You can still use the rest of SpotLift while we keep training recommendations paused.",
+      "Chest pain or dizziness during exercise needs a doctor's OK first. You can still use the rest of SpotLift — scanning equipment and browsing exercises — while training recommendations stay paused.",
     gathering:
       "Tell me your goal, how many days you can train, what equipment you have, your experience level, and any pain or limitations. I can build a reliable starter workout from those details even if advanced personalization is unavailable.",
     retry:
@@ -393,7 +406,7 @@ const FALLBACK_COPY = {
   },
   es: {
     medical:
-      "Antes de armar un entrenamiento, detente y consigue autorización médica por el síntoma o la condición que mencionaste. Puedes seguir usando el resto de SpotLift mientras mantenemos en pausa las recomendaciones de entrenamiento.",
+      "El dolor de pecho o el mareo al hacer ejercicio necesitan el visto bueno de un médico primero. Puedes seguir usando el resto de SpotLift — escanear equipo y explorar ejercicios — mientras las recomendaciones de entrenamiento quedan en pausa.",
     gathering:
       "Cuéntame tu objetivo, cuántos días puedes entrenar, qué equipo tienes, tu nivel de experiencia y cualquier dolor o limitación. Con esos datos puedo armar un entrenamiento inicial confiable aunque la personalización avanzada no esté disponible.",
     retry:
@@ -508,12 +521,8 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
 
   const isRecoverableFormatError = isCoachFallbackEligibleError;
 
-  const safetyMessages: CoachMessage[] = options.forceSafetyReview
-    ? [...messages, { role: "user", content: "ACCOUNT SAFETY CONTEXT: A stored account safety review requires a cautious response. Do not prescribe or revise a workout plan until the user has appropriate professional guidance and clear exercise restrictions. Do not assume the missing details." }]
-    : messages;
-
   try {
-    return await run(safetyMessages, primaryModel, primaryTimeoutMs);
+    return await run(messages, primaryModel, primaryTimeoutMs);
   } catch (error) {
     // A depleted provider balance affects every model. Intake and chat can
     // degrade safely without paying for a second request that must also fail.
@@ -531,7 +540,7 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
     // malformed response is not worth re-asking the expensive model for.
     try {
       const strictMessages: CoachMessage[] = [
-        ...safetyMessages,
+        ...messages,
         {
           role: "user",
           content:
@@ -554,10 +563,11 @@ export function buildIntakeMessages(
   units: Units,
   history: CoachMessage[],
   userMessage: string,
-  language?: ReliableLanguage
+  language?: ReliableLanguage,
+  ageBand?: AgeBand
 ): CoachMessage[] {
   return history.length === 0
-    ? [{ role: "user", content: `${context({ mode: "intake", units, language })}\n\n${userMessage}` }]
+    ? [{ role: "user", content: `${context({ mode: "intake", units, language, age_band: ageBandForPrompt(ageBand) })}\n\n${userMessage}` }]
     : [...history, { role: "user", content: userMessage }];
 }
 
@@ -566,9 +576,10 @@ export async function intakeTurn(
   history: CoachMessage[],
   userMessage: string,
   options?: CoachCallOptions,
-  language?: ReliableLanguage
+  language?: ReliableLanguage,
+  ageBand?: AgeBand
 ): Promise<CoachResponse> {
-  return callCoach(buildIntakeMessages(units, history, userMessage, language), options);
+  return callCoach(buildIntakeMessages(units, history, userMessage, language, ageBand), options);
 }
 
 export async function adaptPlan(
@@ -576,12 +587,20 @@ export async function adaptPlan(
   currentPlan: Plan,
   logs: unknown,
   options?: CoachCallOptions,
-  language?: ReliableLanguage
+  language?: ReliableLanguage,
+  ageBand?: AgeBand
 ): Promise<CoachResponse> {
   return callCoach([
     {
       role: "user",
-      content: context({ mode: "adapt", units, language, current_plan: compactPlanForCoach(currentPlan), logs }),
+      content: context({
+        mode: "adapt",
+        units,
+        language,
+        current_plan: compactPlanForCoach(currentPlan),
+        logs,
+        age_band: ageBandForPrompt(ageBand),
+      }),
     },
   ], options);
 }
@@ -591,7 +610,8 @@ export async function updateGoals(
   currentPlan: Plan,
   newGoal: string,
   options?: CoachCallOptions,
-  language?: ReliableLanguage
+  language?: ReliableLanguage,
+  ageBand?: AgeBand
 ): Promise<CoachResponse> {
   return callCoach([
     {
@@ -602,6 +622,7 @@ export async function updateGoals(
         language,
         current_plan: compactPlanForCoach(currentPlan),
         new_goal: newGoal,
+        age_band: ageBandForPrompt(ageBand),
       }),
     },
   ], options);
@@ -612,7 +633,8 @@ export async function chatWithCoach(
   question: string,
   currentPlan?: Plan | null,
   options?: CoachCallOptions,
-  language?: ReliableLanguage
+  language?: ReliableLanguage,
+  ageBand?: AgeBand
 ): Promise<CoachResponse> {
   return callCoach([
     {
@@ -623,6 +645,7 @@ export async function chatWithCoach(
         language,
         question,
         current_plan: currentPlan ? compactPlanForCoach(currentPlan) : null,
+        age_band: ageBandForPrompt(ageBand),
       }),
     },
   ], options);

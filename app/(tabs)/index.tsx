@@ -26,7 +26,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "@/store/authStore";
 import { useWorkoutGuideStore } from "@/store/workoutGuideStore";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
+import { usePlanSetupStore } from "@/store/planSetupStore";
 import { coachColors, coachDark, coachFonts, radii, spacing } from "@/constants/theme";
+import { useTabBarSpace } from "@/components/Navigation/FloatingTabBar";
 import { apiFetch } from "@/lib/api";
 import { ReliableSession } from "@/shared/reliableCoach";
 
@@ -51,6 +53,7 @@ export default function HomeScreen() {
   const [workoutLoading, setWorkoutLoading] = useState(false);
   const [workoutMessage, setWorkoutMessage] = useState("");
   const [justApplied, setJustApplied] = useState(false);
+  const tabBarSpace = useTabBarSpace();
 
   useEffect(() => {
     loadTrainer();
@@ -105,7 +108,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
@@ -203,7 +206,13 @@ export default function HomeScreen() {
             <>
               <Text style={styles.todayCardNoPlanTitle}>{t("home.today_card_no_plan_title")}</Text>
               <Text style={styles.todayCardNoPlanBody}>{t("home.today_card_no_plan_body")}</Text>
-              <TouchableOpacity style={styles.startWorkoutButton} onPress={() => router.push("/trainer")}>
+              <TouchableOpacity
+                style={styles.startWorkoutButton}
+                onPress={() => {
+                  usePlanSetupStore.getState().reset();
+                  router.push("/plan-setup/goal");
+                }}
+              >
                 <Text style={styles.startWorkoutText}>{t("home.today_card_build_plan")}</Text>
               </TouchableOpacity>
             </>
@@ -316,7 +325,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: coachColors.bg },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: 32, gap: spacing.lg },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, gap: spacing.lg },
 
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   dateLabel: { color: coachColors.textSecondary, fontFamily: coachFonts.bodyBold, fontSize: 13, letterSpacing: 1.4 },

@@ -11,13 +11,13 @@ export default function TabsLayout() {
         // news" state (e.g. a pending suggestion or an unseen weekly
         // check-in) once that state exists in coachTrainerStore. No such
         // signal exists yet, so the badge stays off rather than faking one.
-        <FloatingTabBar {...props} hasUnreadCoachNews={false} />
+        <FloatingTabBar {...props} hasCoachNews={false} />
       )}
     >
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="trainer" />
       <Tabs.Screen name="plan" />
       <Tabs.Screen name="scan" />
+      <Tabs.Screen name="trainer" />
       <Tabs.Screen name="profile" />
       <Tabs.Screen name="search" options={{ href: null }} />
       <Tabs.Screen name="saved" options={{ href: null }} />
