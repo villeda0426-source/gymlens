@@ -28,7 +28,11 @@ export default function SafetyStopCard({ onClearedByDoctor }: SafetyStopCardProp
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: spacing.md, alignItems: "flex-start" },
+  // No alignItems override here — the default "stretch" is what makes the
+  // ContinueButton fill the width like every other CTA in the flow. An
+  // earlier "flex-start" (presumably meant for the text above it, which
+  // doesn't actually need it) was shrinking the button to its label's width.
+  wrap: { gap: spacing.md },
   iconTile: {
     width: 56,
     height: 56,
