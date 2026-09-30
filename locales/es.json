@@ -319,7 +319,31 @@
       "shorter": "Hacer esta rutina más corta",
       "adjust_today": "Ajustar la rutina de hoy",
       "explain": "Explicar este ejercicio"
-    }
+    },
+    "coach_header_title": "Coach",
+    "coach_header_subtitle": "Conoce tu plan, tu gimnasio y tu progreso",
+    "feeling_check_in": {
+      "title": "¿Cómo se siente tu cuerpo hoy?",
+      "fresh": "Con energía",
+      "okay": "Bien",
+      "sore": "Algo adolorido",
+      "fresh_message": "Hoy me siento con energía y listo para entrenar.",
+      "okay_message": "Hoy me siento bien.",
+      "sore_message": "Hoy me siento algo adolorido."
+    },
+    "coach_composer": {
+      "camera": "Preguntar sobre una máquina con la cámara",
+      "send": "Enviar"
+    },
+    "coach_suggestion": {
+      "eyebrow": "Cambio sugerido",
+      "apply": "Aplicar hoy",
+      "keep": "Mantener plan",
+      "applied_notice": "Aplicado. Tu plan guardado ahora usa este cambio.",
+      "kept_notice": "Mantendremos tu plan como está."
+    },
+    "back_to_library": "Volver a conversaciones",
+    "open_plan": "Abrir plan"
   },
   "app_status": {
     "update_required": "Actualización requerida",

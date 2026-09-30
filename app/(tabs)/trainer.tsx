@@ -7,7 +7,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -16,7 +15,13 @@ import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import SafeScreen from "@/components/Layout/SafeScreen";
-import { colors, fonts } from "@/constants/theme";
+import { colors, coachColors, coachFonts, fonts, radii, spacing } from "@/constants/theme";
+import CoachComposer from "@/components/Coach/CoachComposer";
+import CoachMessageBubble from "@/components/Coach/CoachMessageBubble";
+import CoachSuggestionCard from "@/components/Coach/CoachSuggestionCard";
+import FeelingCheckIn, { Feeling } from "@/components/Coach/FeelingCheckIn";
+import SafetyNote from "@/components/Coach/SafetyNote";
+import SuggestedPrompts from "@/components/Coach/SuggestedPrompts";
 import { supabase } from "@/lib/supabase";
 import {
   callCoachTrainer,
@@ -31,6 +36,11 @@ import {
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { useAuthStore } from "@/store/authStore";
 
+// Live still has all 8 — "adjust_today" used to open a local rule-based
+// panel that doesn't exist in this codebase (it came from a line that
+// diverged after the App Store release). Dropped here: tapping it now just
+// asks Coach directly like any other quick action, which the backend
+// already handles fine via mode "adapt".
 const QUICK_ACTIONS = [
   "trainer.quick_actions.create_plan",
   "trainer.quick_actions.train_today",
@@ -38,7 +48,6 @@ const QUICK_ACTIONS = [
   "trainer.quick_actions.sore_today",
   "trainer.quick_actions.swap_exercise",
   "trainer.quick_actions.shorter",
-  "trainer.quick_actions.adjust_today",
   "trainer.quick_actions.explain",
 ];
 
@@ -76,47 +85,14 @@ function loadSpeechRecognitionModule(): SpeechRecognitionModule | null {
   }
 }
 
-function stringifyCoachResponse(response: CoachResponse): string {
-  return JSON.stringify(response);
-}
-
 function getCoachResponseText(response: CoachResponse): string {
-  if (response.status === "plan_ready" || response.status === "plan_updated") {
-    const changes =
-      response.status === "plan_updated" && response.changes.length > 0
-        ? `\n\nChanges:\n${response.changes.map((change) => `- ${change}`).join("\n")}`
-        : "";
-    return `${response.summary}${changes}`;
-  }
+  if (response.status === "plan_ready") return response.summary;
+  // plan_updated's changes are rendered by CoachSuggestionCard, not repeated
+  // as chat text (the card is staged alongside this bubble — see
+  // handleResponse below).
+  if (response.status === "plan_updated") return response.summary;
 
   return response.message;
-}
-
-function formatStoredCoachMessage(content: string): string {
-  try {
-    const parsed = JSON.parse(content) as CoachResponse;
-    return getCoachResponseText(parsed);
-  } catch {
-    return content;
-  }
-}
-
-function ChatBubble({ message }: { message: CoachMessage }) {
-  const isUser = message.role === "user";
-  const text = isUser ? message.content : formatStoredCoachMessage(message.content);
-
-  return (
-    <View style={[styles.bubbleRow, isUser && styles.bubbleRowUser]}>
-      {!isUser ? (
-        <View style={styles.coachAvatar}>
-          <Ionicons name="fitness" size={17} color={colors.white} />
-        </View>
-      ) : null}
-      <View style={[styles.bubble, isUser ? styles.userBubble : styles.coachBubble]}>
-        <Text style={[styles.bubbleText, isUser && styles.userBubbleText]}>{text}</Text>
-      </View>
-    </View>
-  );
 }
 
 export default function TrainerScreen() {
@@ -140,6 +116,10 @@ export default function TrainerScreen() {
     setIntakeHistory,
     conversation,
     addConversationMessage,
+    pendingPlanChange,
+    setPendingPlanChange,
+    applyPendingPlanChange,
+    dismissPendingPlanChange,
     resetChatSession,
     threads,
     openTrainerLibrary,
@@ -155,6 +135,7 @@ export default function TrainerScreen() {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [listening, setListening] = useState(false);
+  const [feeling, setFeeling] = useState<Feeling | null>(null);
 
   useEffect(() => {
     const speechModule = loadSpeechRecognitionModule();
@@ -262,21 +243,36 @@ export default function TrainerScreen() {
   }, [conversation, t]);
 
   const handleResponse = (response: CoachResponse, nextIntakeHistory?: CoachMessage[]) => {
-    const assistantJson = stringifyCoachResponse(response);
     const assistantText = getCoachResponseText(response);
-
     addConversationMessage({ role: "assistant", content: assistantText });
 
     if (nextIntakeHistory) {
-      setIntakeHistory([...nextIntakeHistory, { role: "assistant", content: assistantJson }]);
+      setIntakeHistory([...nextIntakeHistory, { role: "assistant", content: JSON.stringify(response) }]);
     }
 
-    if (response.status === "plan_ready" || response.status === "plan_updated") {
+    if (response.status === "plan_ready") {
+      // The very first plan (onboarding) applies immediately — it's not a
+      // "change" to an existing plan, so there's nothing to stage.
       setPlan(response.plan);
       setNotice(t("trainer.plan_ready_notice"));
+    } else if (response.status === "plan_updated") {
+      // Stage it: CoachSuggestionCard renders it, and only "Apply today"
+      // (applyPendingPlanChange) edits the saved plan.
+      setPendingPlanChange(response);
+      setNotice("");
     } else {
       setNotice("");
     }
+  };
+
+  const handleApplyPendingPlanChange = () => {
+    applyPendingPlanChange();
+    addConversationMessage({ role: "assistant", content: t("trainer.coach_suggestion.applied_notice") });
+  };
+
+  const handleDismissPendingPlanChange = () => {
+    dismissPendingPlanChange();
+    addConversationMessage({ role: "assistant", content: t("trainer.coach_suggestion.kept_notice") });
   };
 
   const waitForCoachJob = async (jobId: string, authToken: string, signal: AbortSignal) => {
@@ -337,7 +333,7 @@ export default function TrainerScreen() {
     setDraft("");
 
     try {
-      const language = i18n.language?.startsWith("es") ? "es" as const : "en" as const;
+      const language = i18n.language?.startsWith("es") ? ("es" as const) : ("en" as const);
       if (!plan) {
         const nextHistory =
           intakeHistory.length === 0
@@ -418,6 +414,11 @@ export default function TrainerScreen() {
     }
   };
 
+  const handleFeelingSelect = (nextFeeling: Feeling) => {
+    setFeeling(nextFeeling);
+    submitMessage(t(`trainer.feeling_check_in.${nextFeeling}_message`));
+  };
+
   const toggleVoiceInput = async () => {
     const speechModule = speechModuleRef.current ?? loadSpeechRecognitionModule();
     speechModuleRef.current = speechModule;
@@ -482,7 +483,7 @@ export default function TrainerScreen() {
               <Text style={styles.introSubtitle}>{t("trainer.library_subtitle")}</Text>
             </View>
             <TouchableOpacity style={styles.newThreadButton} onPress={startNewThread} disabled={!user}>
-              <Ionicons name="add" size={22} color={colors.white} />
+              <Ionicons name="add" size={22} color={coachColors.card} />
             </TouchableOpacity>
           </View>
 
@@ -496,7 +497,7 @@ export default function TrainerScreen() {
                   onPress={() => selectThread(thread.id)}
                 >
                   <View style={styles.threadIcon}>
-                    <Ionicons name={thread.plan ? "barbell" : "chatbubble-ellipses"} size={21} color={colors.ndGold} />
+                    <Ionicons name={thread.plan ? "barbell" : "chatbubble-ellipses"} size={21} color={coachColors.coachGoldText} />
                   </View>
                   <View style={styles.threadCopy}>
                     <Text style={styles.threadTitle} numberOfLines={1}>{thread.title}</Text>
@@ -510,10 +511,10 @@ export default function TrainerScreen() {
                     </Text>
                   </View>
                   <View style={styles.threadCount}>
-                    <Ionicons name="chatbubble-outline" size={13} color={colors.textMuted} />
+                    <Ionicons name="chatbubble-outline" size={13} color={coachColors.textSecondary} />
                     <Text style={styles.threadCountText}>{thread.conversation.length}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={19} color={colors.textMuted} />
+                  <Ionicons name="chevron-forward" size={19} color={coachColors.textSecondary} />
                 </TouchableOpacity>
               ))}
             </View>
@@ -542,7 +543,7 @@ export default function TrainerScreen() {
             <Text style={styles.chatWithMeText}>
               {user ? t("trainer.new_conversation") : t("trainer.sign_in_to_chat")}
             </Text>
-            <Ionicons name="arrow-forward" size={18} color={colors.white} />
+            <Ionicons name="arrow-forward" size={18} color={coachColors.card} />
           </TouchableOpacity>
 
           {!user ? (
@@ -556,26 +557,37 @@ export default function TrainerScreen() {
   }
 
   return (
-    <SafeScreen edges={["top"]}>
+    <SafeScreen edges={["top"]} style={styles.chatScreen}>
       <KeyboardAvoidingView
         style={styles.keyboard}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
       >
         <View style={styles.header}>
-          <TouchableOpacity style={styles.libraryBackButton} onPress={openTrainerLibrary}>
-            <Ionicons name="chevron-back" size={23} color={colors.text} />
+          <TouchableOpacity style={styles.libraryBackButton} onPress={openTrainerLibrary} accessibilityRole="button" accessibilityLabel={t("trainer.back_to_library")}>
+            <Ionicons name="chevron-back" size={22} color={coachColors.text} />
           </TouchableOpacity>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>{t("trainer.personal_trainer")}</Text>
-            <Text style={styles.title}>{t("trainer.chat_title")}</Text>
+          <View style={styles.headerAvatar}>
+            <Ionicons name="star" size={18} color={coachColors.coachGold} />
           </View>
+          <View style={styles.headerCopy}>
+            <Text style={styles.headerTitle}>{t("trainer.coach_header_title")}</Text>
+            <Text style={styles.headerSubtitle}>{t("trainer.coach_header_subtitle")}</Text>
+          </View>
+          {/* Weekly check-in entry point lands here in Phase 4, once
+              app/coach-week.tsx exists — no dead link in the meantime. */}
           {plan ? (
-            <TouchableOpacity style={styles.headerPlanButton} onPress={() => router.push("/plan")}>
-              <Ionicons name="barbell-outline" size={18} color={colors.ndGold} />
+            <TouchableOpacity style={styles.headerPlanButton} onPress={() => router.push("/plan")} accessibilityRole="button" accessibilityLabel={t("trainer.open_plan")}>
+              <Ionicons name="barbell-outline" size={18} color={coachColors.coachGold} />
             </TouchableOpacity>
           ) : null}
         </View>
+
+        {plan ? (
+          <View style={styles.feelingCheckInWrap}>
+            <FeelingCheckIn selected={feeling} onSelect={handleFeelingSelect} />
+          </View>
+        ) : null}
 
         <ScrollView
           ref={scrollRef}
@@ -585,19 +597,32 @@ export default function TrainerScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {visibleConversation.map((message, index) => (
-            <ChatBubble key={`${message.role}-${index}-${message.content.slice(0, 12)}`} message={message} />
+            <CoachMessageBubble key={`${message.role}-${index}-${message.content.slice(0, 12)}`} message={message} />
           ))}
+
+          {pendingPlanChange ? (
+            <View style={styles.suggestionWrap}>
+              <CoachSuggestionCard
+                response={pendingPlanChange}
+                onApply={handleApplyPendingPlanChange}
+                onKeep={handleDismissPendingPlanChange}
+              />
+              {pendingPlanChange.plan.safety_flags.length > 0 ? (
+                <SafetyNote text={pendingPlanChange.plan.safety_flags[0]} />
+              ) : null}
+            </View>
+          ) : null}
 
           {loading ? (
             <View style={styles.thinkingCard}>
-              <ActivityIndicator color={colors.ndGold} size="small" />
+              <ActivityIndicator color={coachColors.coachGold} size="small" />
               <Text style={styles.thinkingText}>{t("trainer.coach_thinking")}</Text>
             </View>
           ) : null}
 
           {notice ? (
             <View style={styles.noticeCard}>
-              <Ionicons name="sparkles" size={17} color={colors.ndGold} />
+              <Ionicons name="sparkles" size={17} color={coachColors.coachGoldText} />
               <Text style={styles.noticeText}>{notice}</Text>
               {failedPrompt ? (
                 <TouchableOpacity style={styles.resendButton} onPress={() => submitMessage(failedPrompt)} disabled={loading}>
@@ -613,44 +638,23 @@ export default function TrainerScreen() {
         </ScrollView>
 
         <View style={styles.quickActions}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickActionsInner}>
-            {QUICK_ACTIONS.map((action) => (
-              <TouchableOpacity key={action} style={styles.quickChip} onPress={() => submitMessage(t(action))}>
-                <Text style={styles.quickChipText}>{t(action)}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <SuggestedPrompts
+            prompts={QUICK_ACTIONS.map((action) => ({ key: action, label: t(action) }))}
+            onPress={(action) => submitMessage(t(action))}
+          />
         </View>
 
         <View style={styles.composerWrap}>
-          <TouchableOpacity
-            style={[styles.voiceButton, listening && styles.voiceButtonActive]}
-            onPress={toggleVoiceInput}
-            disabled={loading}
-            accessibilityRole="button"
-            accessibilityLabel={listening ? t("trainer.voice_stop") : t("trainer.voice_start")}
-          >
-            <Ionicons name={listening ? "mic" : "mic-outline"} size={19} color={listening ? colors.white : colors.ndGold} />
-          </TouchableOpacity>
-          <TextInput
+          <CoachComposer
             value={draft}
             onChangeText={setDraft}
+            onSend={() => submitMessage()}
+            onCameraPress={() => router.push("/(tabs)/scan")}
+            onVoicePress={toggleVoiceInput}
+            listening={listening}
+            loading={loading}
             placeholder={plan ? t("trainer.placeholder_plan") : t("trainer.placeholder_intake")}
-            placeholderTextColor={colors.textMuted}
-            multiline
-            style={styles.composer}
           />
-          <TouchableOpacity
-            style={[styles.sendButton, (!draft.trim() || loading) && styles.sendButtonDisabled]}
-            onPress={() => submitMessage()}
-            disabled={!draft.trim() || loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.white} size="small" />
-            ) : (
-              <Ionicons name="send" size={18} color={colors.white} />
-            )}
-          </TouchableOpacity>
         </View>
 
         {conversation.length > 0 ? (
@@ -668,62 +672,38 @@ const styles = StyleSheet.create({
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
   introScroll: { flex: 1 },
   introContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 34 },
-  introHeader: { marginBottom: 16 },
   libraryHeader: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 18 },
   newThreadButton: {
-    width: 48, height: 48, borderRadius: 16, backgroundColor: colors.ndGold,
+    width: 48, height: 48, borderRadius: 16, backgroundColor: coachColors.coachNavy,
     alignItems: "center", justifyContent: "center",
   },
   threadList: { gap: 11 },
   threadCard: {
-    minHeight: 92, borderRadius: 18, backgroundColor: colors.card, borderWidth: 1,
-    borderColor: colors.cardBorder, padding: 14, flexDirection: "row", alignItems: "center", gap: 12,
+    minHeight: 92, borderRadius: 18, backgroundColor: coachColors.card, borderWidth: 1,
+    borderColor: coachColors.border, padding: 14, flexDirection: "row", alignItems: "center", gap: 12,
   },
   threadIcon: {
-    width: 46, height: 46, borderRadius: 15, backgroundColor: colors.ndGold + "18",
+    width: 46, height: 46, borderRadius: 15, backgroundColor: coachColors.coachGold + "18",
     alignItems: "center", justifyContent: "center",
   },
   threadCopy: { flex: 1 },
-  threadTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 16 },
-  threadMeta: { color: colors.textSecondary, fontFamily: fonts.body, fontSize: 12, marginTop: 4 },
-  threadDate: { color: colors.textMuted, fontFamily: fonts.body, fontSize: 11, marginTop: 4 },
+  threadTitle: { color: coachColors.text, fontFamily: coachFonts.bodyBold, fontSize: 16 },
+  threadMeta: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 12, marginTop: 4 },
+  threadDate: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 11, marginTop: 4 },
   threadCount: { flexDirection: "row", alignItems: "center", gap: 4 },
-  threadCountText: { color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 11 },
+  threadCountText: { color: coachColors.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 11 },
   introSubtitle: { color: colors.textSecondary, fontFamily: fonts.body, fontSize: 15, lineHeight: 22, marginTop: 6 },
   coachIntroCard: {
     borderRadius: 26,
     padding: 18,
-    backgroundColor: colors.ndNavy,
-    borderWidth: 1,
-    borderColor: colors.ndGold + "55",
+    backgroundColor: coachColors.coachNavy,
     alignItems: "center",
     overflow: "hidden",
   },
   coachIntroCopy: { alignSelf: "stretch", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 18, padding: 16 },
-  coachIntroEyebrow: { color: colors.ndGold, fontFamily: fonts.extraBold, fontSize: 11, textTransform: "uppercase" },
-  coachIntroTitle: { color: colors.white, fontFamily: fonts.heading, fontSize: 32, marginTop: 3 },
+  coachIntroEyebrow: { color: coachColors.coachGold, fontFamily: fonts.extraBold, fontSize: 11, textTransform: "uppercase" },
+  coachIntroTitle: { color: coachColors.card, fontFamily: fonts.heading, fontSize: 32, marginTop: 3 },
   coachIntroText: { color: "rgba(255,255,255,0.78)", fontFamily: fonts.body, fontSize: 14, lineHeight: 21, marginTop: 5 },
-  backgroundCard: {
-    marginTop: 14,
-    borderRadius: 18,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    padding: 14,
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "flex-start",
-  },
-  backgroundIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: colors.ndGold + "18",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backgroundTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 15 },
-  backgroundText: { color: colors.textSecondary, fontFamily: fonts.body, fontSize: 13, lineHeight: 19, marginTop: 3 },
   introNotice: {
     marginTop: 12,
     flexDirection: "row",
@@ -739,93 +719,54 @@ const styles = StyleSheet.create({
     marginTop: 16,
     minHeight: 54,
     borderRadius: 18,
-    backgroundColor: colors.ndGold,
+    backgroundColor: coachColors.coachGold,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 9,
   },
-  chatWithMeText: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 16 },
+  chatWithMeText: { color: coachColors.card, fontFamily: fonts.extraBold, fontSize: 16 },
   authLinkButton: { alignItems: "center", paddingVertical: 14 },
-  authLinkText: { color: colors.ndNavy, fontFamily: fonts.bold, fontSize: 14 },
+  authLinkText: { color: coachColors.coachNavy, fontFamily: fonts.bold, fontSize: 14 },
+  chatScreen: { backgroundColor: coachColors.bg },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: spacing.md,
   },
   libraryBackButton: {
-    width: 42, height: 42, borderRadius: 14, backgroundColor: colors.card,
-    borderWidth: 1, borderColor: colors.cardBorder, alignItems: "center", justifyContent: "center", marginRight: 11,
+    width: 40, height: 40, borderRadius: radii.pill, backgroundColor: coachColors.card,
+    borderWidth: 1, borderColor: coachColors.border, alignItems: "center", justifyContent: "center",
   },
-  headerPlanButton: {
-    width: 42, height: 42, borderRadius: 14, backgroundColor: colors.ndNavy,
-    borderWidth: 1, borderColor: colors.ndGold + "55", alignItems: "center", justifyContent: "center",
-  },
-  eyebrow: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 12, textTransform: "uppercase" },
-  title: { color: colors.text, fontFamily: fonts.heading, fontSize: 34 },
-  headerControls: { alignItems: "flex-end", gap: 8 },
-  planShortcut: {
-    minHeight: 42,
-    borderRadius: 13,
-    backgroundColor: colors.ndNavy,
-    borderWidth: 1,
-    borderColor: colors.ndGold + "55",
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-  },
-  planShortcutText: { color: colors.ndGold, fontFamily: fonts.bold, fontSize: 13 },
-  unitSwitch: {
-    flexDirection: "row",
-    borderRadius: 10,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: colors.ndGold + "55",
-    backgroundColor: colors.card,
-  },
-  unitButton: { minWidth: 36, minHeight: 32, alignItems: "center", justifyContent: "center" },
-  unitButtonActive: { backgroundColor: colors.ndGold },
-  unitText: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 12 },
-  unitTextActive: { color: colors.white },
-  messages: { flex: 1 },
-  messagesContent: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 18, gap: 12 },
-  bubbleRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
-  bubbleRowUser: { justifyContent: "flex-end" },
-  coachAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    backgroundColor: colors.text,
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.pill,
+    backgroundColor: coachColors.coachNavy,
     alignItems: "center",
     justifyContent: "center",
   },
-  bubble: {
-    maxWidth: "82%",
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+  headerPlanButton: {
+    width: 40, height: 40, borderRadius: radii.pill, backgroundColor: coachColors.coachNavy,
+    alignItems: "center", justifyContent: "center",
   },
-  coachBubble: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderBottomLeftRadius: 6,
-  },
-  userBubble: {
-    backgroundColor: colors.ndNavy,
-    borderBottomRightRadius: 6,
-  },
-  bubbleText: { color: colors.text, fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
-  userBubbleText: { color: colors.white },
+  headerCopy: { flex: 1 },
+  headerTitle: { color: coachColors.text, fontFamily: coachFonts.heading, fontSize: 22 },
+  headerSubtitle: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 12, marginTop: 1 },
+  eyebrow: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 12, textTransform: "uppercase" },
+  title: { color: colors.text, fontFamily: fonts.heading, fontSize: 34 },
+  feelingCheckInWrap: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
+  messages: { flex: 1 },
+  messagesContent: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 18, gap: 12 },
+  suggestionWrap: { gap: spacing.sm },
   noticeCard: {
     flexDirection: "row",
     gap: 8,
-    backgroundColor: colors.ndGold + "16",
-    borderColor: colors.ndGold + "45",
+    backgroundColor: coachColors.coachGold + "16",
+    borderColor: coachColors.coachGold + "45",
     borderWidth: 1,
     borderRadius: 14,
     padding: 12,
@@ -840,8 +781,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderBottomLeftRadius: 6,
     borderWidth: 1,
-    borderColor: colors.ndGold + "35",
-    backgroundColor: colors.ndGold + "12",
+    borderColor: coachColors.coachGold + "35",
+    backgroundColor: coachColors.coachGold + "12",
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
@@ -849,67 +790,15 @@ const styles = StyleSheet.create({
   resendButton: {
     alignSelf: "center",
     borderRadius: 10,
-    backgroundColor: colors.ndGold,
+    backgroundColor: coachColors.coachGold,
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
-  resendText: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 12 },
-  quickActions: { borderTopWidth: 1, borderTopColor: colors.cardBorder, paddingTop: 10 },
-  quickActionsInner: { paddingHorizontal: 20, gap: 8, paddingBottom: 10 },
-  quickChip: {
-    minHeight: 36,
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    backgroundColor: colors.ndNavy + "08",
-    borderWidth: 1,
-    borderColor: colors.ndGold + "35",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  quickChipText: { color: colors.ndNavy, fontFamily: fonts.semiBold, fontSize: 12 },
+  resendText: { color: coachColors.card, fontFamily: fonts.extraBold, fontSize: 12 },
+  quickActions: { borderTopWidth: 1, borderTopColor: coachColors.border, paddingTop: 10 },
   composerWrap: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "flex-end",
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-  },
-  voiceButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.ndGold + "45",
-    backgroundColor: colors.card,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  voiceButtonActive: {
-    backgroundColor: colors.coral,
-    borderColor: colors.coral,
-  },
-  composer: {
-    flex: 1,
-    maxHeight: 110,
-    minHeight: 48,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.ndGold + "45",
-    backgroundColor: colors.card,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: colors.text,
-    fontFamily: fonts.body,
-    fontSize: 14,
-    textAlignVertical: "top",
-  },
-  sendButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: colors.ndGold,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.sm,
   },
   sendButtonDisabled: { opacity: 0.5 },
   resetButton: { alignSelf: "center", paddingVertical: 8, marginBottom: 4 },

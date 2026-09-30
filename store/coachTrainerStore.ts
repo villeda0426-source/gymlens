@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
-import { CoachMessage, CoachPlan, Units } from "@/lib/coachTrainer";
+import { CoachMessage, CoachPlan, CoachResponse, Units } from "@/lib/coachTrainer";
 
 const STORAGE_KEY = "coachlift_ai_trainer_state_v1";
 
@@ -30,6 +30,13 @@ export type CoachWorkoutReview = {
   createdAt: string;
 };
 
+// A Coach-suggested plan edit, staged from the chat's "plan_updated"
+// response. Never applied to `plan`/the active thread until the user
+// explicitly taps "Apply" (CoachSuggestionCard) — see Phase 3 of the Coach
+// Forward plan. Deliberately not part of a thread's persisted history: it's
+// a live, in-progress prompt, not a message.
+export type PendingPlanChange = Extract<CoachResponse, { status: "plan_updated" }>;
+
 export type CoachAvatarConfig = {
   skinTone: "light" | "medium" | "deep";
   bodyType: "lean" | "athletic" | "strong";
@@ -49,6 +56,7 @@ interface CoachTrainerState {
   intakeHistory: CoachMessage[];
   conversation: TrainerConversation[];
   latestWorkoutReview: CoachWorkoutReview | null;
+  pendingPlanChange: PendingPlanChange | null;
   threads: CoachTrainerThread[];
   activeThreadId: string | null;
   hasLoaded: boolean;
@@ -67,6 +75,9 @@ interface CoachTrainerState {
   setIntakeHistory: (history: CoachMessage[]) => void;
   addConversationMessage: (message: CoachMessage) => void;
   setLatestWorkoutReview: (review: Omit<CoachWorkoutReview, "createdAt"> | null) => void;
+  setPendingPlanChange: (change: PendingPlanChange | null) => void;
+  applyPendingPlanChange: () => void;
+  dismissPendingPlanChange: () => void;
   resetChatSession: () => void;
   clearTrainer: () => void;
   purgeTrainer: () => Promise<void>;
@@ -201,6 +212,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
   intakeHistory: [],
   conversation: [],
   latestWorkoutReview: null,
+  pendingPlanChange: null,
   threads: [],
   activeThreadId: null,
   hasLoaded: false,
@@ -259,6 +271,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
       latestWorkoutReview: thread.latestWorkoutReview,
       failedPrompt: null,
       hasEnteredCoachChat: true,
+      pendingPlanChange: null,
     });
     persist(get());
   },
@@ -273,6 +286,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
       latestWorkoutReview: null,
       failedPrompt: null,
       hasEnteredCoachChat: true,
+      pendingPlanChange: null,
     });
     persist(get());
   },
@@ -320,6 +334,17 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
     persist(get());
   },
 
+  setPendingPlanChange: (pendingPlanChange) => set({ pendingPlanChange }),
+
+  applyPendingPlanChange: () => {
+    const { pendingPlanChange } = get();
+    if (!pendingPlanChange) return;
+    get().setPlan(pendingPlanChange.plan);
+    set({ pendingPlanChange: null });
+  },
+
+  dismissPendingPlanChange: () => set({ pendingPlanChange: null }),
+
   resetChatSession: () => {
     const next = { hasEnteredCoachChat: false, failedPrompt: null };
     set(next);
@@ -337,6 +362,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
       intakeHistory: [],
       conversation: [],
       latestWorkoutReview: null,
+      pendingPlanChange: null,
       activeThreadId: null,
       threads: get().threads,
     };
@@ -355,6 +381,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
       intakeHistory: [],
       conversation: [],
       latestWorkoutReview: null,
+      pendingPlanChange: null,
       threads: [],
       activeThreadId: null,
       hasLoaded: true,
