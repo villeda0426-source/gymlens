@@ -41,21 +41,39 @@ import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { supabase } from "@/lib/supabase";
 import { handleAuthRedirectUrl } from "@/lib/authRedirect";
 import { colors } from "@/constants/theme";
+import { isBelowMinimumAccountAge } from "@/shared/ageBand";
 
 function AuthGate() {
-  const { user, isLoading } = useAuthStore();
+  const { user, profile, isLoading } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     if (isLoading) return;
     const inAuth = segments[0] === "(auth)";
-    if (!user && !inAuth) {
-      router.replace("/(auth)/login");
-    } else if (user && inAuth) {
-      router.replace("/(tabs)");
+    const onBirthYearScreen = inAuth && (segments as string[])[1] === "birth-year";
+
+    if (!user) {
+      if (!inAuth) router.replace("/(auth)/login");
+      return;
     }
-  }, [user, isLoading, segments]);
+
+    // Asked once, right at sign-in — for every account, new or existing,
+    // whose profile still has age_band "unknown". A birth year below the
+    // minimum account age keeps routing here permanently (checked straight
+    // from birth_year, not age_band, so it can't be bypassed by whatever
+    // band that year happens to compute to).
+    const storedBirthYear = typeof profile?.birth_year === "number" ? profile.birth_year : null;
+    const belowMinimumAge = storedBirthYear !== null && isBelowMinimumAccountAge(storedBirthYear);
+    const needsBirthYear = !!profile && profile.age_band === "unknown";
+
+    if (needsBirthYear || belowMinimumAge) {
+      if (!onBirthYearScreen) router.replace("/(auth)/birth-year");
+      return;
+    }
+
+    if (inAuth) router.replace("/(tabs)");
+  }, [user, profile, isLoading, segments]);
 
   return null;
 }
@@ -136,6 +154,7 @@ function RootLayout() {
                   <Stack.Screen name="(tabs)" />
                   <Stack.Screen name="(auth)/login" />
                   <Stack.Screen name="(auth)/register" />
+                  <Stack.Screen name="(auth)/birth-year" />
                   <Stack.Screen name="auth/callback" />
                   <Stack.Screen name="equipment/[id]" options={{ presentation: "card" }} />
                   <Stack.Screen name="feedback" options={{ presentation: "modal" }} />

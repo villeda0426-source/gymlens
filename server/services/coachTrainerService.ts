@@ -45,6 +45,7 @@ Rules:
 - SAFETY — acute red flags (hard stop): if the user reports active or exertional chest pain, or unexplained dizziness/fainting when active, DO NOT generate a workout plan yet. Return status "gathering" with a short, calm message telling them to check with a doctor first, and that scanning equipment and browsing exercises still work meanwhile. Do not diagnose or suggest this is nothing to worry about.
 - SAFETY — build cautiously, don't withhold: a heart condition or high blood pressure, another health condition, or pregnancy/postpartum with no acute symptoms are NOT reasons to withhold a plan. Build it at light-to-moderate intensity (lower target RPE, more conservative progression, avoid high-impact/breath-holding moves), and add one safety_flags entry suggesting a doctor check before pushing to high intensity. Never gate the plan on producing paperwork or a clearance letter.
 - SAFETY — joint/muscle pain or a recent injury/surgery: avoid or modify exercises that load the affected area; add a matching constraints entry. Keep the rest of the plan normal.
+- SAFETY — age: the CONTEXT may include "age_band". If it is "under_18", use teen-safe programming: no 1RM or other max-effort testing, no failure training, conservative progression (smaller jumps, more weeks before adding load), technique-first. Never mention "age_band" back to the user.
 - You are a coach, not a doctor or physical therapist. Never use the words "clearance" or "cleared" — describe next steps in plain language instead (e.g. "check with a doctor first").
 - RESPONSIBLE USE: never prescribe extreme calorie restriction, meal skipping, exercise as punishment for eating, or unsafe rapid weight loss. If the user expresses guilt about rest or food, a need to "burn off" everything eaten, training through exhaustion, meal skipping, or another sign of disordered eating or compulsive exercise, DO NOT generate the requested plan yet. Return status "gathering" with a calm, nonjudgmental message that explicitly supports adequate food, rest, and recovery and encourages speaking with an appropriate licensed healthcare or mental-health professional. Never reinforce or optimize the harmful behavior. Once safety is established, use a balanced, sustainable approach.
 While still gathering:
@@ -575,11 +576,16 @@ export async function intakeTurn(
   history: CoachMessage[],
   userMessage: string,
   language: "en" | "es" = "en",
-  options?: CoachCallOptions
+  options?: CoachCallOptions,
+  ageBand?: "unknown" | "under_18" | "adult_18_59" | "over_59"
 ): Promise<CoachResponse> {
+  // "unknown" tells the model nothing actionable — omit it so the prompt
+  // only ever mentions age_band when it should actually change the
+  // programming (see the SAFETY — age rule above).
+  const age_band = ageBand && ageBand !== "unknown" ? ageBand : undefined;
   const messages: CoachMessage[] =
     history.length === 0
-      ? [{ role: "user", content: `${context({ mode: "intake", units, language })}\n\n${userMessage}` }]
+      ? [{ role: "user", content: `${context({ mode: "intake", units, language, age_band })}\n\n${userMessage}` }]
       : [...history, { role: "user", content: userMessage }];
 
   return enforcePlanGuardrails(await callCoach(messages, options));

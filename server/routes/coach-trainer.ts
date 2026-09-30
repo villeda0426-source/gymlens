@@ -99,7 +99,9 @@ function isWorkoutFeedback(value: unknown): value is WorkoutFeedback {
   );
 }
 
-async function runCoachRequest(req: Request, coachOptions: CoachCallOptions = getCoachTimeouts(req)) {
+type AgeBand = "unknown" | "under_18" | "adult_18_59" | "over_59";
+
+async function runCoachRequest(req: Request, coachOptions: CoachCallOptions = getCoachTimeouts(req), ageBand?: AgeBand) {
   const mode = req.body?.mode;
   const units = req.body?.units;
   const language = req.body?.language === "es" ? "es" : "en";
@@ -118,7 +120,7 @@ async function runCoachRequest(req: Request, coachOptions: CoachCallOptions = ge
       throw new Error("userMessage is required for intake.");
     }
 
-    return intakeTurn(units, getHistory(req.body?.history), userMessage, language, coachOptions);
+    return intakeTurn(units, getHistory(req.body?.history), userMessage, language, coachOptions, ageBand);
   }
 
   if (mode === "adapt") {
@@ -145,7 +147,7 @@ async function runCoachRequest(req: Request, coachOptions: CoachCallOptions = ge
   return chatWithCoach(units, question, currentPlan, language, coachOptions);
 }
 
-async function processCoachJob(jobId: string, payload: unknown) {
+async function processCoachJob(jobId: string, payload: unknown, ageBand?: AgeBand) {
   const processStartedAt = Date.now();
   const timing: CoachStageTiming = { openAiMs: 0, validationMs: 0, retryMs: 0, attempts: 0, fallbackUsed: false };
   const { data: jobRow } = await supabase
@@ -158,7 +160,7 @@ async function processCoachJob(jobId: string, payload: unknown) {
 
   try {
     const mockReq = { body: payload, header: () => undefined } as unknown as Request;
-    const result = await runCoachRequest(mockReq, { primaryTimeoutMs: 110000, fallbackTimeoutMs: 25000, timing });
+    const result = await runCoachRequest(mockReq, { primaryTimeoutMs: 110000, fallbackTimeoutMs: 25000, timing }, ageBand);
     const processingMs = Date.now() - processStartedAt;
     const saveStartedAt = Date.now();
     const { error } = await supabase
@@ -216,6 +218,16 @@ router.post("/jobs", async (req: Request, res: Response) => {
 
     const userId = await getAuthenticatedUserId(req);
     if (!userId) return res.status(401).json({ error: "Sign in is required to create a Coach job." });
+
+    // Only intake needs this — it's the one call that shapes a plan's
+    // overall structure (see coachTrainerService.ts's SAFETY — age rule).
+    let ageBand: AgeBand | undefined;
+    if (mode === "intake") {
+      const { data: profileRow } = await supabase.from("profiles").select("age_band").eq("id", userId).maybeSingle();
+      const validBands: AgeBand[] = ["unknown", "under_18", "adult_18_59", "over_59"];
+      ageBand = validBands.includes(profileRow?.age_band) ? (profileRow!.age_band as AgeBand) : undefined;
+    }
+
     const { data, error } = await supabase
       .from("coach_trainer_jobs")
       .insert({
@@ -228,7 +240,7 @@ router.post("/jobs", async (req: Request, res: Response) => {
 
     if (error) throw error;
 
-    void processCoachJob(data.id, req.body);
+    void processCoachJob(data.id, req.body, ageBand);
     return res.status(202).json({ jobId: data.id, status: data.status });
   } catch (error: any) {
     console.error("[coach-trainer-jobs] create error:", error.message ?? error);

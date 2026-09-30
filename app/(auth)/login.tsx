@@ -97,8 +97,13 @@ export default function LoginScreen() {
         if (error) throw error;
         if (!data.session?.user) throw new Error(t("auth.session_failed"));
 
+        // Don't navigate here: isLoading is still true until loadProfile()
+        // (triggered by the auth-state-change listener in app/_layout.tsx)
+        // finishes, and AuthGate needs the loaded profile to know whether to
+        // send this account to /(auth)/birth-year or /(tabs). Navigating
+        // immediately raced that load — the person would flash into /(tabs)
+        // and then get bounced to birth-year a moment later.
         setUser(data.session.user);
-        router.replace("/(tabs)");
       } else {
         const { error } = await withTimeout(
           supabase.auth.signUp({

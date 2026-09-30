@@ -683,5 +683,16 @@
       "tweak_with_coach": "Tweak it with Coach",
       "plan_name_fallback": "Your training plan"
     }
+  },
+  "age_gate": {
+    "title": "One quick question",
+    "body": "What year were you born? This helps Coach keep your training age-appropriate.",
+    "placeholder": "YYYY",
+    "continue": "Continue",
+    "invalid_year": "Enter a valid birth year.",
+    "save_error": "Could not save that. Please try again.",
+    "blocked_title": "Not old enough yet",
+    "blocked_body": "You need to be at least {{age}} to use SpotLift. Please check back when you meet the minimum age.",
+    "sign_out": "Sign out"
   }
 }
