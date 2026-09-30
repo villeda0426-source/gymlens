@@ -34,6 +34,7 @@ import {
   startCoachTrainerJob,
 } from "@/lib/coachTrainer";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
+import { usePlanSetupStore } from "@/store/planSetupStore";
 import { useAuthStore } from "@/store/authStore";
 
 // Live still has all 8 — "adjust_today" used to open a local rule-based
@@ -103,7 +104,7 @@ export default function TrainerScreen() {
   const voiceDraftSeedRef = useRef("");
   const speechModuleRef = useRef<SpeechRecognitionModule | null>(null);
   const reviewHydratedRef = useRef(false);
-  const { user, isLoading: authLoading } = useAuthStore();
+  const { user, profile, isLoading: authLoading } = useAuthStore();
   const {
     units,
     plan,
@@ -458,6 +459,15 @@ export default function TrainerScreen() {
   const confirmReset = () => {
     Alert.alert(t("trainer.reset_title"), t("trainer.reset_message"), [
       { text: t("common.cancel"), style: "cancel" },
+      ...(plan
+        ? [{
+            text: t("trainer.rebuild_plan"),
+            onPress: () => {
+              usePlanSetupStore.getState().beginFromProfile(profile);
+              router.push("/plan-setup/goal");
+            },
+          }]
+        : []),
       { text: t("trainer.new_conversation"), onPress: startNewThread },
     ]);
   };
@@ -538,19 +548,29 @@ export default function TrainerScreen() {
           <TouchableOpacity
             style={[styles.chatWithMeButton, !user && styles.sendButtonDisabled]}
             disabled={!user}
-            onPress={startNewThread}
+            onPress={() => {
+              usePlanSetupStore.getState().reset();
+              startNewThread();
+              router.push("/plan-setup/goal");
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t("trainer.build_plan_cta")}
           >
             <Text style={styles.chatWithMeText}>
-              {user ? t("trainer.new_conversation") : t("trainer.sign_in_to_chat")}
+              {user ? t("trainer.build_plan_cta") : t("trainer.sign_in_to_chat")}
             </Text>
             <Ionicons name="arrow-forward" size={18} color={coachColors.card} />
           </TouchableOpacity>
 
-          {!user ? (
+          {user ? (
+            <TouchableOpacity style={styles.authLinkButton} onPress={startNewThread}>
+              <Text style={styles.authLinkText}>{t("trainer.new_conversation")}</Text>
+            </TouchableOpacity>
+          ) : (
             <TouchableOpacity style={styles.authLinkButton} onPress={() => router.push("/(auth)/login")}>
               <Text style={styles.authLinkText}>{t("trainer.go_to_sign_in")}</Text>
             </TouchableOpacity>
-          ) : null}
+          )}
         </ScrollView>
       </SafeScreen>
     );

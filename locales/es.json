@@ -344,7 +344,9 @@
     },
     "back_to_library": "Volver a conversaciones",
     "open_plan": "Abrir plan",
-    "coach_week_button": "Revisión semanal"
+    "coach_week_button": "Revisión semanal",
+    "build_plan_cta": "Armar un plan",
+    "rebuild_plan": "Rehacer plan"
   },
   "app_status": {
     "update_required": "Actualización requerida",
@@ -552,5 +554,134 @@
     "approve": "Aprobar cambios",
     "edit": "Editar",
     "approved_notice": "Aprobado. Coach usará estos cambios a partir de la próxima semana."
+  },
+  "plan_setup": {
+    "close": "Cerrar",
+    "back": "Atrás",
+    "continue": "Continuar",
+    "build_my_plan": "Armar mi plan",
+    "step_of": "{{step}} de 5",
+    "coach_label": "Coach",
+    "option_selected": "{{title}}, seleccionado",
+    "goal": {
+      "title": "¿Cuál es tu objetivo principal?",
+      "helper": "Elige uno. Puedes cambiarlo cuando quieras.",
+      "options": {
+        "strength": {
+          "title": "Ganar fuerza",
+          "description": "Levantar más, moverte mejor"
+        },
+        "hypertrophy": {
+          "title": "Ganar músculo",
+          "description": "Aumentar tamaño y forma"
+        },
+        "fat_loss": {
+          "title": "Perder grasa",
+          "description": "Quemar más, mantener tu músculo"
+        },
+        "general_fitness": {
+          "title": "Sentirme mejor en general",
+          "description": "Más energía, menos rigidez"
+        }
+      }
+    },
+    "days": {
+      "title": "¿Cuántos días a la semana puedes entrenar?",
+      "helper": "Sé realista — la constancia vence a un plan perfecto.",
+      "day_count": "{{count}} días a la semana",
+      "minutes_label": "¿Cuánto dura cada sesión?",
+      "minutes_value": "{{minutes}} min",
+      "minutes_value_short": "{{days}}× · {{minutes}} min",
+      "tip": {
+        "full_body": "{{days}} días × {{minutes}} min es un gran comienzo. Armaré una rutina de cuerpo completo.",
+        "upper_lower": "{{days}} días × {{minutes}} min es un gran comienzo. Lo dividiré en tren superior/inferior.",
+        "push_pull_legs": "{{days}} días × {{minutes}} min funciona bien como empuje/tracción/piernas."
+      }
+    },
+    "where": {
+      "title": "¿Dónde vas a entrenar?",
+      "helper": "Solo elegiré ejercicios que realmente puedas hacer.",
+      "tip": "Consejo: escanea las máquinas de tu gimnasio después y las incluiré en tu plan.",
+      "options": {
+        "full_gym": {
+          "title": "Gimnasio completo",
+          "description": "Máquinas, poleas, pesas libres"
+        },
+        "dumbbells_home": {
+          "title": "Casa con algo de equipo",
+          "description": "Mancuernas, ligas, un banco"
+        },
+        "bodyweight": {
+          "title": "Sin equipo",
+          "description": "Peso corporal, donde sea"
+        }
+      }
+    },
+    "experience": {
+      "title": "¿Cuánto has entrenado antes?",
+      "helper": "No hay respuesta incorrecta. Empezar de cero está bien.",
+      "options": {
+        "beginner": {
+          "title": "Nuevo por completo",
+          "description": "Nunca he entrenado, o ha pasado más de un año"
+        },
+        "intermediate": {
+          "title": "Algo de experiencia",
+          "description": "He entrenado de forma intermitente"
+        },
+        "advanced": {
+          "title": "Constante",
+          "description": "Entreno la mayoría de las semanas y conozco los fundamentos"
+        }
+      }
+    },
+    "limitations": {
+      "title": "¿Algo que deba tener en cuenta?",
+      "helper": "Toca todo lo que aplique. Esto mantiene tu plan seguro.",
+      "nothing": "Nada — estoy listo",
+      "or": "O",
+      "chips": {
+        "joint_or_muscle_pain": "Dolor articular o muscular",
+        "recent_injury_or_surgery": "Lesión o cirugía reciente",
+        "heart_condition_or_high_bp": "Condición cardíaca o presión alta",
+        "chest_pain_or_dizziness": "Dolor de pecho o mareo al estar activo",
+        "pregnant_or_postpartum": "Embarazada o posparto",
+        "other_health_condition": "Otra condición de salud"
+      },
+      "area_label": "¿Qué área?",
+      "area_placeholder": "p. ej. rodilla izquierda",
+      "disclaimer": "SpotLift ofrece guía general de acondicionamiento físico, no consejo médico.",
+      "session_expired": "Inicia sesión de nuevo antes de armar tu plan."
+    },
+    "consent": {
+      "title": "¿Usar esto para ajustar tu plan?",
+      "body": "Solo usamos lo que compartes aquí para dar forma a tu entrenamiento — nada más.",
+      "privacy_policy": "Política de privacidad",
+      "allow": "Permitir",
+      "not_now": "Ahora no",
+      "dismiss": "Cerrar"
+    },
+    "stop_card": {
+      "title": "Consulta primero con un médico",
+      "body": "El dolor de pecho o el mareo al estar activo necesitan el visto bueno de un médico antes de armar tu plan de entrenamiento.",
+      "still_available": "Mientras tanto puedes escanear equipo y explorar ejercicios.",
+      "cleared_button": "Ya tengo autorización"
+    },
+    "ready": {
+      "building": "Armando tu plan…",
+      "error_title": "Algo salió mal",
+      "error_body": "Coach no pudo armar tu plan. Intenta de nuevo.",
+      "retry": "Intentar de nuevo",
+      "hero_greeting": "Tu plan está listo",
+      "hero_greeting_named": "Tu plan está listo, {{name}}",
+      "chip_days": "{{count}} días",
+      "chip_frequency": "{{count}}× por semana",
+      "chip_minutes": "{{minutes}} min",
+      "week_1": "Semana 1",
+      "moves_count": "{{count}} ejercicios",
+      "start_day_1": "Empezar día 1",
+      "tweak_with_coach": "Ajustarlo con Coach",
+      "plan_name_fallback": "Tu plan de entrenamiento"
+    }
   }
 }

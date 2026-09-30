@@ -179,6 +179,56 @@ export async function getLatestCoachWorkoutReview(
   }, 15000);
 }
 
+function makeAbortError(): Error {
+  const error = new Error("Coach job polling aborted.");
+  error.name = "AbortError";
+  return error;
+}
+
+export type CoachLanguage = "en" | "es";
+
+export type RunCoachJobOptions = {
+  authToken: string;
+  signal?: AbortSignal;
+  pollIntervalMs?: number;
+  maxWaitMs?: number;
+};
+
+// Shared by app/(tabs)/trainer.tsx (ongoing chat) and
+// store/planSetupStore.ts (the tap-only setup flow's final "Build my plan"
+// call) so both start a job and poll it to completion the same way, against
+// the same /api/coach-trainer/jobs contract.
+export async function runCoachTrainerJob(
+  payload: TrainerRequest,
+  options: RunCoachJobOptions
+): Promise<CoachResponse> {
+  const { authToken, signal, pollIntervalMs = 2500, maxWaitMs = 180000 } = options;
+  const job = await startCoachTrainerJob(payload, { authToken, signal });
+
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < maxWaitMs) {
+    if (signal?.aborted) throw makeAbortError();
+
+    const status = await getCoachTrainerJob(job.jobId, { authToken, signal });
+    if (status.status === "completed" && status.result) return status.result;
+    if (status.status === "failed") throw new Error(status.error || "Coach job failed.");
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(resolve, pollIntervalMs);
+      signal?.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timeout);
+          reject(makeAbortError());
+        },
+        { once: true }
+      );
+    });
+  }
+
+  throw new Error("Coach job timed out.");
+}
+
 export function makeFreeformWorkoutLog(note: string) {
   return [
     {

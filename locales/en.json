@@ -344,7 +344,9 @@
     },
     "back_to_library": "Back to conversations",
     "open_plan": "Open plan",
-    "coach_week_button": "Weekly check-in"
+    "coach_week_button": "Weekly check-in",
+    "build_plan_cta": "Build a plan",
+    "rebuild_plan": "Rebuild plan"
   },
   "app_status": {
     "update_required": "Update required",
@@ -552,5 +554,134 @@
     "approve": "Approve changes",
     "edit": "Edit",
     "approved_notice": "Approved. Coach will use these changes starting next week."
+  },
+  "plan_setup": {
+    "close": "Close",
+    "back": "Back",
+    "continue": "Continue",
+    "build_my_plan": "Build my plan",
+    "step_of": "{{step}} of 5",
+    "coach_label": "Coach",
+    "option_selected": "{{title}}, selected",
+    "goal": {
+      "title": "What's your main goal?",
+      "helper": "Pick one. You can change it anytime.",
+      "options": {
+        "strength": {
+          "title": "Get stronger",
+          "description": "Lift more, move better"
+        },
+        "hypertrophy": {
+          "title": "Build muscle",
+          "description": "Add size and shape"
+        },
+        "fat_loss": {
+          "title": "Lose fat",
+          "description": "Burn more, keep your muscle"
+        },
+        "general_fitness": {
+          "title": "Feel fitter overall",
+          "description": "More energy, less stiffness"
+        }
+      }
+    },
+    "days": {
+      "title": "How many days a week can you train?",
+      "helper": "Be realistic — consistency beats a perfect plan.",
+      "day_count": "{{count}} days a week",
+      "minutes_label": "How long per session?",
+      "minutes_value": "{{minutes}} min",
+      "minutes_value_short": "{{days}}× · {{minutes}} min",
+      "tip": {
+        "full_body": "{{days}} days × {{minutes}} min is a great start. I'll build a full-body split.",
+        "upper_lower": "{{days}} days × {{minutes}} min is a great start. I'll split it upper/lower body.",
+        "push_pull_legs": "{{days}} days × {{minutes}} min works well as push/pull/legs."
+      }
+    },
+    "where": {
+      "title": "Where will you train?",
+      "helper": "I'll only pick exercises you can actually do.",
+      "tip": "Tip: scan machines at your gym later and I'll fit them into your plan.",
+      "options": {
+        "full_gym": {
+          "title": "Full gym",
+          "description": "Machines, cables, free weights"
+        },
+        "dumbbells_home": {
+          "title": "Home with some gear",
+          "description": "Dumbbells, bands, a bench"
+        },
+        "bodyweight": {
+          "title": "No equipment",
+          "description": "Bodyweight, anywhere"
+        }
+      }
+    },
+    "experience": {
+      "title": "How much have you trained before?",
+      "helper": "No wrong answer. Starting from zero is great.",
+      "options": {
+        "beginner": {
+          "title": "Brand new",
+          "description": "Never really lifted, or it's been over a year"
+        },
+        "intermediate": {
+          "title": "Some experience",
+          "description": "I've trained on and off"
+        },
+        "advanced": {
+          "title": "Consistent",
+          "description": "I train most weeks and know the basics"
+        }
+      }
+    },
+    "limitations": {
+      "title": "Anything I should work around?",
+      "helper": "Tap all that apply. This keeps your plan safe.",
+      "nothing": "Nothing — I'm good to go",
+      "or": "OR",
+      "chips": {
+        "joint_or_muscle_pain": "Joint or muscle pain",
+        "recent_injury_or_surgery": "Recent injury or surgery",
+        "heart_condition_or_high_bp": "Heart condition or high BP",
+        "chest_pain_or_dizziness": "Chest pain or dizziness when active",
+        "pregnant_or_postpartum": "Pregnant or postpartum",
+        "other_health_condition": "Other health condition"
+      },
+      "area_label": "Which area?",
+      "area_placeholder": "e.g. left knee",
+      "disclaimer": "SpotLift gives general fitness guidance, not medical advice.",
+      "session_expired": "Sign in again before building your plan."
+    },
+    "consent": {
+      "title": "Use this to tailor your plan?",
+      "body": "We only use what you share here to shape your training — nothing else.",
+      "privacy_policy": "Privacy policy",
+      "allow": "Allow",
+      "not_now": "Not now",
+      "dismiss": "Dismiss"
+    },
+    "stop_card": {
+      "title": "Let's check with a doctor first",
+      "body": "Chest pain or dizziness during activity needs a doctor's OK before we build you a training plan.",
+      "still_available": "You can still scan equipment and browse exercises in the meantime.",
+      "cleared_button": "I've been cleared"
+    },
+    "ready": {
+      "building": "Building your plan…",
+      "error_title": "Something went wrong",
+      "error_body": "Coach couldn't build your plan. Please try again.",
+      "retry": "Try again",
+      "hero_greeting": "Your plan is ready",
+      "hero_greeting_named": "Your plan is ready, {{name}}",
+      "chip_days": "{{count}} days",
+      "chip_frequency": "{{count}}× a week",
+      "chip_minutes": "{{minutes}} min",
+      "week_1": "Week 1",
+      "moves_count": "{{count}} moves",
+      "start_day_1": "Start day 1",
+      "tweak_with_coach": "Tweak it with Coach",
+      "plan_name_fallback": "Your training plan"
+    }
   }
 }
