@@ -343,7 +343,8 @@
       "kept_notice": "Mantendremos tu plan como está."
     },
     "back_to_library": "Volver a conversaciones",
-    "open_plan": "Abrir plan"
+    "open_plan": "Abrir plan",
+    "coach_week_button": "Revisión semanal"
   },
   "app_status": {
     "update_required": "Actualización requerida",
@@ -540,5 +541,16 @@
     "empty_category": "No hay elementos en esta categoría",
     "count": "{{count}} elemento",
     "count_plural": "{{count}} elementos"
+  },
+  "coach_week": {
+    "back": "Volver al chat con Coach",
+    "eyebrow": "Revisión semanal",
+    "week": "Semana {{number}}",
+    "ratio": "{{done}} de {{total}}",
+    "what_i_noticed": "Lo que noté",
+    "changes_title": "Cambios para la próxima semana",
+    "approve": "Aprobar cambios",
+    "edit": "Editar",
+    "approved_notice": "Aprobado. Coach usará estos cambios a partir de la próxima semana."
   }
 }

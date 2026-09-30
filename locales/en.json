@@ -343,7 +343,8 @@
       "kept_notice": "Keeping your plan as it is."
     },
     "back_to_library": "Back to conversations",
-    "open_plan": "Open plan"
+    "open_plan": "Open plan",
+    "coach_week_button": "Weekly check-in"
   },
   "app_status": {
     "update_required": "Update required",
@@ -540,5 +541,16 @@
     "empty_category": "No items in this category",
     "count": "{{count}} item",
     "count_plural": "{{count}} items"
+  },
+  "coach_week": {
+    "back": "Back to Coach chat",
+    "eyebrow": "Weekly check-in",
+    "week": "Week {{number}}",
+    "ratio": "{{done}} of {{total}}",
+    "what_i_noticed": "What I noticed",
+    "changes_title": "Changes for next week",
+    "approve": "Approve changes",
+    "edit": "Edit",
+    "approved_notice": "Approved. Coach will use these changes starting next week."
   }
 }
