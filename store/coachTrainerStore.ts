@@ -20,6 +20,9 @@ export type CoachTrainerThread = {
   intakeHistory: CoachMessage[];
   conversation: TrainerConversation[];
   latestWorkoutReview: CoachWorkoutReview | null;
+  // QA #13: archive, not delete. A non-null timestamp hides the thread from
+  // the default library list; unarchiving is just clearing it back to null.
+  archivedAt: string | null;
 };
 
 export type CoachWorkoutReview = {
@@ -69,6 +72,8 @@ interface CoachTrainerState {
   openTrainerLibrary: () => void;
   selectThread: (threadId: string) => void;
   startNewThread: () => void;
+  archiveThread: (threadId: string) => void;
+  unarchiveThread: (threadId: string) => void;
   setFailedPrompt: (prompt: string | null) => void;
   markExerciseCompleted: (exerciseId: string) => void;
   unmarkExerciseCompleted: (exerciseId: string) => void;
@@ -109,12 +114,13 @@ function syncActiveThread(
 ) {
   const now = new Date().toISOString();
   const activeThreadId = state.activeThreadId ?? makeThreadId();
+  const existing = state.threads.find((item) => item.id === activeThreadId);
   const plan = changes.plan !== undefined ? changes.plan : state.plan;
   const conversation = changes.conversation ?? state.conversation;
   const thread: CoachTrainerThread = {
     id: activeThreadId,
     title: threadTitle(plan, conversation),
-    createdAt: state.threads.find((item) => item.id === activeThreadId)?.createdAt ?? now,
+    createdAt: existing?.createdAt ?? now,
     updatedAt: now,
     units: changes.units ?? state.units,
     plan,
@@ -122,6 +128,7 @@ function syncActiveThread(
     intakeHistory: changes.intakeHistory ?? state.intakeHistory,
     conversation,
     latestWorkoutReview: changes.latestWorkoutReview !== undefined ? changes.latestWorkoutReview : state.latestWorkoutReview,
+    archivedAt: existing?.archivedAt ?? null,
   };
   return {
     activeThreadId,
@@ -291,6 +298,24 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
     persist(get());
   },
 
+  archiveThread: (threadId) => {
+    set((state) => ({
+      threads: state.threads.map((thread) =>
+        thread.id === threadId ? { ...thread, archivedAt: new Date().toISOString() } : thread
+      ),
+    }));
+    persist(get());
+  },
+
+  unarchiveThread: (threadId) => {
+    set((state) => ({
+      threads: state.threads.map((thread) =>
+        thread.id === threadId ? { ...thread, archivedAt: null } : thread
+      ),
+    }));
+    persist(get());
+  },
+
   setFailedPrompt: (failedPrompt) => {
     set({ failedPrompt });
     persist(get());
@@ -400,7 +425,11 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
       const saved = JSON.parse(raw);
       const savedPlan = normalizePlanTimeline(saved.plan ?? null);
       const savedConversation = Array.isArray(saved.conversation) ? saved.conversation : [];
-      const savedThreads: CoachTrainerThread[] = Array.isArray(saved.threads) ? saved.threads : [];
+      // Threads saved before archiving existed won't have archivedAt at all;
+      // default them to active (null) rather than leaving it undefined.
+      const savedThreads: CoachTrainerThread[] = (Array.isArray(saved.threads) ? saved.threads : []).map(
+        (thread: CoachTrainerThread) => ({ ...thread, archivedAt: thread.archivedAt ?? null })
+      );
       const shouldMigrateLegacy = savedThreads.length === 0 && (savedPlan || savedConversation.length > 0);
       const migratedId = shouldMigrateLegacy ? makeThreadId() : null;
       const threads = shouldMigrateLegacy
@@ -415,6 +444,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
             intakeHistory: Array.isArray(saved.intakeHistory) ? saved.intakeHistory : [],
             conversation: savedConversation,
             latestWorkoutReview: saved.latestWorkoutReview ?? null,
+            archivedAt: null,
           }]
         : savedThreads;
       set({

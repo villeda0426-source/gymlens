@@ -127,6 +127,8 @@ export default function TrainerScreen() {
     openTrainerLibrary,
     selectThread,
     startNewThread,
+    archiveThread,
+    unarchiveThread,
     latestWorkoutReview,
     setLatestWorkoutReview,
     hasLoaded,
@@ -138,6 +140,7 @@ export default function TrainerScreen() {
   const [notice, setNotice] = useState("");
   const [listening, setListening] = useState(false);
   const [feeling, setFeeling] = useState<Feeling | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
     const speechModule = loadSpeechRecognitionModule();
@@ -253,6 +256,9 @@ export default function TrainerScreen() {
       },
     ];
   }, [conversation, t]);
+
+  const activeThreads = useMemo(() => threads.filter((thread) => !thread.archivedAt), [threads]);
+  const archivedThreads = useMemo(() => threads.filter((thread) => thread.archivedAt), [threads]);
 
   const handleResponse = (response: CoachResponse, nextIntakeHistory?: CoachMessage[]) => {
     const assistantText = getCoachResponseText(response);
@@ -520,7 +526,7 @@ export default function TrainerScreen() {
 
           {threads.length > 0 ? (
             <View style={styles.threadList}>
-              {threads.map((thread) => (
+              {activeThreads.map((thread) => (
                 <TouchableOpacity
                   key={thread.id}
                   style={styles.threadCard}
@@ -545,9 +551,61 @@ export default function TrainerScreen() {
                     <Ionicons name="chatbubble-outline" size={13} color={coachColors.textSecondary} />
                     <Text style={styles.threadCountText}>{thread.conversation.length}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={19} color={coachColors.textSecondary} />
+                  <TouchableOpacity
+                    style={styles.threadArchiveButton}
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      archiveThread(thread.id);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("trainer.archive_thread")}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="archive-outline" size={18} color={coachColors.textSecondary} />
+                  </TouchableOpacity>
                 </TouchableOpacity>
               ))}
+
+              {/* QA #13: archive, not delete — recoverable. Collapsed by
+                  default so a long history doesn't clutter the main list. */}
+              {archivedThreads.length > 0 ? (
+                <>
+                  <TouchableOpacity
+                    style={styles.archivedToggle}
+                    onPress={() => setShowArchived((value) => !value)}
+                  >
+                    <Ionicons name={showArchived ? "chevron-down" : "chevron-forward"} size={16} color={coachColors.textSecondary} />
+                    <Text style={styles.archivedToggleText}>
+                      {t("trainer.archived_count", { count: archivedThreads.length })}
+                    </Text>
+                  </TouchableOpacity>
+                  {showArchived
+                    ? archivedThreads.map((thread) => (
+                        <View key={thread.id} style={[styles.threadCard, styles.threadCardArchived]}>
+                          <View style={styles.threadIcon}>
+                            <Ionicons name={thread.plan ? "barbell" : "chatbubble-ellipses"} size={21} color={coachColors.textSecondary} />
+                          </View>
+                          <TouchableOpacity style={styles.threadCopy} onPress={() => selectThread(thread.id)}>
+                            <Text style={styles.threadTitle} numberOfLines={1}>{thread.title}</Text>
+                            <Text style={styles.threadMeta} numberOfLines={1}>
+                              {thread.plan
+                                ? `${t("trainer.days_per_week", { count: thread.plan.days_per_week })} · ${thread.plan.split}`
+                                : t("trainer.plan_in_progress")}
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.unarchiveButton}
+                            onPress={() => unarchiveThread(thread.id)}
+                            accessibilityRole="button"
+                            accessibilityLabel={t("trainer.unarchive_thread")}
+                          >
+                            <Text style={styles.unarchiveButtonText}>{t("trainer.unarchive_thread")}</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))
+                    : null}
+                </>
+              ) : null}
             </View>
           ) : (
             <View style={styles.coachIntroCard}>
@@ -756,6 +814,18 @@ const styles = StyleSheet.create({
   threadDate: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 11, marginTop: 4 },
   threadCount: { flexDirection: "row", alignItems: "center", gap: 4 },
   threadCountText: { color: coachColors.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 11 },
+  threadArchiveButton: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  threadCardArchived: { opacity: 0.75 },
+  archivedToggle: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingVertical: 10, paddingHorizontal: 4, alignSelf: "flex-start",
+  },
+  archivedToggleText: { color: coachColors.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 13 },
+  unarchiveButton: {
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: radii.pill,
+    borderWidth: 1, borderColor: coachColors.border,
+  },
+  unarchiveButtonText: { color: coachColors.text, fontFamily: coachFonts.bodySemiBold, fontSize: 12 },
   introSubtitle: { color: colors.textSecondary, fontFamily: fonts.body, fontSize: 15, lineHeight: 22, marginTop: 6 },
   coachIntroCard: {
     borderRadius: 26,
