@@ -13,6 +13,7 @@ import {
   type LimitationChip,
   type PlanSetupTriage,
 } from "@/shared/planSetupTriage";
+import { buildTemplatePlan, extractAreasFromText } from "@/shared/buildTemplatePlan";
 
 export type PlanSetupGoal = "strength" | "hypertrophy" | "fat_loss" | "general_fitness";
 export type PlanSetupLocation = "full_gym" | "dumbbells_home" | "bodyweight";
@@ -268,20 +269,47 @@ export const usePlanSetupStore = create<PlanSetupState>((set, get) => ({
 
       const limitationText = limitationSentence(triage, state.limitations, state.limitationArea, state.consentGranted, language);
 
-      const userMessage = buildSyntheticIntakeMessage({
+      // QA #9: the tap-only flow already has goal/days/equipment/experience/
+      // limitations as structured fields, not prose — build the plan straight
+      // from shared/coachProgramming.ts's evidence-based templates instead of
+      // asking the AI to generate one from scratch. Falls back to the AI path
+      // only if the template engine can't produce a plan for this input (it
+      // shouldn't, given the UI's own option set, but this must never leave
+      // someone with no plan over an edge case the templates don't cover).
+      const templatePlan = buildTemplatePlan({
         goal: state.goal,
         daysPerWeek: state.daysPerWeek,
         sessionMinutes: state.sessionMinutes,
         location: state.location,
         experience: state.experience,
-        limitationText,
+        avoidAreas: extractAreasFromText(state.limitationArea),
+        lightModerate: triage.kind === "light_moderate",
+        units,
         language,
       });
 
-      const response = await runCoachTrainerJob(
-        { mode: "intake", units, language, history: [], userMessage },
-        { authToken }
-      );
+      let response: CoachResponse;
+      if (templatePlan) {
+        response = {
+          status: "plan_ready",
+          summary: templatePlan.weekly_notes,
+          plan: templatePlan,
+        };
+      } else {
+        const userMessage = buildSyntheticIntakeMessage({
+          goal: state.goal,
+          daysPerWeek: state.daysPerWeek,
+          sessionMinutes: state.sessionMinutes,
+          location: state.location,
+          experience: state.experience,
+          limitationText,
+          language,
+        });
+        response = await runCoachTrainerJob(
+          { mode: "intake", units, language, history: [], userMessage },
+          { authToken }
+        );
+      }
 
       if (response.status === "plan_ready") {
         useCoachTrainerStore.getState().setPlan(response.plan);
