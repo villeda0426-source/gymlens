@@ -61,7 +61,10 @@ Rules:
 - Don't interrogate. If the first message is already rich, go straight to plan_ready.
 - Once the user has provided experience, days per week, equipment/access, injuries/limitations, and a broad goal, you MUST generate plan_ready. Do not ask follow-up questions for nice-to-have details like exact session length, favorite lifts, swimming technique, or schedule order; choose sensible defaults and mention them in the summary.
 - Keep plans concise: no more than 5 exercises per session, and no more than 4 sessions in the JSON.
-- SAFETY: if the user reports active or exertional chest pain, unexplained dizziness or fainting, a recent surgery without clearance, an uncontrolled medical condition, pregnancy without appropriate prenatal exercise guidance, or another condition that warrants clearance, DO NOT generate a workout plan yet. Return status "gathering" with a concise, calm message telling them to pause and obtain guidance or clearance from the appropriate licensed healthcare professional. Do not diagnose, prescribe rehabilitation, suggest test exercises, or provide loads/RPE targets while clearance is unresolved. Once the user confirms appropriate clearance and supplies any restrictions, keep programming conservative and add a safety flag that reflects those restrictions. You are a coach, not a doctor or physical therapist.
+- SAFETY — acute red flags (hard stop): if the user reports active or exertional chest pain, or unexplained dizziness/fainting when active, DO NOT generate a workout plan yet. Return status "gathering" with a short, calm message telling them to check with a doctor first, and that scanning equipment and browsing exercises still work meanwhile. Do not diagnose or suggest this is nothing to worry about.
+- SAFETY — build cautiously, don't withhold: a heart condition or high blood pressure, another health condition, or pregnancy/postpartum with no acute symptoms are NOT reasons to withhold a plan. Build it at light-to-moderate intensity (lower target RPE, more conservative progression, avoid high-impact/breath-holding moves), and add one safety_flags entry suggesting a doctor check before pushing to high intensity. Never gate the plan on producing paperwork or a clearance letter.
+- SAFETY — joint/muscle pain or a recent injury/surgery: avoid or modify exercises that load the affected area; add a matching constraints entry. Keep the rest of the plan normal.
+- You are a coach, not a doctor or physical therapist. Never use the words "clearance" or "cleared" — describe next steps in plain language instead (e.g. "check with a doctor first").
 - RESPONSIBLE USE: never prescribe extreme calorie restriction, meal skipping, exercise as punishment for eating, or unsafe rapid weight loss. If the user expresses guilt about rest or food, a need to "burn off" everything eaten, training through exhaustion, meal skipping, or another sign of disordered eating or compulsive exercise, DO NOT generate the requested plan yet. Return status "gathering" with a calm, nonjudgmental message that explicitly supports adequate food, rest, and recovery and encourages speaking with an appropriate licensed healthcare or mental-health professional. Never reinforce or optimize the harmful behavior. Once safety is established, use a balanced, sustainable approach.
 While still gathering:
 { "status": "gathering", "message": "<friendly question(s)>" }
@@ -124,7 +127,7 @@ Answer concisely and practically (form, swaps, soreness, travel, etc.):
       }
     ],
     "weekly_notes": "<deload cadence, recovery, optional light nutrition pointer>",
-    "safety_flags": ["<e.g. recommend physician clearance before starting>"]
+    "safety_flags": ["<e.g. check with a doctor before pushing to high intensity>"]
   }
 }
 Keep exercise_id STABLE across revisions so the app can match history to exercises. Reuse the same id when you keep an exercise; mint a new id only for a genuinely new movement.
@@ -385,7 +388,7 @@ export function parseCoachResponse(rawText: string): CoachResponse {
 const FALLBACK_COPY = {
   en: {
     medical:
-      "Before I build a workout, stop and get medical clearance for the symptom or condition you mentioned. You can still use the rest of SpotLift while we keep training recommendations paused.",
+      "Let's check with a doctor first about what you mentioned before I build a workout. You can still use the rest of SpotLift — scanning equipment and browsing exercises — while we keep training recommendations paused.",
     gathering:
       "Tell me your goal, how many days you can train, what equipment you have, your experience level, and any pain or limitations. I can build a reliable starter workout from those details even if advanced personalization is unavailable.",
     retry:
@@ -393,7 +396,7 @@ const FALLBACK_COPY = {
   },
   es: {
     medical:
-      "Antes de armar un entrenamiento, detente y consigue autorización médica por el síntoma o la condición que mencionaste. Puedes seguir usando el resto de SpotLift mientras mantenemos en pausa las recomendaciones de entrenamiento.",
+      "Primero consulta con un médico sobre lo que mencionaste antes de que arme un entrenamiento. Puedes seguir usando el resto de SpotLift — escanear equipo y explorar ejercicios — mientras mantenemos en pausa las recomendaciones de entrenamiento.",
     gathering:
       "Cuéntame tu objetivo, cuántos días puedes entrenar, qué equipo tienes, tu nivel de experiencia y cualquier dolor o limitación. Con esos datos puedo armar un entrenamiento inicial confiable aunque la personalización avanzada no esté disponible.",
     retry:
@@ -509,7 +512,7 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
   const isRecoverableFormatError = isCoachFallbackEligibleError;
 
   const safetyMessages: CoachMessage[] = options.forceSafetyReview
-    ? [...messages, { role: "user", content: "ACCOUNT SAFETY CONTEXT: A stored account safety review requires a cautious response. Do not prescribe or revise a workout plan until the user has appropriate professional guidance and clear exercise restrictions. Do not assume the missing details." }]
+    ? [...messages, { role: "user", content: "ACCOUNT SAFETY CONTEXT: This account has a stored safety flag from an earlier conversation. Don't re-ask about it or gate the plan on it — if the user brings up a condition or limitation themselves, factor it into programming (avoid contraindicated movements, offer substitutions) and mention checking with a professional once, briefly. Otherwise proceed normally." }]
     : messages;
 
   try {
