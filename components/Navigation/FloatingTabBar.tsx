@@ -112,8 +112,13 @@ export default function FloatingTabBar({
 
           const isCoach = name === "trainer";
           const icon = ICONS[name][isFocused ? "filled" : "outline"];
+          // Spec (3.2): Coach icon is navy when inactive, gold when active;
+          // Coach's label stays navy either way — only non-Coach tabs turn
+          // coral on focus.
           const iconColor = isCoach
-            ? coachColors.coachGoldText
+            ? isFocused
+              ? coachColors.coachGold
+              : coachColors.coachNavy
             : isFocused
               ? coachColors.coral
               : coachColors.textSecondary;
@@ -226,7 +231,7 @@ const styles = StyleSheet.create({
     color: coachColors.coral,
   },
   labelCoach: {
-    color: coachColors.coachGoldText,
+    color: coachColors.coachNavy,
   },
   scanCircle: {
     width: 56,
