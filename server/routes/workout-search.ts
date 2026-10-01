@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { createStructuredResponse, OPENAI_DEFAULT_MODEL } from "../services/openaiService";
+import { getOrCreateGuide, getSupabaseGuideStore } from "../services/workoutGuideCache";
 
 const router = Router();
 
@@ -102,7 +103,14 @@ router.post("/", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Enter an exercise name to search." });
     }
 
-    const guide = await getWorkoutGuide(query, language);
+    // QA #1: repeated searches for the same exercise (any user) were hitting
+    // the model every time. getOrCreateGuide reads/writes the workout_guides
+    // table (already live in prod — see the 2026-09-21 migration) and
+    // degrades to a plain generate() call if Supabase is unconfigured or the
+    // cache read/write fails, so a cache outage can't break search.
+    const { guide } = await getOrCreateGuide(getSupabaseGuideStore(), query, language, () =>
+      getWorkoutGuide(query, language)
+    );
 
     if (!guide || !guide.found || !guide.exercise || guide.steps.length === 0) {
       return res.status(404).json({
