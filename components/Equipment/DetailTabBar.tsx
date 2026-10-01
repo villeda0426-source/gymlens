@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 export interface DetailTab {
   key: string;
@@ -39,11 +39,11 @@ export default function DetailTabBar({ tabs, activeTab, onChange }: DetailTabBar
 const styles = StyleSheet.create({
   tabBarWrap: {
     flexDirection: "row",
-    backgroundColor: colors.input,
+    backgroundColor: coachColors.bg,
     borderRadius: 12,
     padding: 4,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: coachColors.border,
     marginBottom: 20,
     gap: 3,
   },
@@ -56,13 +56,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   tabActive: {
-    backgroundColor: colors.coral,
-    shadowColor: colors.coral,
+    backgroundColor: coachColors.coral,
+    shadowColor: coachColors.coral,
     shadowOpacity: 0.18,
     shadowRadius: 7,
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
-  tabText: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.semiBold, textAlign: "center" },
-  tabTextActive: { color: colors.white },
+  tabText: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.bodySemiBold, textAlign: "center" },
+  tabTextActive: { color: coachColors.card },
 });

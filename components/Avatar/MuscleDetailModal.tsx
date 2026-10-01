@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, Modal, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 import {
   AvatarMuscleGroup,
   nextLevelThreshold,
@@ -55,7 +55,7 @@ export default function MuscleDetailModal({
           <View style={styles.header}>
             <Text style={styles.title}>{muscleLabel}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={24} color={colors.textMuted} />
+              <Ionicons name="close" size={24} color={coachColors.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -82,14 +82,14 @@ export default function MuscleDetailModal({
           </Text>
 
           {loading ? (
-            <ActivityIndicator color={colors.coral} style={{ marginVertical: 20 }} />
+            <ActivityIndicator color={coachColors.coral} style={{ marginVertical: 20 }} />
           ) : recentCompletions.length === 0 ? (
             <Text style={styles.empty}>{t("avatar_progress.empty_muscle")}</Text>
           ) : (
             <ScrollView style={styles.list}>
               {recentCompletions.map((item) => (
                 <View key={item.id} style={styles.exerciseRow}>
-                  <Ionicons name="checkmark-circle" size={16} color={colors.lime} />
+                  <Ionicons name="checkmark-circle" size={16} color={coachColors.lime} />
                   <Text style={styles.exerciseName} numberOfLines={1}>{item.exercise_name}</Text>
                   <Text style={styles.exerciseDate}>
                     {new Date(item.completed_at).toLocaleDateString()}
@@ -101,7 +101,7 @@ export default function MuscleDetailModal({
 
           {showRecommendation && (
             <View style={styles.recommendation}>
-              <Ionicons name="bulb-outline" size={18} color={colors.coral} />
+              <Ionicons name="bulb-outline" size={18} color={coachColors.coral} />
               <Text style={styles.recommendationText}>{recommendationText}</Text>
             </View>
           )}
@@ -114,34 +114,34 @@ export default function MuscleDetailModal({
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
   sheet: {
-    backgroundColor: colors.bg,
+    backgroundColor: coachColors.bg,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
     maxHeight: "75%",
   },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  title: { fontSize: 24, fontFamily: fonts.heading, color: colors.text },
+  title: { fontSize: 24, fontFamily: coachFonts.heading, color: coachColors.text },
   levelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
   levelBadge: {
-    backgroundColor: colors.lime + "18", borderRadius: 8, borderWidth: 1, borderColor: colors.lime + "40",
+    backgroundColor: coachColors.lime + "18", borderRadius: 8, borderWidth: 1, borderColor: coachColors.lime + "40",
     paddingHorizontal: 10, paddingVertical: 4,
   },
-  levelBadgeText: { color: colors.lime, fontSize: 13, fontFamily: fonts.bold },
-  scoreText: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.semiBold },
-  progressTrack: { height: 8, borderRadius: 4, backgroundColor: colors.input, overflow: "hidden" },
-  progressFill: { height: 8, borderRadius: 4, backgroundColor: colors.lime },
-  progressLabel: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 6, marginBottom: 18 },
-  sectionTitle: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 },
-  empty: { color: colors.textMuted, fontFamily: fonts.body, paddingVertical: 12 },
+  levelBadgeText: { color: coachColors.lime, fontSize: 13, fontFamily: coachFonts.bodyBold },
+  scoreText: { color: coachColors.textSecondary, fontSize: 13, fontFamily: coachFonts.bodySemiBold },
+  progressTrack: { height: 8, borderRadius: 4, backgroundColor: coachColors.bg, overflow: "hidden" },
+  progressFill: { height: 8, borderRadius: 4, backgroundColor: coachColors.lime },
+  progressLabel: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.body, marginTop: 6, marginBottom: 18 },
+  sectionTitle: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.bodyBold, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 },
+  empty: { color: coachColors.textSecondary, fontFamily: coachFonts.body, paddingVertical: 12 },
   list: { maxHeight: 180 },
-  exerciseRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
-  exerciseName: { flex: 1, color: colors.text, fontSize: 14, fontFamily: fonts.body },
-  exerciseDate: { color: colors.textMuted, fontSize: 11, fontFamily: fonts.body },
+  exerciseRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: coachColors.border },
+  exerciseName: { flex: 1, color: coachColors.text, fontSize: 14, fontFamily: coachFonts.body },
+  exerciseDate: { color: coachColors.textSecondary, fontSize: 11, fontFamily: coachFonts.body },
   recommendation: {
     flexDirection: "row", gap: 10, marginTop: 18,
-    backgroundColor: colors.coral + "0f", borderRadius: 12, padding: 14,
-    borderWidth: 1, borderColor: colors.coral + "30",
+    backgroundColor: coachColors.coral + "0f", borderRadius: 12, padding: 14,
+    borderWidth: 1, borderColor: coachColors.coral + "30",
   },
-  recommendationText: { flex: 1, color: colors.text, fontSize: 13, fontFamily: fonts.body, lineHeight: 19 },
+  recommendationText: { flex: 1, color: coachColors.text, fontSize: 13, fontFamily: coachFonts.body, lineHeight: 19 },
 });

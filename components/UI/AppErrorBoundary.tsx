@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 import { Sentry } from "@/lib/sentry";
 import i18n from "@/lib/i18n";
 
@@ -56,18 +56,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
-    backgroundColor: colors.bg,
+    backgroundColor: coachColors.bg,
   },
-  title: { color: colors.text, fontFamily: fonts.heading, fontSize: 30, textAlign: "center" },
-  body: { color: colors.textSecondary, fontFamily: fonts.body, fontSize: 15, lineHeight: 22, textAlign: "center", marginTop: 10 },
+  title: { color: coachColors.text, fontFamily: coachFonts.heading, fontSize: 30, textAlign: "center" },
+  body: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 15, lineHeight: 22, textAlign: "center", marginTop: 10 },
   button: {
     marginTop: 22,
     minHeight: 48,
     borderRadius: 14,
-    backgroundColor: colors.coral,
+    backgroundColor: coachColors.coral,
     paddingHorizontal: 22,
     alignItems: "center",
     justifyContent: "center",
   },
-  buttonText: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 15 },
+  buttonText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 15 },
 });

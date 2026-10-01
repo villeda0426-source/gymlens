@@ -14,7 +14,7 @@ import {
   View,
 } from "react-native";
 import { useTranslation } from "react-i18next";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { computeAgeBand, isBelowMinimumAccountAge, isValidBirthYear, MINIMUM_ACCOUNT_AGE } from "@/shared/ageBand";
@@ -77,7 +77,7 @@ export default function BirthYearScreen() {
         value={input}
         onChangeText={setInput}
         placeholder={t("age_gate.placeholder")}
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={coachColors.textSecondary}
         keyboardType="number-pad"
         maxLength={4}
         style={styles.input}
@@ -92,42 +92,42 @@ export default function BirthYearScreen() {
         accessibilityRole="button"
         accessibilityLabel={t("age_gate.continue")}
       >
-        {saving ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryButtonText}>{t("age_gate.continue")}</Text>}
+        {saving ? <ActivityIndicator color={coachColors.card} /> : <Text style={styles.primaryButtonText}>{t("age_gate.continue")}</Text>}
       </Pressable>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28, backgroundColor: colors.bg, gap: 14 },
-  title: { fontFamily: fonts.heading, fontSize: 28, color: colors.text, textAlign: "center" },
-  body: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.textSecondary, textAlign: "center", maxWidth: 320 },
+  screen: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28, backgroundColor: coachColors.bg, gap: 14 },
+  title: { fontFamily: coachFonts.heading, fontSize: 28, color: coachColors.text, textAlign: "center" },
+  body: { fontFamily: coachFonts.body, fontSize: 15, lineHeight: 22, color: coachColors.textSecondary, textAlign: "center", maxWidth: 320 },
   input: {
     width: 160,
     height: 52,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
-    backgroundColor: colors.card,
+    borderColor: coachColors.border,
+    backgroundColor: coachColors.card,
     textAlign: "center",
-    fontFamily: fonts.bold,
+    fontFamily: coachFonts.bodyBold,
     fontSize: 20,
-    color: colors.text,
+    color: coachColors.text,
     marginTop: 8,
   },
-  error: { fontFamily: fonts.semiBold, fontSize: 13, color: colors.danger },
+  error: { fontFamily: coachFonts.bodySemiBold, fontSize: 13, color: coachColors.coral },
   primaryButton: {
     minWidth: 200,
     minHeight: 52,
     borderRadius: 999,
-    backgroundColor: colors.coral,
+    backgroundColor: coachColors.coral,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
     paddingHorizontal: 24,
   },
   buttonDisabled: { opacity: 0.6 },
-  primaryButtonText: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 16 },
+  primaryButtonText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 16 },
   secondaryButton: { marginTop: 8, paddingVertical: 12, paddingHorizontal: 20 },
-  secondaryButtonText: { color: colors.textSecondary, fontFamily: fonts.bold, fontSize: 15, textDecorationLine: "underline" },
+  secondaryButtonText: { color: coachColors.textSecondary, fontFamily: coachFonts.bodyBold, fontSize: 15, textDecorationLine: "underline" },
 });

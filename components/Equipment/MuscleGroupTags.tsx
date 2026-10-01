@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 // Keyword → color. Matched by substring so longer, free-text muscle names
 // (e.g. "Latissimus Dorsi (Lats)" from the AI workout-search guide) still
@@ -27,7 +27,7 @@ const MUSCLE_KEYWORD_COLORS: [string, string][] = [
   ["calves", "#06b6d4"],
   ["forearm", "#8b5cf6"],
 ];
-const DEFAULT_COLOR = colors.textMuted;
+const DEFAULT_COLOR = coachColors.textSecondary;
 
 function colorForMuscle(group: string): string {
   const normalized = group.toLowerCase().replace(/\([^)]*\)/g, " ");
@@ -57,5 +57,5 @@ export default function MuscleGroupTags({ groups }: MuscleGroupTagsProps) {
 const styles = StyleSheet.create({
   container: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tag: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4 },
-  text: { fontSize: 13, fontFamily: fonts.semiBold, textTransform: "capitalize" },
+  text: { fontSize: 13, fontFamily: coachFonts.bodySemiBold, textTransform: "capitalize" },
 });

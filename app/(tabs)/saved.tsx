@@ -16,7 +16,7 @@ import EquipmentCard from "@/components/Equipment/EquipmentCard";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useEquipmentStore } from "@/store/equipmentStore";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 const CATEGORIES = ["all", "machine", "free_weight", "cable", "cardio", "accessory"] as const;
 
@@ -99,7 +99,7 @@ export default function SavedScreen() {
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={colors.coral} size="large" />
+          <ActivityIndicator color={coachColors.coral} size="large" />
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.empty}>
@@ -119,7 +119,7 @@ export default function SavedScreen() {
           renderItem={({ item }) => <EquipmentCard item={item} />}
           contentContainerStyle={styles.list}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.coral} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={coachColors.coral} />
           }
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
@@ -135,22 +135,22 @@ export default function SavedScreen() {
 
 const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
-  title: { color: colors.text, fontSize: 28, fontFamily: fonts.heading },
+  title: { color: coachColors.text, fontSize: 28, fontFamily: coachFonts.heading },
   syncBanner: {
     marginHorizontal: 16,
     marginBottom: 12,
-    backgroundColor: colors.card,
+    backgroundColor: coachColors.card,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: coachColors.border,
     paddingHorizontal: 14,
     paddingVertical: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  syncBannerText: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.body, flex: 1, marginRight: 8 },
-  syncBannerCta: { color: colors.coral, fontSize: 12, fontFamily: fonts.bold },
+  syncBannerText: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.body, flex: 1, marginRight: 8 },
+  syncBannerCta: { color: coachColors.coral, fontSize: 12, fontFamily: coachFonts.bodyBold },
   filters: {
     flexDirection: "row",
     paddingHorizontal: 12,
@@ -159,35 +159,35 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    backgroundColor: colors.card,
+    backgroundColor: coachColors.card,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: coachColors.border,
   },
-  chipActive: { backgroundColor: colors.coral, borderColor: colors.coral },
-  chipText: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.semiBold },
-  chipTextActive: { color: colors.white },
+  chipActive: { backgroundColor: coachColors.coral, borderColor: coachColors.coral },
+  chipText: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.bodySemiBold },
+  chipTextActive: { color: coachColors.card },
   list: { paddingHorizontal: 16, paddingBottom: 20 },
-  count: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginBottom: 8 },
+  count: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.body, marginBottom: 8 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
   emptyEmoji: { fontSize: 48, marginBottom: 16 },
-  emptyTitle: { color: colors.text, fontSize: 18, fontFamily: fonts.bold, marginBottom: 8 },
+  emptyTitle: { color: coachColors.text, fontSize: 18, fontFamily: coachFonts.bodyBold, marginBottom: 8 },
   emptySubtitle: {
-    color: colors.textSecondary,
+    color: coachColors.textSecondary,
     fontSize: 14,
-    fontFamily: fonts.body,
+    fontFamily: coachFonts.body,
     textAlign: "center",
     lineHeight: 20,
     marginBottom: 24,
   },
   cta: {
-    backgroundColor: colors.coral,
+    backgroundColor: coachColors.coral,
     borderRadius: 14,
     paddingHorizontal: 24,
     paddingVertical: 12,
   },
-  ctaText: { color: colors.white, fontSize: 14, fontFamily: fonts.bold },
+  ctaText: { color: coachColors.card, fontSize: 14, fontFamily: coachFonts.bodyBold },
 });

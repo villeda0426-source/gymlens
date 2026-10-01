@@ -15,7 +15,7 @@ import Constants from "expo-constants";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import SafeScreen from "@/components/Layout/SafeScreen";
-import { colors, coachColors, coachFonts, fonts, radii, spacing } from "@/constants/theme";
+import { coachColors, coachFonts, radii, spacing } from "@/constants/theme";
 import CoachComposer from "@/components/Coach/CoachComposer";
 import CoachMessageBubble from "@/components/Coach/CoachMessageBubble";
 import CoachSuggestionCard from "@/components/Coach/CoachSuggestionCard";
@@ -503,7 +503,7 @@ export default function TrainerScreen() {
     return (
       <SafeScreen>
         <View style={styles.centered}>
-          <ActivityIndicator color={colors.coral} />
+          <ActivityIndicator color={coachColors.coral} />
         </View>
       </SafeScreen>
     );
@@ -619,7 +619,7 @@ export default function TrainerScreen() {
 
           {notice ? (
             <View style={styles.introNotice}>
-              <Ionicons name="information-circle" size={18} color={colors.coral} />
+              <Ionicons name="information-circle" size={18} color={coachColors.coral} />
               <Text style={styles.introNoticeText}>{notice}</Text>
             </View>
           ) : null}
@@ -826,7 +826,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: coachColors.border,
   },
   unarchiveButtonText: { color: coachColors.text, fontFamily: coachFonts.bodySemiBold, fontSize: 12 },
-  introSubtitle: { color: colors.textSecondary, fontFamily: fonts.body, fontSize: 15, lineHeight: 22, marginTop: 6 },
+  introSubtitle: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 15, lineHeight: 22, marginTop: 6 },
   coachIntroCard: {
     borderRadius: 26,
     padding: 18,
@@ -835,20 +835,20 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   coachIntroCopy: { alignSelf: "stretch", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 18, padding: 16 },
-  coachIntroEyebrow: { color: coachColors.coachGold, fontFamily: fonts.extraBold, fontSize: 11, textTransform: "uppercase" },
-  coachIntroTitle: { color: coachColors.card, fontFamily: fonts.heading, fontSize: 32, marginTop: 3 },
-  coachIntroText: { color: "rgba(255,255,255,0.78)", fontFamily: fonts.body, fontSize: 14, lineHeight: 21, marginTop: 5 },
+  coachIntroEyebrow: { color: coachColors.coachGold, fontFamily: coachFonts.bodyExtraBold, fontSize: 11, textTransform: "uppercase" },
+  coachIntroTitle: { color: coachColors.card, fontFamily: coachFonts.heading, fontSize: 32, marginTop: 3 },
+  coachIntroText: { color: "rgba(255,255,255,0.78)", fontFamily: coachFonts.body, fontSize: 14, lineHeight: 21, marginTop: 5 },
   introNotice: {
     marginTop: 12,
     flexDirection: "row",
     gap: 8,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.coral + "30",
-    backgroundColor: colors.coral + "10",
+    borderColor: coachColors.coral + "30",
+    backgroundColor: coachColors.coral + "10",
     padding: 12,
   },
-  introNoticeText: { flex: 1, color: colors.text, fontFamily: fonts.semiBold, fontSize: 13, lineHeight: 18 },
+  introNoticeText: { flex: 1, color: coachColors.text, fontFamily: coachFonts.bodySemiBold, fontSize: 13, lineHeight: 18 },
   chatWithMeButton: {
     marginTop: 16,
     minHeight: 54,
@@ -859,9 +859,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 9,
   },
-  chatWithMeText: { color: coachColors.card, fontFamily: fonts.extraBold, fontSize: 16 },
+  chatWithMeText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 16 },
   authLinkButton: { alignItems: "center", paddingVertical: 14 },
-  authLinkText: { color: coachColors.coachNavy, fontFamily: fonts.bold, fontSize: 14 },
+  authLinkText: { color: coachColors.coachNavy, fontFamily: coachFonts.bodyBold, fontSize: 14 },
   chatScreen: { backgroundColor: coachColors.bg },
   header: {
     paddingHorizontal: spacing.xl,
@@ -920,8 +920,8 @@ const styles = StyleSheet.create({
   headerCopy: { flex: 1 },
   headerTitle: { color: coachColors.text, fontFamily: coachFonts.heading, fontSize: 22 },
   headerSubtitle: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 12, marginTop: 1 },
-  eyebrow: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 12, textTransform: "uppercase" },
-  title: { color: colors.text, fontFamily: fonts.heading, fontSize: 34 },
+  eyebrow: { color: coachColors.textSecondary, fontFamily: coachFonts.bodyBold, fontSize: 12, textTransform: "uppercase" },
+  title: { color: coachColors.text, fontFamily: coachFonts.heading, fontSize: 34 },
   feelingCheckInWrap: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
   messages: { flex: 1 },
   // paddingTop was 4 — the first message bubble sat almost flush against the
@@ -938,7 +938,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 12,
   },
-  noticeText: { flex: 1, color: colors.text, fontFamily: fonts.semiBold, fontSize: 13, lineHeight: 18 },
+  noticeText: { flex: 1, color: coachColors.text, fontFamily: coachFonts.bodySemiBold, fontSize: 13, lineHeight: 18 },
   thinkingCard: {
     alignSelf: "flex-start",
     flexDirection: "row",
@@ -953,7 +953,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
-  thinkingText: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 13 },
+  thinkingText: { color: coachColors.text, fontFamily: coachFonts.bodySemiBold, fontSize: 13 },
   resendButton: {
     alignSelf: "center",
     borderRadius: 10,
@@ -961,7 +961,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
-  resendText: { color: coachColors.card, fontFamily: fonts.extraBold, fontSize: 12 },
+  resendText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 12 },
   quickActions: { borderTopWidth: 1, borderTopColor: coachColors.border, paddingTop: 10 },
   composerWrap: {
     paddingHorizontal: spacing.xl,

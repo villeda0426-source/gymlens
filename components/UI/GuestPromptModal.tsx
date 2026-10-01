@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 interface GuestPromptModalProps {
   visible: boolean;
@@ -39,23 +39,23 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: coachColors.card,
     borderRadius: 20,
     padding: 28,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: coachColors.border,
     width: "100%",
   },
-  title: { color: colors.text, fontSize: 22, fontFamily: fonts.heading, marginBottom: 12, textAlign: "center" },
-  message: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body, lineHeight: 22, textAlign: "center", marginBottom: 24 },
+  title: { color: coachColors.text, fontSize: 22, fontFamily: coachFonts.heading, marginBottom: 12, textAlign: "center" },
+  message: { color: coachColors.textSecondary, fontSize: 14, fontFamily: coachFonts.body, lineHeight: 22, textAlign: "center", marginBottom: 24 },
   cta: {
-    backgroundColor: colors.coral,
+    backgroundColor: coachColors.coral,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: "center",
     marginBottom: 12,
   },
-  ctaText: { color: colors.white, fontSize: 16, fontFamily: fonts.extraBold },
+  ctaText: { color: coachColors.card, fontSize: 16, fontFamily: coachFonts.bodyExtraBold },
   later: { alignItems: "center", paddingVertical: 8 },
-  laterText: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.body },
+  laterText: { color: coachColors.textSecondary, fontSize: 14, fontFamily: coachFonts.body },
 });

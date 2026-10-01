@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 export interface TutorialStep {
   step: number;
@@ -49,16 +49,16 @@ export default function TutorialSteps({ steps, isEs, emptyLabel }: TutorialSteps
 
 const styles = StyleSheet.create({
   container: { gap: 12 },
-  empty: { color: colors.textMuted, fontFamily: fonts.body, textAlign: "center", paddingVertical: 16 },
+  empty: { color: coachColors.textSecondary, fontFamily: coachFonts.body, textAlign: "center", paddingVertical: 16 },
   stepCard: {
-    backgroundColor: colors.card, borderRadius: 12, padding: 16,
-    borderWidth: 1, borderColor: colors.cardBorder,
+    backgroundColor: coachColors.card, borderRadius: 12, padding: 16,
+    borderWidth: 1, borderColor: coachColors.border,
   },
   stepHeader: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
   stepNumber: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: colors.coral, alignItems: "center", justifyContent: "center", flexShrink: 0,
+    backgroundColor: coachColors.coral, alignItems: "center", justifyContent: "center", flexShrink: 0,
   },
-  stepNumberText: { color: colors.white, fontSize: 14, fontFamily: fonts.extraBold },
-  stepInstruction: { color: colors.text, fontSize: 14, fontFamily: fonts.body, lineHeight: 22, flex: 1 },
+  stepNumberText: { color: coachColors.card, fontSize: 14, fontFamily: coachFonts.bodyExtraBold },
+  stepInstruction: { color: coachColors.text, fontSize: 14, fontFamily: coachFonts.body, lineHeight: 22, flex: 1 },
 });

@@ -29,7 +29,7 @@ import MuscleMapView from "@/components/Equipment/MuscleMapView";
 import SafetyTips from "@/components/Equipment/SafetyTips";
 import TutorialSteps from "@/components/Equipment/TutorialSteps";
 import VideoList, { VideoItem } from "@/components/Equipment/VideoList";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 import { apiFetch } from "@/lib/api";
 import {
   CoachPlan,
@@ -157,7 +157,7 @@ function PlanEmptyState() {
   return (
     <View style={styles.emptyPlan}>
       <View style={styles.emptyIcon}>
-        <Ionicons name="chatbubbles" size={28} color={colors.coral} />
+        <Ionicons name="chatbubbles" size={28} color={coachColors.coral} />
       </View>
       <Text style={styles.emptyTitle}>{t("plan.empty_title")}</Text>
       <Text style={styles.emptyText}>{t("plan.empty_text")}</Text>
@@ -244,7 +244,7 @@ function WorkoutDayCard({
             onPress={() => onOpenStretch(stretch, t(`plan.stretch.${stretch}`), muscles)}
           >
             <View style={styles.prepIcon}>
-              <Ionicons name="body" size={16} color={colors.ndGold} />
+              <Ionicons name="body" size={16} color={coachColors.coachGold} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.prepName}>{t(`plan.stretch.${stretch}`)}</Text>
@@ -265,11 +265,11 @@ function WorkoutDayCard({
               onPress={() => (isDone ? onUncompleteExercise(exercise) : onCompleteExercise(exercise))}
             >
               {isCompleting ? (
-                <ActivityIndicator size="small" color={colors.coral} />
+                <ActivityIndicator size="small" color={coachColors.coral} />
               ) : isDone ? (
-                <Ionicons name="checkmark" size={15} color={colors.white} />
+                <Ionicons name="checkmark" size={15} color={coachColors.card} />
               ) : (
-                <Ionicons name="ellipse-outline" size={18} color={colors.textMuted} />
+                <Ionicons name="ellipse-outline" size={18} color={coachColors.textSecondary} />
               )}
             </TouchableOpacity>
             <TouchableOpacity style={{ flex: 1 }} onPress={() => onOpenExercise(exercise)} activeOpacity={0.78}>
@@ -290,7 +290,7 @@ function WorkoutDayCard({
         onPress={() => onOpenWorkout(session, index)}
         disabled={isComplete}
       >
-        <Ionicons name={isComplete ? "checkmark-circle" : "reader"} size={17} color={isComplete ? colors.lime : colors.white} />
+        <Ionicons name={isComplete ? "checkmark-circle" : "reader"} size={17} color={isComplete ? coachColors.lime : coachColors.card} />
         <Text style={[styles.startButtonText, isComplete && styles.startButtonTextComplete]}>
           {isComplete ? t("plan.workout_complete") : t("plan.open_workout_details")}
         </Text>
@@ -389,7 +389,7 @@ function ExerciseGuideModal({
 
             {loading ? (
               <View style={styles.guideLoading}>
-                <ActivityIndicator color={colors.coral} />
+                <ActivityIndicator color={coachColors.coral} />
                 <Text style={styles.guideLoadingText}>{t("plan.loading_exercise_guide")}</Text>
               </View>
             ) : (
@@ -431,7 +431,7 @@ function ExerciseGuideModal({
                         <TextInput
                           style={styles.calcInput}
                           placeholder={t("equipment.body_weight_placeholder")}
-                          placeholderTextColor={colors.textMuted}
+                          placeholderTextColor={coachColors.textSecondary}
                           keyboardType="numeric"
                           value={bodyWeight}
                           onChangeText={setBodyWeight}
@@ -441,8 +441,8 @@ function ExerciseGuideModal({
                           <Switch
                             value={!useLbs}
                             onValueChange={(value) => setUseLbs(!value)}
-                            trackColor={{ false: colors.coral, true: colors.coral }}
-                            thumbColor={colors.white}
+                            trackColor={{ false: coachColors.coral, true: coachColors.coral }}
+                            thumbColor={coachColors.card}
                           />
                           <Text style={[styles.unitText, !useLbs && styles.unitActive]}>kg</Text>
                         </View>
@@ -576,7 +576,7 @@ function WorkoutDetailModal({
               >
                 <View style={styles.detailExerciseHeader}>
                   <View style={styles.prepIcon}>
-                    <Ionicons name="body" size={16} color={colors.ndGold} />
+                    <Ionicons name="body" size={16} color={coachColors.coachGold} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.detailExerciseName}>{t(`plan.stretch.${stretch}`)}</Text>
@@ -602,11 +602,11 @@ function WorkoutDetailModal({
                       onPress={() => (isDone ? onUncompleteExercise(exercise) : onCompleteExercise(exercise))}
                     >
                       {isCompleting ? (
-                        <ActivityIndicator size="small" color={colors.coral} />
+                        <ActivityIndicator size="small" color={coachColors.coral} />
                       ) : isDone ? (
-                        <Ionicons name="checkmark" size={15} color={colors.white} />
+                        <Ionicons name="checkmark" size={15} color={coachColors.card} />
                       ) : (
-                        <Ionicons name="ellipse-outline" size={18} color={colors.textMuted} />
+                        <Ionicons name="ellipse-outline" size={18} color={coachColors.textSecondary} />
                       )}
                     </TouchableOpacity>
                     <TouchableOpacity style={{ flex: 1 }} onPress={() => onOpenExercise(exercise)} activeOpacity={0.78}>
@@ -632,7 +632,7 @@ function WorkoutDetailModal({
                   {exercise.substitutions.length > 0 ? (
                     <View style={styles.swapArea}>
                       <View style={styles.swapTitleRow}>
-                        <Ionicons name="chatbubble-ellipses" size={13} color={colors.ndGold} />
+                        <Ionicons name="chatbubble-ellipses" size={13} color={coachColors.coachGold} />
                         <Text style={styles.swapTitle}>{t("plan.swap_same_goal")}</Text>
                       </View>
                       <Text style={styles.swapSubtitle}>{t("plan.swap_subtitle")}</Text>
@@ -652,7 +652,7 @@ function WorkoutDetailModal({
                           }}
                         >
                           <Text style={styles.swapButtonText}>{replacement}</Text>
-                          <Ionicons name="swap-horizontal" size={16} color={colors.ndGold} />
+                          <Ionicons name="swap-horizontal" size={16} color={coachColors.coachGold} />
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -728,7 +728,7 @@ function PlanOverviewModal({
                 >
                   <View style={[styles.overviewBadge, isDone && styles.overviewBadgeDone]}>
                     {isDone ? (
-                      <Ionicons name="checkmark" size={16} color={colors.white} />
+                      <Ionicons name="checkmark" size={16} color={coachColors.card} />
                     ) : (
                       <Text style={styles.overviewBadgeText}>{dayName(index)}</Text>
                     )}
@@ -1146,7 +1146,7 @@ export default function PlanScreen() {
     return (
       <SafeScreen>
         <View style={styles.centered}>
-          <ActivityIndicator color={colors.coral} />
+          <ActivityIndicator color={coachColors.coral} />
         </View>
       </SafeScreen>
     );
@@ -1162,7 +1162,7 @@ export default function PlanScreen() {
             <Text style={styles.title}>{t("plan.title")}</Text>
           </View>
           <TouchableOpacity style={styles.coachButton} onPress={handleContinueWithCoach}>
-            <Ionicons name="chatbubble-ellipses" size={17} color={colors.coral} />
+            <Ionicons name="chatbubble-ellipses" size={17} color={coachColors.coral} />
             <Text style={styles.coachButtonText}>{t("plan.coach")}</Text>
           </TouchableOpacity>
         </View>
@@ -1190,7 +1190,7 @@ export default function PlanScreen() {
                     : plan.goal}
                 </Text>
               </TouchableOpacity>
-              <LinearGradient colors={[colors.coral, "#ff6b6b"]} style={styles.progressRing}>
+              <LinearGradient colors={[coachColors.coral, "#ff6b6b"]} style={styles.progressRing}>
                 <Text style={styles.progressRingText}>{planProgress}%</Text>
               </LinearGradient>
             </LinearGradient>
@@ -1263,14 +1263,14 @@ export default function PlanScreen() {
               style={styles.summaryButton}
               onPress={handleOpenOverview}
             >
-              <Ionicons name="calendar" size={18} color={colors.coral} />
+              <Ionicons name="calendar" size={18} color={coachColors.coral} />
               <Text style={styles.summaryButtonText}>{t("plan.view_full_plan")}</Text>
               <Ionicons name="chevron-forward" size={18} color={PLAN_MUTED} />
             </TouchableOpacity>
 
             {sessionDeltas.length > 0 ? (
               <TouchableOpacity style={styles.progressSummaryButton} onPress={handleWorkoutSummary}>
-                <Ionicons name="analytics" size={16} color={colors.ndGold} />
+                <Ionicons name="analytics" size={16} color={coachColors.coachGold} />
                 <Text style={styles.progressSummaryText}>{t("plan.progress_summary")}</Text>
               </TouchableOpacity>
             ) : null}
@@ -1280,7 +1280,7 @@ export default function PlanScreen() {
               <TouchableOpacity style={styles.coachReviewCard} onPress={handleContinueWithCoach} activeOpacity={0.82}>
                 <View style={styles.coachReviewHeader}>
                   <View style={styles.coachReviewBadge}>
-                    <Ionicons name="fitness" size={14} color={colors.white} />
+                    <Ionicons name="fitness" size={14} color={coachColors.card} />
                     <Text style={styles.coachReviewBadgeText}>{t("plan.coach_follow_up")}</Text>
                   </View>
                   <Text style={styles.coachReviewSource}>{t(latestWorkoutReview.source === "ai" ? "plan.ai_reviewed" : "plan.rules_reviewed")}</Text>
@@ -1294,7 +1294,7 @@ export default function PlanScreen() {
                 </Text>
                 <View style={styles.coachReviewLink}>
                   <Text style={styles.coachReviewLinkText}>{t("plan.continue_coach")}</Text>
-                  <Ionicons name="arrow-forward" size={16} color={colors.ndGold} />
+                  <Ionicons name="arrow-forward" size={16} color={coachColors.coachGold} />
                 </View>
               </TouchableOpacity>
             ) : null}
@@ -1302,7 +1302,7 @@ export default function PlanScreen() {
             {isFullPlanComplete ? (
               <TouchableOpacity style={styles.feedbackCheckInCard} onPress={handleRetryCompletedPlan} activeOpacity={0.84}>
                 <View style={styles.feedbackCheckInIcon}>
-                  <Ionicons name="sparkles" size={19} color={colors.coral} />
+                  <Ionicons name="sparkles" size={19} color={coachColors.coral} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.feedbackCheckInTitle}>{t("plan.build_next_plan")}</Text>
@@ -1387,8 +1387,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  eyebrow: { color: PLAN_MUTED, fontFamily: fonts.bold, fontSize: 12, textTransform: "uppercase" },
-  title: { color: PLAN_TEXT, fontFamily: fonts.heading, fontSize: 42 },
+  eyebrow: { color: PLAN_MUTED, fontFamily: coachFonts.bodyBold, fontSize: 12, textTransform: "uppercase" },
+  title: { color: PLAN_TEXT, fontFamily: coachFonts.heading, fontSize: 42 },
   coachButton: {
     minHeight: 42,
     borderRadius: 13,
@@ -1400,7 +1400,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 7,
   },
-  coachButtonText: { color: colors.coral, fontFamily: fonts.bold, fontSize: 13 },
+  coachButtonText: { color: coachColors.coral, fontFamily: coachFonts.bodyBold, fontSize: 13 },
   planHero: {
     flexDirection: "row",
     alignItems: "center",
@@ -1416,18 +1416,18 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 12 },
   },
-  planHeroEyebrow: { color: colors.ndGold, fontFamily: fonts.extraBold, fontSize: 11, textTransform: "uppercase", marginBottom: 4 },
-  planHeroTitle: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 27 },
-  planHeroText: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 14, lineHeight: 21, marginTop: 6 },
+  planHeroEyebrow: { color: coachColors.coachGold, fontFamily: coachFonts.bodyExtraBold, fontSize: 11, textTransform: "uppercase", marginBottom: 4 },
+  planHeroTitle: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 27 },
+  planHeroText: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 14, lineHeight: 21, marginTop: 6 },
   progressRing: {
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: colors.coral,
+    backgroundColor: coachColors.coral,
     alignItems: "center",
     justifyContent: "center",
   },
-  progressRingText: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 20 },
+  progressRingText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 20 },
   timelineCard: {
     borderRadius: 16,
     borderWidth: 1,
@@ -1437,8 +1437,8 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   timelineHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  timelineTitle: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 15 },
-  timelineMeta: { color: colors.ndGold, fontFamily: fonts.extraBold, fontSize: 12 },
+  timelineTitle: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 15 },
+  timelineMeta: { color: coachColors.coachGold, fontFamily: coachFonts.bodyExtraBold, fontSize: 12 },
   timelineDots: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 12 },
   timelineDot: {
     width: 25,
@@ -1451,12 +1451,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   timelineDotVisible: { backgroundColor: "rgba(255,255,255,0.16)", borderColor: "rgba(255,255,255,0.24)" },
-  timelineDotDone: { backgroundColor: colors.lime, borderColor: colors.lime },
-  timelineHint: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 12, lineHeight: 17, marginTop: 10 },
+  timelineDotDone: { backgroundColor: coachColors.lime, borderColor: coachColors.lime },
+  timelineHint: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 12, lineHeight: 17, marginTop: 10 },
   planSlider: { gap: PLAN_CARD_GAP, paddingBottom: 2 },
   planDots: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 16 },
   planDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.18)" },
-  planDotActive: { width: 18, backgroundColor: colors.coral },
+  planDotActive: { width: 18, backgroundColor: coachColors.coral },
   dayCard: {
     width: PLAN_CARD_WIDTH,
     borderRadius: 20,
@@ -1466,7 +1466,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     overflow: "hidden",
   },
-  dayCardComplete: { borderColor: colors.lime + "70" },
+  dayCardComplete: { borderColor: coachColors.lime + "70" },
   dayHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
   dayBadge: {
     width: 44,
@@ -1476,17 +1476,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  dayBadgeText: { color: colors.coral, fontFamily: fonts.extraBold, fontSize: 13 },
-  dayTitle: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 20 },
-  dayMeta: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 13, marginTop: 2 },
+  dayBadgeText: { color: coachColors.coral, fontFamily: coachFonts.bodyExtraBold, fontSize: 13 },
+  dayTitle: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 20 },
+  dayMeta: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 13, marginTop: 2 },
   statusPill: { backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5 },
-  statusPillComplete: { backgroundColor: colors.lime + "18" },
-  statusText: { color: "rgba(255,255,255,0.75)", fontFamily: fonts.bold, fontSize: 11 },
-  statusTextComplete: { color: colors.lime },
-  dayFocus: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 13, lineHeight: 19, marginTop: 12 },
+  statusPillComplete: { backgroundColor: coachColors.lime + "18" },
+  statusText: { color: "rgba(255,255,255,0.75)", fontFamily: coachFonts.bodyBold, fontSize: 11 },
+  statusTextComplete: { color: coachColors.lime },
+  dayFocus: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 13, lineHeight: 19, marginTop: 12 },
   muscleChips: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 12 },
   muscleChip: { borderRadius: 9, backgroundColor: "rgba(255,255,255,0.12)", paddingHorizontal: 9, paddingVertical: 5 },
-  muscleChipText: { color: "rgba(255,255,255,0.78)", fontFamily: fonts.semiBold, fontSize: 11, textTransform: "capitalize" },
+  muscleChipText: { color: "rgba(255,255,255,0.78)", fontFamily: coachFonts.bodySemiBold, fontSize: 11, textTransform: "capitalize" },
   prepBlock: {
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.1)",
@@ -1494,7 +1494,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     gap: 9,
   },
-  prepLabel: { color: colors.ndGold, fontFamily: fonts.extraBold, fontSize: 11, textTransform: "uppercase" },
+  prepLabel: { color: coachColors.coachGold, fontFamily: coachFonts.bodyExtraBold, fontSize: 11, textTransform: "uppercase" },
   prepRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   prepIcon: {
     width: 42,
@@ -1502,12 +1502,12 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.ndGold + "16",
+    backgroundColor: coachColors.coachGold + "16",
     borderWidth: 1,
-    borderColor: colors.ndGold + "30",
+    borderColor: coachColors.coachGold + "30",
   },
-  prepName: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 14 },
-  prepMeta: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 12, marginTop: 2 },
+  prepName: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 14 },
+  prepMeta: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 12, marginTop: 2 },
   exerciseRow: {
     flexDirection: "row",
     gap: 10,
@@ -1518,23 +1518,23 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   exerciseCheck: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" },
-  exerciseCheckDone: { borderRadius: 21, backgroundColor: colors.lime },
-  exerciseName: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 16 },
+  exerciseCheckDone: { borderRadius: 21, backgroundColor: coachColors.lime },
+  exerciseName: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 16 },
   exerciseDoneText: { color: PLAN_MUTED, textDecorationLine: "line-through" },
-  exerciseDose: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 12, marginTop: 3 },
+  exerciseDose: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 12, marginTop: 3 },
   startButton: {
     marginTop: 14,
     minHeight: 46,
     borderRadius: 13,
-    backgroundColor: colors.coral,
+    backgroundColor: coachColors.coral,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
   },
-  startButtonComplete: { backgroundColor: colors.lime + "14", borderWidth: 1, borderColor: colors.lime + "50" },
-  startButtonText: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 14 },
-  startButtonTextComplete: { color: colors.lime },
+  startButtonComplete: { backgroundColor: coachColors.lime + "14", borderWidth: 1, borderColor: coachColors.lime + "50" },
+  startButtonText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 14 },
+  startButtonTextComplete: { color: coachColors.lime },
   summaryButton: {
     minHeight: 48,
     borderRadius: 18,
@@ -1547,20 +1547,20 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  summaryButtonText: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 16 },
+  summaryButtonText: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 16 },
   progressSummaryButton: {
     minHeight: 42,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.ndGold + "45",
-    backgroundColor: colors.ndGold + "14",
+    borderColor: coachColors.coachGold + "45",
+    backgroundColor: coachColors.coachGold + "14",
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
     marginBottom: 18,
   },
-  progressSummaryText: { color: colors.ndGold, fontFamily: fonts.bold, fontSize: 13 },
+  progressSummaryText: { color: coachColors.coachGold, fontFamily: coachFonts.bodyBold, fontSize: 13 },
   emptyPlan: {
     backgroundColor: PLAN_PANEL,
     borderRadius: 20,
@@ -1573,21 +1573,21 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 16,
-    backgroundColor: colors.coral + "14",
+    backgroundColor: coachColors.coral + "14",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
   },
-  emptyTitle: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 20 },
-  emptyText: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 14, lineHeight: 21, marginTop: 7, marginBottom: 16 },
+  emptyTitle: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 20 },
+  emptyText: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 14, lineHeight: 21, marginTop: 7, marginBottom: 16 },
   primaryButton: {
     minHeight: 48,
     borderRadius: 14,
-    backgroundColor: colors.coral,
+    backgroundColor: coachColors.coral,
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryButtonText: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 14 },
+  primaryButtonText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 14 },
   avatarCard: {
     backgroundColor: PLAN_PANEL,
     borderRadius: 20,
@@ -1598,8 +1598,8 @@ const styles = StyleSheet.create({
   },
   avatarHeader: { flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap" },
   avatarHeaderCopy: { flex: 1, minWidth: 180 },
-  sectionTitle: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 18 },
-  sectionSubtitle: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 12, lineHeight: 17, marginTop: 4 },
+  sectionTitle: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 18 },
+  sectionSubtitle: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 12, lineHeight: 17, marginTop: 4 },
   avatarPreview: { alignItems: "center", justifyContent: "center", minHeight: 286, marginTop: 8 },
   weekLegend: {
     flexDirection: "row",
@@ -1620,26 +1620,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.85)",
   },
-  legendSwatchActive: { backgroundColor: colors.coral },
-  legendText: { color: PLAN_MUTED, fontFamily: fonts.semiBold, fontSize: 12 },
+  legendSwatchActive: { backgroundColor: coachColors.coral },
+  legendText: { color: PLAN_MUTED, fontFamily: coachFonts.bodySemiBold, fontSize: 12 },
   workedMuscleChips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
   workedMuscleChip: {
     borderRadius: 10,
-    backgroundColor: colors.coral + "18",
+    backgroundColor: coachColors.coral + "18",
     borderWidth: 1,
-    borderColor: colors.coral + "50",
+    borderColor: coachColors.coral + "50",
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
-  workedMuscleText: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 12 },
-  noWorkedMuscles: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 13, lineHeight: 19 },
+  workedMuscleText: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 12 },
+  noWorkedMuscles: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 13, lineHeight: 19 },
   detailSafe: { flex: 1, backgroundColor: PLAN_DARK },
   detailScroll: { flex: 1, backgroundColor: PLAN_DARK },
   detailContent: { padding: 20, paddingBottom: 34 },
   detailHeader: { flexDirection: "row", alignItems: "flex-start", gap: 14, marginBottom: 16 },
-  detailEyebrow: { color: colors.ndGold, fontFamily: fonts.extraBold, fontSize: 11, textTransform: "uppercase" },
-  detailTitle: { color: PLAN_TEXT, fontFamily: fonts.heading, fontSize: 36, marginTop: 2 },
-  detailMeta: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 13, marginTop: 4 },
+  detailEyebrow: { color: coachColors.coachGold, fontFamily: coachFonts.bodyExtraBold, fontSize: 11, textTransform: "uppercase" },
+  detailTitle: { color: PLAN_TEXT, fontFamily: coachFonts.heading, fontSize: 36, marginTop: 2 },
+  detailMeta: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 13, marginTop: 4 },
   detailClose: {
     width: 42,
     height: 42,
@@ -1661,19 +1661,19 @@ const styles = StyleSheet.create({
   finishWorkoutButton: {
     minHeight: 52,
     borderRadius: 14,
-    backgroundColor: colors.coral,
+    backgroundColor: coachColors.coral,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 9,
     marginBottom: 18,
   },
-  finishWorkoutText: { color: colors.white, fontFamily: fonts.bold, fontSize: 15 },
+  finishWorkoutText: { color: coachColors.card, fontFamily: coachFonts.bodyBold, fontSize: 15 },
   feedbackCheckInCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.coral + "55",
-    backgroundColor: colors.coral + "14",
+    borderColor: coachColors.coral + "55",
+    backgroundColor: coachColors.coral + "14",
     padding: 14,
     marginTop: 12,
     flexDirection: "row",
@@ -1684,33 +1684,33 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: colors.coral + "20",
+    backgroundColor: coachColors.coral + "20",
     alignItems: "center",
     justifyContent: "center",
   },
-  feedbackCheckInTitle: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 14 },
-  feedbackCheckInText: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 12, lineHeight: 17, marginTop: 2 },
+  feedbackCheckInTitle: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 14 },
+  feedbackCheckInText: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 12, lineHeight: 17, marginTop: 2 },
   coachReviewCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: colors.ndGold + "66",
+    borderColor: coachColors.coachGold + "66",
     backgroundColor: PLAN_PANEL,
     padding: 16,
     marginTop: 12,
   },
   coachReviewHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
-  coachReviewBadge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.ndGold, borderRadius: 9, paddingHorizontal: 9, paddingVertical: 5 },
-  coachReviewBadgeText: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 10 },
-  coachReviewSource: { color: PLAN_MUTED, fontFamily: fonts.semiBold, fontSize: 11 },
-  coachReviewTitle: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 16, marginTop: 13 },
-  coachReviewText: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 13, lineHeight: 19, marginTop: 5 },
-  coachReviewChange: { color: PLAN_TEXT, fontFamily: fonts.semiBold, fontSize: 13, lineHeight: 19, marginTop: 10 },
+  coachReviewBadge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: coachColors.coachGold, borderRadius: 9, paddingHorizontal: 9, paddingVertical: 5 },
+  coachReviewBadgeText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 10 },
+  coachReviewSource: { color: PLAN_MUTED, fontFamily: coachFonts.bodySemiBold, fontSize: 11 },
+  coachReviewTitle: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 16, marginTop: 13 },
+  coachReviewText: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 13, lineHeight: 19, marginTop: 5 },
+  coachReviewChange: { color: PLAN_TEXT, fontFamily: coachFonts.bodySemiBold, fontSize: 13, lineHeight: 19, marginTop: 10 },
   coachReviewLink: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 13 },
-  coachReviewLinkText: { color: colors.ndGold, fontFamily: fonts.bold, fontSize: 13 },
-  detailSectionTitle: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 17, marginBottom: 8 },
-  detailBody: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 13, lineHeight: 19 },
+  coachReviewLinkText: { color: coachColors.coachGold, fontFamily: coachFonts.bodyBold, fontSize: 13 },
+  detailSectionTitle: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 17, marginBottom: 8 },
+  detailBody: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 13, lineHeight: 19 },
   stretchRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 7 },
-  stretchText: { color: PLAN_TEXT, fontFamily: fonts.semiBold, fontSize: 13 },
+  stretchText: { color: PLAN_TEXT, fontFamily: coachFonts.bodySemiBold, fontSize: 13 },
   detailExerciseCard: {
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.1)",
@@ -1719,40 +1719,40 @@ const styles = StyleSheet.create({
     gap: 9,
   },
   detailExerciseHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
-  detailExerciseName: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 16 },
-  detailExerciseDose: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 12, marginTop: 2 },
-  detailSmall: { color: "rgba(255,255,255,0.52)", fontFamily: fonts.body, fontSize: 12, lineHeight: 17 },
-  guideSafe: { flex: 1, backgroundColor: colors.bg },
+  detailExerciseName: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 16 },
+  detailExerciseDose: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 12, marginTop: 2 },
+  detailSmall: { color: "rgba(255,255,255,0.52)", fontFamily: coachFonts.body, fontSize: 12, lineHeight: 17 },
+  guideSafe: { flex: 1, backgroundColor: coachColors.bg },
   guideHeader: {
     flexDirection: "row",
     justifyContent: "flex-end",
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 4,
-    backgroundColor: colors.bg,
+    backgroundColor: coachColors.bg,
   },
   guideMuscleMap: {
-    backgroundColor: colors.bg,
+    backgroundColor: coachColors.bg,
     paddingTop: 8,
     borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
+    borderBottomColor: coachColors.border,
   },
   guideContent: { padding: 20, paddingBottom: 34 },
   guideBadge: {
-    backgroundColor: colors.lime + "18",
+    backgroundColor: coachColors.lime + "18",
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
     alignSelf: "flex-start",
     marginBottom: 12,
   },
-  guideBadgeText: { color: colors.lime, fontSize: 11, fontFamily: fonts.semiBold },
-  guideTitle: { color: colors.text, fontSize: 28, fontFamily: fonts.heading, marginBottom: 16, lineHeight: 34 },
+  guideBadgeText: { color: coachColors.lime, fontSize: 11, fontFamily: coachFonts.bodySemiBold },
+  guideTitle: { color: coachColors.text, fontSize: 28, fontFamily: coachFonts.heading, marginBottom: 16, lineHeight: 34 },
   guideSection: { marginBottom: 20 },
   guideSectionTitle: {
-    color: colors.textMuted,
+    color: coachColors.textSecondary,
     fontSize: 12,
-    fontFamily: fonts.bold,
+    fontFamily: coachFonts.bodyBold,
     textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 10,
@@ -1761,82 +1761,82 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: colors.card,
+    backgroundColor: coachColors.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: coachColors.border,
     padding: 16,
   },
-  guideLoadingText: { color: colors.textSecondary, fontFamily: fonts.semiBold, fontSize: 13 },
+  guideLoadingText: { color: coachColors.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 13 },
   guideCalculator: { gap: 12 },
   calcCard: {
-    backgroundColor: colors.card,
+    backgroundColor: coachColors.card,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: coachColors.border,
   },
-  calcLabel: { color: colors.textMuted, fontSize: 11, fontFamily: fonts.bold, textTransform: "uppercase", marginBottom: 10 },
+  calcLabel: { color: coachColors.textSecondary, fontSize: 11, fontFamily: coachFonts.bodyBold, textTransform: "uppercase", marginBottom: 10 },
   calcInputRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   calcInput: {
     flex: 1,
-    backgroundColor: colors.input,
+    backgroundColor: coachColors.bg,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: colors.text,
+    color: coachColors.text,
     fontSize: 18,
-    fontFamily: fonts.bold,
+    fontFamily: coachFonts.bodyBold,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: coachColors.border,
   },
   unitToggle: { flexDirection: "row", alignItems: "center", gap: 6 },
-  unitText: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.semiBold },
-  unitActive: { color: colors.coral, fontFamily: fonts.bold },
+  unitText: { color: coachColors.textSecondary, fontSize: 13, fontFamily: coachFonts.bodySemiBold },
+  unitActive: { color: coachColors.coral, fontFamily: coachFonts.bodyBold },
   calcLevelRow: { flexDirection: "row", gap: 8 },
   levelBtn: {
     flex: 1,
     paddingVertical: 10,
     alignItems: "center",
-    backgroundColor: colors.input,
+    backgroundColor: coachColors.bg,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: coachColors.border,
   },
-  levelBtnActive: { backgroundColor: colors.coral, borderColor: colors.coral },
-  levelBtnText: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.semiBold },
-  levelBtnTextActive: { color: colors.white, fontFamily: fonts.bold },
+  levelBtnActive: { backgroundColor: coachColors.coral, borderColor: coachColors.coral },
+  levelBtnText: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.bodySemiBold },
+  levelBtnTextActive: { color: coachColors.card, fontFamily: coachFonts.bodyBold },
   resultsCard: {
-    backgroundColor: colors.coral + "0d",
+    backgroundColor: coachColors.coral + "0d",
     borderRadius: 14,
     padding: 20,
     borderWidth: 1,
-    borderColor: colors.coral + "30",
+    borderColor: coachColors.coral + "30",
   },
-  resultsTitle: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase", marginBottom: 8 },
-  resultsWeight: { color: colors.coral, fontSize: 38, fontFamily: fonts.heading, marginBottom: 16 },
-  resultsDivider: { height: 1, backgroundColor: colors.coral + "30", marginBottom: 16 },
+  resultsTitle: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.bodyBold, textTransform: "uppercase", marginBottom: 8 },
+  resultsWeight: { color: coachColors.coral, fontSize: 38, fontFamily: coachFonts.heading, marginBottom: 16 },
+  resultsDivider: { height: 1, backgroundColor: coachColors.coral + "30", marginBottom: 16 },
   resultRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 12 },
-  resultKey: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.body },
-  resultVal: { color: colors.text, fontSize: 13, fontFamily: fonts.bold, flexShrink: 1, textAlign: "right" },
-  calcNote: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.body, lineHeight: 18, marginTop: 10 },
+  resultKey: { color: coachColors.textSecondary, fontSize: 13, fontFamily: coachFonts.body },
+  resultVal: { color: coachColors.text, fontSize: 13, fontFamily: coachFonts.bodyBold, flexShrink: 1, textAlign: "right" },
+  calcNote: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.body, lineHeight: 18, marginTop: 10 },
   swapArea: { gap: 8, marginTop: 4 },
   swapTitleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  swapTitle: { color: colors.ndGold, fontFamily: fonts.extraBold, fontSize: 11, textTransform: "uppercase" },
-  swapSubtitle: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 12, lineHeight: 16, marginTop: -4 },
+  swapTitle: { color: coachColors.coachGold, fontFamily: coachFonts.bodyExtraBold, fontSize: 11, textTransform: "uppercase" },
+  swapSubtitle: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 12, lineHeight: 16, marginTop: -4 },
   swapButton: {
     minHeight: 40,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.ndGold + "45",
-    backgroundColor: colors.ndGold + "12",
+    borderColor: coachColors.coachGold + "45",
+    backgroundColor: coachColors.coachGold + "12",
     paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
   },
-  swapButtonText: { flex: 1, color: PLAN_TEXT, fontFamily: fonts.semiBold, fontSize: 13 },
+  swapButtonText: { flex: 1, color: PLAN_TEXT, fontFamily: coachFonts.bodySemiBold, fontSize: 13 },
   overviewProgressTrack: {
     height: 8,
     borderRadius: 4,
@@ -1844,7 +1844,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: 18,
   },
-  overviewProgressFill: { height: 8, borderRadius: 4, backgroundColor: colors.lime },
+  overviewProgressFill: { height: 8, borderRadius: 4, backgroundColor: coachColors.lime },
   overviewRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1862,8 +1862,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.08)",
   },
-  overviewBadgeDone: { backgroundColor: colors.lime },
-  overviewBadgeText: { color: PLAN_TEXT, fontFamily: fonts.extraBold, fontSize: 12 },
-  overviewRowTitle: { color: PLAN_TEXT, fontFamily: fonts.bold, fontSize: 15 },
-  overviewRowMeta: { color: PLAN_MUTED, fontFamily: fonts.body, fontSize: 12, marginTop: 2 },
+  overviewBadgeDone: { backgroundColor: coachColors.lime },
+  overviewBadgeText: { color: PLAN_TEXT, fontFamily: coachFonts.bodyExtraBold, fontSize: 12 },
+  overviewRowTitle: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 15 },
+  overviewRowMeta: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 12, marginTop: 2 },
 });

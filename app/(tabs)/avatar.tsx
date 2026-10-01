@@ -9,7 +9,7 @@ import MuscleDetailModal from "@/components/Avatar/MuscleDetailModal";
 import { useAuthStore } from "@/store/authStore";
 import { useMuscleProgressStore, CompletedExerciseRow } from "@/store/muscleProgressStore";
 import { AvatarMuscleGroup, getUndertrainedRecommendation } from "@/lib/muscleProgress";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 const AVATAR_BODY_STYLE_KEY = "spotlift_avatar_body_style";
 
@@ -145,26 +145,26 @@ export default function AvatarScreen() {
 
 const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 },
-  title: { fontSize: 28, fontFamily: fonts.heading, color: colors.text },
-  subtitle: { fontSize: 13, fontFamily: fonts.body, color: colors.textSecondary, marginTop: 4 },
+  title: { fontSize: 28, fontFamily: coachFonts.heading, color: coachColors.text },
+  subtitle: { fontSize: 13, fontFamily: coachFonts.body, color: coachColors.textSecondary, marginTop: 4 },
   toggleWrap: { paddingHorizontal: 20, paddingTop: 16 },
   styleRow: {
     paddingHorizontal: 20, paddingTop: 12, flexDirection: "row", alignItems: "center",
     justifyContent: "space-between",
   },
-  styleLabel: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.semiBold },
+  styleLabel: { color: coachColors.textSecondary, fontSize: 13, fontFamily: coachFonts.bodySemiBold },
   styleOptions: {
-    flexDirection: "row", padding: 3, borderRadius: 12, backgroundColor: colors.input,
+    flexDirection: "row", padding: 3, borderRadius: 12, backgroundColor: coachColors.bg,
   },
   styleButton: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 9 },
-  styleButtonActive: { backgroundColor: colors.card },
-  styleButtonText: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.bold },
-  styleButtonTextActive: { color: colors.coral },
+  styleButtonActive: { backgroundColor: coachColors.card },
+  styleButtonText: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.bodyBold },
+  styleButtonTextActive: { color: coachColors.coral },
   avatarWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
-  rotateHint: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 10 },
+  rotateHint: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.body, marginTop: 10 },
   guestBanner: {
-    marginHorizontal: 20, marginBottom: 20, backgroundColor: colors.card, borderRadius: 12,
-    borderWidth: 1, borderColor: colors.cardBorder, padding: 14,
+    marginHorizontal: 20, marginBottom: 20, backgroundColor: coachColors.card, borderRadius: 12,
+    borderWidth: 1, borderColor: coachColors.border, padding: 14,
   },
-  guestBannerText: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.body, textAlign: "center" },
+  guestBannerText: { color: coachColors.textSecondary, fontSize: 13, fontFamily: coachFonts.body, textAlign: "center" },
 });

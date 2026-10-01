@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { setStoredLanguage } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 export default function LanguageToggle() {
   const { i18n } = useTranslation();
@@ -29,12 +29,12 @@ export default function LanguageToggle() {
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: colors.input,
+    backgroundColor: coachColors.bg,
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: colors.coral,
+    borderColor: coachColors.coral,
   },
-  text: { color: colors.coral, fontSize: 12, fontFamily: fonts.bold, letterSpacing: 1 },
+  text: { color: coachColors.coral, fontSize: 12, fontFamily: coachFonts.bodyBold, letterSpacing: 1 },
 });

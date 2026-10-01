@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 interface SafetyTipsProps {
   tips: string[];
@@ -30,12 +30,12 @@ export default function SafetyTips({ tips, emptyLabel }: SafetyTipsProps) {
 
 const styles = StyleSheet.create({
   container: { gap: 12 },
-  empty: { color: colors.textMuted, fontFamily: fonts.body, textAlign: "center", paddingVertical: 16 },
+  empty: { color: coachColors.textSecondary, fontFamily: coachFonts.body, textAlign: "center", paddingVertical: 16 },
   safetyItem: {
     flexDirection: "row", gap: 12,
-    backgroundColor: colors.coral + "0f", borderRadius: 12, padding: 16,
-    borderWidth: 1, borderColor: colors.coral + "30",
+    backgroundColor: coachColors.coral + "0f", borderRadius: 12, padding: 16,
+    borderWidth: 1, borderColor: coachColors.coral + "30",
   },
   safetyIcon: { fontSize: 18, flexShrink: 0 },
-  safetyText: { color: colors.text, fontSize: 14, fontFamily: fonts.body, lineHeight: 22, flex: 1 },
+  safetyText: { color: coachColors.text, fontSize: 14, fontFamily: coachFonts.body, lineHeight: 22, flex: 1 },
 });

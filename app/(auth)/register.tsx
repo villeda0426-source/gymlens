@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { getAuthRedirectUrl } from "@/lib/authRedirect";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 function getRegisterErrorAlert(message: string, t: (key: string) => string) {
   const normalized = message.toLowerCase();
@@ -73,7 +73,7 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               placeholder={t("auth.username_placeholder")}
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={coachColors.textSecondary}
               value={username}
               onChangeText={setUsername}
               autoCapitalize="words"
@@ -85,7 +85,7 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               placeholder={t("auth.email_placeholder")}
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={coachColors.textSecondary}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -99,7 +99,7 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               placeholder={t("auth.password_placeholder")}
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={coachColors.textSecondary}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -112,7 +112,7 @@ export default function RegisterScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={colors.white} />
+              <ActivityIndicator color={coachColors.card} />
             ) : (
               <Text style={styles.buttonText}>{t("auth.sign_up")}</Text>
             )}
@@ -132,27 +132,27 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1, backgroundColor: coachColors.bg },
   inner: { paddingHorizontal: 28, paddingTop: 80, paddingBottom: 40 },
-  logoCoach: { color: colors.text, fontSize: 40, fontFamily: fonts.heading, marginBottom: 8 },
-  logoLift: { color: colors.coral },
-  title: { color: colors.text, fontSize: 26, fontFamily: fonts.bold, marginBottom: 40 },
+  logoCoach: { color: coachColors.text, fontSize: 40, fontFamily: coachFonts.heading, marginBottom: 8 },
+  logoLift: { color: coachColors.coral },
+  title: { color: coachColors.text, fontSize: 26, fontFamily: coachFonts.bodyBold, marginBottom: 40 },
   form: { gap: 20 },
   field: { gap: 8 },
-  label: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.semiBold, textTransform: "uppercase", letterSpacing: 0.5 },
+  label: { color: coachColors.textSecondary, fontSize: 13, fontFamily: coachFonts.bodySemiBold, textTransform: "uppercase", letterSpacing: 0.5 },
   input: {
-    backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-    color: colors.text, fontSize: 15, fontFamily: fonts.body, borderWidth: 1, borderColor: colors.cardBorder,
+    backgroundColor: coachColors.card, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+    color: coachColors.text, fontSize: 15, fontFamily: coachFonts.body, borderWidth: 1, borderColor: coachColors.border,
   },
   button: {
-    backgroundColor: colors.coral, borderRadius: 14, paddingVertical: 16,
+    backgroundColor: coachColors.coral, borderRadius: 14, paddingVertical: 16,
     alignItems: "center", marginTop: 8,
   },
   buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: colors.white, fontSize: 16, fontFamily: fonts.extraBold },
+  buttonText: { color: coachColors.card, fontSize: 16, fontFamily: coachFonts.bodyExtraBold },
   footer: { flexDirection: "row", justifyContent: "center", marginTop: 32 },
-  footerText: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body },
-  link: { color: colors.coral, fontSize: 14, fontFamily: fonts.bold },
+  footerText: { color: coachColors.textSecondary, fontSize: 14, fontFamily: coachFonts.body },
+  link: { color: coachColors.coral, fontSize: 14, fontFamily: coachFonts.bodyBold },
   guestButton: { alignItems: "center", marginTop: 16 },
-  guestText: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.body },
+  guestText: { color: coachColors.textSecondary, fontSize: 14, fontFamily: coachFonts.body },
 });

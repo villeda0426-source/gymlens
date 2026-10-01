@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { View, Text, Animated, Easing, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 interface LoadingSpinnerProps {
   message?: string;
@@ -48,6 +48,6 @@ const styles = StyleSheet.create({
   container: { alignItems: "center", justifyContent: "center", padding: 32 },
   icon: { marginBottom: 16 },
   emoji: { fontSize: 48 },
-  message: { color: colors.coral, fontSize: 20, fontFamily: fonts.bold, textAlign: "center" },
-  subtitle: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body, marginTop: 8, textAlign: "center" },
+  message: { color: coachColors.coral, fontSize: 20, fontFamily: coachFonts.bodyBold, textAlign: "center" },
+  subtitle: { color: coachColors.textSecondary, fontSize: 14, fontFamily: coachFonts.body, marginTop: 8, textAlign: "center" },
 });

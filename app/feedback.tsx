@@ -15,7 +15,7 @@ import * as Haptics from "expo-haptics";
 import SafeScreen from "@/components/Layout/SafeScreen";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 const CATEGORIES = ["wrong_id", "missing_info", "video_quality", "other"] as const;
 
@@ -127,7 +127,7 @@ export default function FeedbackScreen() {
         <TextInput
           style={styles.textarea}
           placeholder={t("feedback.message_placeholder")}
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={coachColors.textSecondary}
           value={message}
           onChangeText={setMessage}
           multiline
@@ -141,7 +141,7 @@ export default function FeedbackScreen() {
           disabled={rating === 0 || loading}
         >
           {loading ? (
-            <ActivityIndicator color={colors.white} />
+            <ActivityIndicator color={coachColors.card} />
           ) : (
             <Text style={styles.submitText}>{t("feedback.submit")}</Text>
           )}
@@ -156,45 +156,45 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 20, paddingVertical: 16,
   },
-  closeIcon: { color: colors.textMuted, fontSize: 18, padding: 4 },
-  title: { color: colors.text, fontSize: 18, fontFamily: fonts.bold },
+  closeIcon: { color: coachColors.textSecondary, fontSize: 18, padding: 4 },
+  title: { color: coachColors.text, fontSize: 18, fontFamily: coachFonts.bodyBold },
   form: { paddingHorizontal: 20, paddingBottom: 40, gap: 20 },
-  subtitle: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body },
-  fieldLabel: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.bold, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: -8 },
+  subtitle: { color: coachColors.textSecondary, fontSize: 14, fontFamily: coachFonts.body },
+  fieldLabel: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.bodyBold, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: -8 },
   stars: { flexDirection: "row", gap: 12 },
-  star: { fontSize: 40, color: colors.cardBorder },
-  starActive: { color: colors.coral },
+  star: { fontSize: 40, color: coachColors.border },
+  starActive: { color: coachColors.coral },
   categories: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   categoryChip: {
-    backgroundColor: colors.card, borderRadius: 20,
+    backgroundColor: coachColors.card, borderRadius: 20,
     paddingHorizontal: 16, paddingVertical: 8,
-    borderWidth: 1, borderColor: colors.cardBorder,
+    borderWidth: 1, borderColor: coachColors.border,
   },
-  categoryChipActive: { backgroundColor: colors.coral + "18", borderColor: colors.coral },
-  categoryChipText: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.semiBold },
-  categoryChipTextActive: { color: colors.coral },
+  categoryChipActive: { backgroundColor: coachColors.coral + "18", borderColor: coachColors.coral },
+  categoryChipText: { color: coachColors.textSecondary, fontSize: 13, fontFamily: coachFonts.bodySemiBold },
+  categoryChipTextActive: { color: coachColors.coral },
   textarea: {
-    backgroundColor: colors.card, borderRadius: 12, padding: 16,
-    color: colors.text, fontSize: 14, fontFamily: fonts.body, minHeight: 100,
-    borderWidth: 1, borderColor: colors.cardBorder, lineHeight: 20,
+    backgroundColor: coachColors.card, borderRadius: 12, padding: 16,
+    color: coachColors.text, fontSize: 14, fontFamily: coachFonts.body, minHeight: 100,
+    borderWidth: 1, borderColor: coachColors.border, lineHeight: 20,
   },
   submitButton: {
-    backgroundColor: colors.coral, borderRadius: 14,
+    backgroundColor: coachColors.coral, borderRadius: 14,
     paddingVertical: 16, alignItems: "center",
   },
   submitDisabled: { opacity: 0.4 },
-  submitText: { color: colors.white, fontSize: 16, fontFamily: fonts.extraBold },
+  submitText: { color: coachColors.card, fontSize: 16, fontFamily: coachFonts.bodyExtraBold },
   success: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40 },
   checkCircle: {
     width: 100, height: 100, borderRadius: 50,
-    backgroundColor: colors.lime, alignItems: "center", justifyContent: "center", marginBottom: 28,
+    backgroundColor: coachColors.lime, alignItems: "center", justifyContent: "center", marginBottom: 28,
   },
-  checkIcon: { color: colors.white, fontSize: 48, fontFamily: fonts.extraBold },
-  thankYouTitle: { color: colors.text, fontSize: 28, fontFamily: fonts.heading, marginBottom: 12 },
-  thankYouMessage: { color: colors.textSecondary, fontSize: 15, fontFamily: fonts.body, textAlign: "center", lineHeight: 22, marginBottom: 40 },
+  checkIcon: { color: coachColors.card, fontSize: 48, fontFamily: coachFonts.bodyExtraBold },
+  thankYouTitle: { color: coachColors.text, fontSize: 28, fontFamily: coachFonts.heading, marginBottom: 12 },
+  thankYouMessage: { color: coachColors.textSecondary, fontSize: 15, fontFamily: coachFonts.body, textAlign: "center", lineHeight: 22, marginBottom: 40 },
   doneButton: {
-    backgroundColor: colors.coral, borderRadius: 14,
+    backgroundColor: coachColors.coral, borderRadius: 14,
     paddingHorizontal: 48, paddingVertical: 16,
   },
-  doneText: { color: colors.white, fontSize: 16, fontFamily: fonts.extraBold },
+  doneText: { color: coachColors.card, fontSize: 16, fontFamily: coachFonts.bodyExtraBold },
 });

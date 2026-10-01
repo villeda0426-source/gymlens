@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 import { useTranslation } from "react-i18next";
 import { apiFetch, getNativeBuildNumber, getNativeAppVersion } from "@/lib/api";
 
@@ -103,7 +103,7 @@ export default function ForceUpdateGate({ children }: PropsWithChildren) {
         </Text>
       ) : null}
 
-      {state === "checking" ? <ActivityIndicator color={colors.coral} style={styles.spinner} /> : null}
+      {state === "checking" ? <ActivityIndicator color={coachColors.coral} style={styles.spinner} /> : null}
 
       {isRequired ? (
         <Pressable style={styles.primaryButton} onPress={openStore}>
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 28,
-    backgroundColor: colors.bg,
+    backgroundColor: coachColors.bg,
   },
   brandMark: {
     width: 72,
@@ -130,33 +130,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 24,
-    backgroundColor: colors.coral,
+    backgroundColor: coachColors.coral,
   },
   brandMarkText: {
-    color: colors.white,
+    color: coachColors.card,
     fontSize: 36,
-    fontFamily: fonts.extraBold,
+    fontFamily: coachFonts.bodyExtraBold,
   },
   title: {
-    fontFamily: fonts.heading,
+    fontFamily: coachFonts.heading,
     fontSize: 34,
-    color: colors.text,
+    color: coachColors.text,
     textAlign: "center",
     marginBottom: 12,
   },
   message: {
-    fontFamily: fonts.body,
+    fontFamily: coachFonts.body,
     fontSize: 16,
     lineHeight: 23,
-    color: colors.textSecondary,
+    color: coachColors.textSecondary,
     textAlign: "center",
     maxWidth: 330,
   },
   versionText: {
     marginTop: 16,
-    fontFamily: fonts.semiBold,
+    fontFamily: coachFonts.bodySemiBold,
     fontSize: 13,
-    color: colors.textMuted,
+    color: coachColors.textSecondary,
     textAlign: "center",
   },
   spinner: {
@@ -170,11 +170,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 28,
     paddingHorizontal: 24,
-    backgroundColor: colors.coral,
+    backgroundColor: coachColors.coral,
   },
   primaryButtonText: {
-    fontFamily: fonts.extraBold,
+    fontFamily: coachFonts.bodyExtraBold,
     fontSize: 16,
-    color: colors.white,
+    color: coachColors.card,
   },
 });

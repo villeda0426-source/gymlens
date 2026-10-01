@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 export interface MuscleGain {
   id: string;
@@ -48,15 +48,15 @@ const styles = StyleSheet.create({
     zIndex: 50,
   },
   toast: {
-    backgroundColor: colors.lime,
+    backgroundColor: coachColors.lime,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    shadowColor: colors.lime,
+    shadowColor: coachColors.lime,
     shadowOpacity: 0.3,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
-  text: { color: colors.white, fontSize: 14, fontFamily: fonts.bold },
+  text: { color: coachColors.card, fontSize: 14, fontFamily: coachFonts.bodyBold },
 });

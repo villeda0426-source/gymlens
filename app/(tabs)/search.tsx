@@ -16,7 +16,7 @@ import SafeScreen from "@/components/Layout/SafeScreen";
 import { useEquipmentSearch } from "@/hooks/useEquipmentSearch";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 const CATEGORIES = ["all", "machine", "free_weight", "cable", "cardio", "accessory", "bodyweight"] as const;
 const RECENT_FILTER = "recently_scanned";
@@ -91,7 +91,7 @@ export default function SearchScreen() {
       if (recentLoading) {
         return (
           <View style={styles.center}>
-            <ActivityIndicator color={colors.coral} size="large" />
+            <ActivityIndicator color={coachColors.coral} size="large" />
           </View>
         );
       }
@@ -137,7 +137,7 @@ export default function SearchScreen() {
     if (isLoading) {
       return (
         <View style={styles.center}>
-          <ActivityIndicator color={colors.coral} size="large" />
+          <ActivityIndicator color={coachColors.coral} size="large" />
         </View>
       );
     }
@@ -194,11 +194,11 @@ export default function SearchScreen() {
       </View>
 
       <View style={styles.searchBar}>
-        <Ionicons name="search-outline" size={17} color={colors.textMuted} style={styles.searchIcon} />
+        <Ionicons name="search-outline" size={17} color={coachColors.textSecondary} style={styles.searchIcon} />
         <TextInput
           style={styles.input}
           placeholder={t("search.placeholder")}
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={coachColors.textSecondary}
           value={query}
           onChangeText={setQuery}
           autoCorrect={false}
@@ -220,7 +220,7 @@ export default function SearchScreen() {
           <Ionicons
             name="time-outline"
             size={12}
-            color={activeCategory === RECENT_FILTER ? colors.white : colors.textSecondary}
+            color={activeCategory === RECENT_FILTER ? coachColors.card : coachColors.textSecondary}
             style={{ marginRight: 4 }}
           />
           <Text style={[styles.chipText, activeCategory === RECENT_FILTER && styles.chipTextActive]}>
@@ -248,22 +248,22 @@ export default function SearchScreen() {
 
 const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: "row", alignItems: "center" },
-  title: { color: colors.text, fontSize: 22, fontFamily: fonts.heading, flexShrink: 1 },
+  title: { color: coachColors.text, fontSize: 22, fontFamily: coachFonts.heading, flexShrink: 1 },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.card,
+    backgroundColor: coachColors.card,
     borderRadius: 12,
     marginHorizontal: 16,
     paddingHorizontal: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: coachColors.border,
     height: 48,
   },
   searchIcon: { marginRight: 8 },
-  input: { flex: 1, color: colors.text, fontSize: 15, fontFamily: fonts.body },
-  clearIcon: { color: colors.textMuted, fontSize: 16, padding: 4 },
+  input: { flex: 1, color: coachColors.text, fontSize: 15, fontFamily: coachFonts.body },
+  clearIcon: { color: coachColors.textSecondary, fontSize: 16, padding: 4 },
   filters: {
     flexDirection: "row",
     paddingHorizontal: 12,
@@ -272,31 +272,31 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    backgroundColor: colors.card,
+    backgroundColor: coachColors.card,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: coachColors.border,
     flexDirection: "row",
     alignItems: "center",
   },
-  chipActive: { backgroundColor: colors.coral, borderColor: colors.coral },
-  chipRecent: { backgroundColor: colors.text, borderColor: colors.text },
-  chipText: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.semiBold },
-  chipTextActive: { color: colors.white },
+  chipActive: { backgroundColor: coachColors.coral, borderColor: coachColors.coral },
+  chipRecent: { backgroundColor: coachColors.text, borderColor: coachColors.text },
+  chipText: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.bodySemiBold },
+  chipTextActive: { color: coachColors.card },
   list: { paddingHorizontal: 16, paddingBottom: 20 },
-  resultCount: { color: colors.textMuted, fontSize: 12, marginBottom: 8, fontFamily: fonts.body },
+  resultCount: { color: coachColors.textSecondary, fontSize: 12, marginBottom: 8, fontFamily: coachFonts.body },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
   emptyEmoji: { fontSize: 48, marginBottom: 16 },
-  emptyTitle: { color: colors.text, fontSize: 18, fontFamily: fonts.bold, marginBottom: 8 },
-  emptySubtitle: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body, textAlign: "center", lineHeight: 20, marginBottom: 24 },
+  emptyTitle: { color: coachColors.text, fontSize: 18, fontFamily: coachFonts.bodyBold, marginBottom: 8 },
+  emptySubtitle: { color: coachColors.textSecondary, fontSize: 14, fontFamily: coachFonts.body, textAlign: "center", lineHeight: 20, marginBottom: 24 },
   cameraButton: {
-    backgroundColor: colors.coral,
+    backgroundColor: coachColors.coral,
     borderRadius: 14,
     paddingHorizontal: 24,
     paddingVertical: 12,
   },
-  cameraButtonText: { color: colors.white, fontSize: 14, fontFamily: fonts.bold },
+  cameraButtonText: { color: coachColors.card, fontSize: 14, fontFamily: coachFonts.bodyBold },
 });

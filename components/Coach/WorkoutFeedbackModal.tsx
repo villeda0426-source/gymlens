@@ -3,7 +3,7 @@ import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, Touc
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import SafeScreen from "@/components/Layout/SafeScreen";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 import type { WorkoutFeedback } from "@/lib/coachingEngine";
 
 type Props = {
@@ -63,15 +63,15 @@ export default function WorkoutFeedbackModal(props: Props) {
               <Text style={styles.title}>{t(props.planComplete ? "coach_feedback.finished_plan" : "coach_feedback.how_felt")}</Text>
               <Text style={styles.subtitle}>{props.sessionLabel}</Text>
             </View>
-            <TouchableOpacity onPress={props.onClose} disabled={props.submitting}><Ionicons name="close" size={24} color={colors.text} /></TouchableOpacity>
+            <TouchableOpacity onPress={props.onClose} disabled={props.submitting}><Ionicons name="close" size={24} color={coachColors.text} /></TouchableOpacity>
           </View>
 
           <View style={styles.card}><Text style={styles.label}>{t("coach_feedback.difficulty")}</Text><Scale value={difficulty} onChange={setDifficulty} /></View>
           <View style={styles.card}><Text style={styles.label}>{t("coach_feedback.energy")}</Text><Scale value={energy} onChange={setEnergy} /></View>
           <View style={styles.card}><Text style={styles.label}>{t("coach_feedback.pain")}</Text><Scale value={pain} onChange={setPain} zero /></View>
 
-          {pain > 0 ? <TextInput style={styles.input} value={painArea} onChangeText={setPainArea} placeholder={t("coach_feedback.pain_area")} placeholderTextColor={colors.textMuted} /> : null}
-          <TextInput style={[styles.input, styles.notes]} value={notes} onChangeText={setNotes} placeholder={t("coach_feedback.notes")} placeholderTextColor={colors.textMuted} multiline />
+          {pain > 0 ? <TextInput style={styles.input} value={painArea} onChangeText={setPainArea} placeholder={t("coach_feedback.pain_area")} placeholderTextColor={coachColors.textSecondary} /> : null}
+          <TextInput style={[styles.input, styles.notes]} value={notes} onChangeText={setNotes} placeholder={t("coach_feedback.notes")} placeholderTextColor={coachColors.textSecondary} multiline />
 
           <Text style={styles.privacy}>
             {props.planComplete
@@ -79,7 +79,7 @@ export default function WorkoutFeedbackModal(props: Props) {
               : t("coach_feedback.workout_privacy")}
           </Text>
           <TouchableOpacity style={styles.submit} onPress={submit} disabled={props.submitting}>
-            {props.submitting ? <ActivityIndicator color={colors.white} /> : <Text style={styles.submitText}>{t(props.planComplete ? "coach_feedback.build_next" : "coach_feedback.save_review")}</Text>}
+            {props.submitting ? <ActivityIndicator color={coachColors.card} /> : <Text style={styles.submitText}>{t(props.planComplete ? "coach_feedback.build_next" : "coach_feedback.save_review")}</Text>}
           </TouchableOpacity>
         </ScrollView>
       </SafeScreen>
@@ -88,22 +88,22 @@ export default function WorkoutFeedbackModal(props: Props) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+  safe: { flex: 1, backgroundColor: coachColors.bg },
   content: { padding: 22, gap: 14 },
   header: { flexDirection: "row", alignItems: "flex-start", marginBottom: 8 },
-  eyebrow: { color: colors.coral, fontFamily: fonts.bold, fontSize: 11, letterSpacing: 1.2 },
-  title: { color: colors.text, fontFamily: fonts.heading, fontSize: 28, marginTop: 5 },
-  subtitle: { color: colors.textSecondary, fontFamily: fonts.body, marginTop: 4 },
-  card: { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: 1, borderRadius: 14, padding: 15 },
-  label: { color: colors.text, fontFamily: fonts.semiBold, marginBottom: 12 },
+  eyebrow: { color: coachColors.coral, fontFamily: coachFonts.bodyBold, fontSize: 11, letterSpacing: 1.2 },
+  title: { color: coachColors.text, fontFamily: coachFonts.heading, fontSize: 28, marginTop: 5 },
+  subtitle: { color: coachColors.textSecondary, fontFamily: coachFonts.body, marginTop: 4 },
+  card: { backgroundColor: coachColors.card, borderColor: coachColors.border, borderWidth: 1, borderRadius: 14, padding: 15 },
+  label: { color: coachColors.text, fontFamily: coachFonts.bodySemiBold, marginBottom: 12 },
   scale: { flexDirection: "row", gap: 8 },
-  scaleButton: { flex: 1, minHeight: 42, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: colors.input },
-  scaleButtonActive: { backgroundColor: colors.coral },
-  scaleText: { color: colors.textSecondary, fontFamily: fonts.bold },
-  scaleTextActive: { color: colors.white },
-  input: { color: colors.text, backgroundColor: colors.input, borderColor: colors.cardBorder, borderWidth: 1, borderRadius: 12, padding: 14, fontFamily: fonts.body },
+  scaleButton: { flex: 1, minHeight: 42, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: coachColors.bg },
+  scaleButtonActive: { backgroundColor: coachColors.coral },
+  scaleText: { color: coachColors.textSecondary, fontFamily: coachFonts.bodyBold },
+  scaleTextActive: { color: coachColors.card },
+  input: { color: coachColors.text, backgroundColor: coachColors.bg, borderColor: coachColors.border, borderWidth: 1, borderRadius: 12, padding: 14, fontFamily: coachFonts.body },
   notes: { minHeight: 92, textAlignVertical: "top" },
-  privacy: { color: colors.textMuted, fontFamily: fonts.body, fontSize: 12, lineHeight: 18 },
-  submit: { minHeight: 52, borderRadius: 13, backgroundColor: colors.coral, alignItems: "center", justifyContent: "center" },
-  submitText: { color: colors.white, fontFamily: fonts.bold, fontSize: 15 },
+  privacy: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 12, lineHeight: 18 },
+  submit: { minHeight: 52, borderRadius: 13, backgroundColor: coachColors.coral, alignItems: "center", justifyContent: "center" },
+  submitText: { color: coachColors.card, fontFamily: coachFonts.bodyBold, fontSize: 15 },
 });

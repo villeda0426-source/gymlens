@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, Image, TouchableOpacity, Linking, ActivityIndicator, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 export interface VideoItem {
   youtube_id: string;
@@ -35,7 +35,7 @@ export default function VideoList({
   if (loading) {
     return (
       <View style={styles.videosLoading}>
-        <ActivityIndicator color={colors.coral} />
+        <ActivityIndicator color={coachColors.coral} />
         <Text style={styles.videosLoadingText}>{resolvedLoadingLabel}</Text>
       </View>
     );
@@ -89,28 +89,28 @@ export default function VideoList({
 
 const styles = StyleSheet.create({
   container: { gap: 12 },
-  noVideos: { color: colors.textMuted, fontFamily: fonts.body, textAlign: "center", paddingVertical: 16 },
+  noVideos: { color: coachColors.textSecondary, fontFamily: coachFonts.body, textAlign: "center", paddingVertical: 16 },
   videosLoading: { alignItems: "center", paddingVertical: 40, gap: 12 },
-  videosLoadingText: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.body },
+  videosLoadingText: { color: coachColors.textSecondary, fontSize: 13, fontFamily: coachFonts.body },
   videosEmpty: { alignItems: "center", paddingVertical: 32, gap: 16 },
-  retryVideos: { backgroundColor: colors.card, borderRadius: 10, borderWidth: 1, borderColor: colors.cardBorder, paddingHorizontal: 20, paddingVertical: 8 },
-  retryVideosText: { color: colors.coral, fontSize: 13, fontFamily: fonts.bold },
+  retryVideos: { backgroundColor: coachColors.card, borderRadius: 10, borderWidth: 1, borderColor: coachColors.border, paddingHorizontal: 20, paddingVertical: 8 },
+  retryVideosText: { color: coachColors.coral, fontSize: 13, fontFamily: coachFonts.bodyBold },
   videoCard: {
-    flexDirection: "row", backgroundColor: colors.card,
+    flexDirection: "row", backgroundColor: coachColors.card,
     borderRadius: 12, overflow: "hidden",
-    borderWidth: 1, borderColor: colors.cardBorder,
+    borderWidth: 1, borderColor: coachColors.border,
   },
   videoThumb: { width: 120, height: 80 },
   videoThumbPlaceholder: {
     width: 120, height: 80,
-    backgroundColor: colors.input, alignItems: "center", justifyContent: "center",
+    backgroundColor: coachColors.bg, alignItems: "center", justifyContent: "center",
   },
   videoInfo: { flex: 1, padding: 12, justifyContent: "space-between" },
   curatedBadge: {
-    backgroundColor: colors.lime + "18", borderRadius: 4,
+    backgroundColor: coachColors.lime + "18", borderRadius: 4,
     paddingHorizontal: 6, paddingVertical: 2, alignSelf: "flex-start", marginBottom: 4,
   },
-  curatedText: { color: colors.lime, fontSize: 10, fontFamily: fonts.bold },
-  videoTitle: { color: colors.text, fontSize: 13, fontFamily: fonts.body, lineHeight: 18 },
-  videoDuration: { color: colors.textMuted, fontSize: 11, fontFamily: fonts.body, marginTop: 4 },
+  curatedText: { color: coachColors.lime, fontSize: 10, fontFamily: coachFonts.bodyBold },
+  videoTitle: { color: coachColors.text, fontSize: 13, fontFamily: coachFonts.body, lineHeight: 18 },
+  videoDuration: { color: coachColors.textSecondary, fontSize: 11, fontFamily: coachFonts.body, marginTop: 4 },
 });

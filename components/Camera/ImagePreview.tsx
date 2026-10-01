@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Image, TouchableOpacity, Text, StyleSheet, Dimensions } from "react-native";
 import { useTranslation } from "react-i18next";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -91,11 +91,11 @@ const styles = StyleSheet.create({
   },
   retakeText: { color: "#F5F5F5", fontSize: 16, fontWeight: "600" },
   identifyButton: {
-    backgroundColor: colors.coral,
+    backgroundColor: coachColors.coral,
     borderRadius: 14,
     paddingHorizontal: 36,
     paddingVertical: 14,
   },
   identifyButtonDisabled: { opacity: 0.5 },
-  identifyText: { color: colors.white, fontSize: 16, fontFamily: fonts.extraBold },
+  identifyText: { color: coachColors.card, fontSize: 16, fontFamily: coachFonts.bodyExtraBold },
 });
