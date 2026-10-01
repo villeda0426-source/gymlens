@@ -1,18 +1,17 @@
 import React from "react";
 import { Tabs } from "expo-router";
 import FloatingTabBar from "@/components/Navigation/FloatingTabBar";
+import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 
 export default function TabsLayout() {
+  // A pending (not-yet-applied) Coach plan change is real "Coach has news":
+  // it's exactly what the Home coach card's own gold badge reacts to.
+  const hasUnreadCoachNews = useCoachTrainerStore((state) => state.pendingPlanChange !== null);
+
   return (
     <Tabs
       screenOptions={{ headerShown: false }}
-      tabBar={(props) => (
-        // TODO(coach-forward phase 3/4): drive this from real "unread coach
-        // news" state (e.g. a pending suggestion or an unseen weekly
-        // check-in) once that state exists in coachTrainerStore. No such
-        // signal exists yet, so the badge stays off rather than faking one.
-        <FloatingTabBar {...props} hasUnreadCoachNews={false} />
-      )}
+      tabBar={(props) => <FloatingTabBar {...props} hasUnreadCoachNews={hasUnreadCoachNews} />}
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="trainer" />

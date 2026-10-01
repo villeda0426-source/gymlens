@@ -141,11 +141,7 @@ export default function PlanSetupReadyScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        {/* app/workout-session.tsx doesn't exist on this branch (it's part
-            of Coach Forward Phase 6, not re-applied here) — "Start day 1"
-            goes to the Plan tab, which already has its own way to start
-            today's workout. */}
-        <Pressable style={styles.startButton} onPress={() => exitTo("/plan")} accessibilityRole="button" accessibilityLabel={t("plan_setup.ready.start_day_1")}>
+        <Pressable style={styles.startButton} onPress={() => exitTo("/workout-session")} accessibilityRole="button" accessibilityLabel={t("plan_setup.ready.start_day_1")}>
           <Text style={styles.startButtonText}>{t("plan_setup.ready.start_day_1")}</Text>
         </Pressable>
         <Pressable style={styles.tweakButton} onPress={() => exitTo("/trainer")} accessibilityRole="button" accessibilityLabel={t("plan_setup.ready.tweak_with_coach")}>

@@ -620,6 +620,11 @@ export default function TrainerScreen() {
               <Ionicons name="barbell-outline" size={18} color={coachColors.coachGold} />
             </TouchableOpacity>
           ) : null}
+          {conversation.length > 0 ? (
+            <TouchableOpacity style={styles.headerMenuButton} onPress={confirmReset} accessibilityRole="button" accessibilityLabel={t("trainer.start_fresh")}>
+              <Ionicons name="ellipsis-horizontal" size={20} color={coachColors.text} />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {plan ? (
@@ -696,11 +701,6 @@ export default function TrainerScreen() {
           />
         </View>
 
-        {conversation.length > 0 ? (
-          <TouchableOpacity style={styles.resetButton} onPress={confirmReset}>
-            <Text style={styles.resetText}>{t("trainer.start_fresh")}</Text>
-          </TouchableOpacity>
-        ) : null}
       </KeyboardAvoidingView>
     </SafeScreen>
   );
@@ -805,6 +805,23 @@ const styles = StyleSheet.create({
       default: { boxShadow: "0 1px 3px rgba(12,35,64,0.1)" },
     }),
   },
+  // ••• menu — holds "Start fresh" (and "Rebuild my plan" when a plan
+  // exists, via the same confirmReset action sheet). Previously a standalone
+  // text link pinned above the composer, where it sat under the floating tab
+  // bar; moved into the header per the Coach-chat-cleanup fix list.
+  headerMenuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.pill,
+    backgroundColor: coachColors.card,
+    alignItems: "center",
+    justifyContent: "center",
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 3, shadowOffset: { width: 0, height: 1 } },
+      android: { elevation: 2 },
+      default: { boxShadow: "0 1px 3px rgba(12,35,64,0.1)" },
+    }),
+  },
   headerCopy: { flex: 1 },
   headerTitle: { color: coachColors.text, fontFamily: coachFonts.heading, fontSize: 22 },
   headerSubtitle: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 12, marginTop: 1 },
@@ -812,7 +829,10 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontFamily: fonts.heading, fontSize: 34 },
   feelingCheckInWrap: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
   messages: { flex: 1 },
-  messagesContent: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 18, gap: 12 },
+  // paddingTop was 4 — the first message bubble sat almost flush against the
+  // compact header, reading as clipped. Per the fix list ("Coach chat header
+  // clips the first message"), give it real breathing room.
+  messagesContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 18, gap: 12 },
   suggestionWrap: { gap: spacing.sm },
   noticeCard: {
     flexDirection: "row",
@@ -853,6 +873,4 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   sendButtonDisabled: { opacity: 0.5 },
-  resetButton: { alignSelf: "center", paddingVertical: 8, marginBottom: 4 },
-  resetText: { color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
 });
