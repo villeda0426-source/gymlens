@@ -17,3 +17,13 @@ distribution build, cross-checked against `eas submit:list` timestamps and
 2026-09-28/29 investigation for how a 2026-09-21 branch-reconciliation merge
 had silently reintroduced a Home-screen feature — an "Avatar" quick-action
 tile — that the live release had already dropped.)
+
+## Working location
+
+All work goes on `release/next` in the main project folder. No worktrees.
+Commit and push after every change.
+
+(`redesign/coach-forward` is the predecessor branch this was consolidated
+from on 2026-09-30 — see the backup/* branches from that date for every
+branch, worktree, and stash that existed at the time, pushed before
+anything was combined or rewritten.)
