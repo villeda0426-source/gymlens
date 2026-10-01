@@ -30,6 +30,7 @@ import SafetyTips from "@/components/Equipment/SafetyTips";
 import TutorialSteps from "@/components/Equipment/TutorialSteps";
 import VideoList, { VideoItem } from "@/components/Equipment/VideoList";
 import { coachColors, coachFonts } from "@/constants/theme";
+import { useTabBarSpace } from "@/components/CoachTabBar";
 import { apiFetch } from "@/lib/api";
 import {
   CoachPlan,
@@ -756,6 +757,7 @@ function PlanOverviewModal({
 export default function PlanScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const tabBarSpace = useTabBarSpace();
   const { user } = useAuthStore();
   const {
     plan,
@@ -1155,7 +1157,7 @@ export default function PlanScreen() {
   return (
     <SafeScreen edges={["top"]} style={styles.safe}>
       <MuscleGainToast gains={gains} />
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace }]} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
             <Text style={styles.eyebrow}>{t("plan.eyebrow")}</Text>

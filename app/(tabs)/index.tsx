@@ -27,6 +27,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useWorkoutGuideStore } from "@/store/workoutGuideStore";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { coachColors, coachDark, coachFonts, radii, spacing } from "@/constants/theme";
+import { useTabBarSpace } from "@/components/CoachTabBar";
 import { apiFetch } from "@/lib/api";
 
 function getTodaysTip(t: (key: string) => string): string {
@@ -36,6 +37,7 @@ function getTodaysTip(t: (key: string) => string): string {
 export default function HomeScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const tabBarSpace = useTabBarSpace();
   const { profile } = useAuthStore();
   const { setCurrentGuide } = useWorkoutGuideStore();
   const {
@@ -104,7 +106,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>

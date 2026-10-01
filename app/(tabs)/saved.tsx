@@ -17,12 +17,14 @@ import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useEquipmentStore } from "@/store/equipmentStore";
 import { coachColors, coachFonts } from "@/constants/theme";
+import { useTabBarSpace } from "@/components/CoachTabBar";
 
 const CATEGORIES = ["all", "machine", "free_weight", "cable", "cardio", "accessory"] as const;
 
 export default function SavedScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const tabBarSpace = useTabBarSpace();
   const { user, profile } = useAuthStore();
   const { guestSavedItems, loadSavedIds } = useEquipmentStore();
   const authenticatedUserId = user && profile ? user.id : null;
@@ -117,7 +119,7 @@ export default function SavedScreen() {
           data={filtered}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <EquipmentCard item={item} />}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace }]}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={coachColors.coral} />
           }

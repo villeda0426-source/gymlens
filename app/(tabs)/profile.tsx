@@ -16,10 +16,12 @@ import SafeScreen from "@/components/Layout/SafeScreen";
 import { useAuthStore } from "@/store/authStore";
 import LanguageToggle from "@/components/UI/LanguageToggle";
 import { coachColors, coachFonts } from "@/constants/theme";
+import { useTabBarSpace } from "@/components/CoachTabBar";
 
 export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const tabBarSpace = useTabBarSpace();
   const { user, profile, signOut, updateProfileName, deleteAccount } = useAuthStore();
   const [name, setName] = useState(profile?.username || "");
   const [editingName, setEditingName] = useState(!profile?.username);
@@ -90,7 +92,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeScreen edges={["top"]}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: tabBarSpace }}>
         <View style={styles.heroCard}>
           <View style={styles.avatarRing}>
             <View style={styles.avatar}>

@@ -16,6 +16,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import SafeScreen from "@/components/Layout/SafeScreen";
 import { coachColors, coachFonts, radii, spacing } from "@/constants/theme";
+import { useTabBarSpace } from "@/components/CoachTabBar";
 import CoachComposer from "@/components/Coach/CoachComposer";
 import CoachMessageBubble from "@/components/Coach/CoachMessageBubble";
 import CoachSuggestionCard from "@/components/Coach/CoachSuggestionCard";
@@ -99,6 +100,7 @@ function getCoachResponseText(response: CoachResponse): string {
 export default function TrainerScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const tabBarSpace = useTabBarSpace();
   const { ask } = useLocalSearchParams<{ ask?: string }>();
   const scrollRef = useRef<ScrollView>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -512,7 +514,7 @@ export default function TrainerScreen() {
   if (!hasEnteredCoachChat) {
     return (
       <SafeScreen edges={["top"]}>
-        <ScrollView style={styles.introScroll} contentContainerStyle={styles.introContent} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.introScroll} contentContainerStyle={[styles.introContent, { paddingBottom: tabBarSpace }]} showsVerticalScrollIndicator={false}>
           <View style={styles.libraryHeader}>
             <View style={{ flex: 1 }}>
               <Text style={styles.eyebrow}>{t("trainer.personal_trainer")}</Text>
@@ -771,7 +773,7 @@ export default function TrainerScreen() {
           />
         </View>
 
-        <View style={styles.composerWrap}>
+        <View style={[styles.composerWrap, { paddingBottom: tabBarSpace }]}>
           <CoachComposer
             value={draft}
             onChangeText={setDraft}

@@ -17,6 +17,7 @@ import { useEquipmentSearch } from "@/hooks/useEquipmentSearch";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { coachColors, coachFonts } from "@/constants/theme";
+import { useTabBarSpace } from "@/components/CoachTabBar";
 
 const CATEGORIES = ["all", "machine", "free_weight", "cable", "cardio", "accessory", "bodyweight"] as const;
 const RECENT_FILTER = "recently_scanned";
@@ -24,6 +25,7 @@ const RECENT_FILTER = "recently_scanned";
 export default function SearchScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const tabBarSpace = useTabBarSpace();
   const { user } = useAuthStore();
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
@@ -121,7 +123,7 @@ export default function SearchScreen() {
           data={recentItems}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <EquipmentCard item={item} />}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace }]}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             <Text style={styles.resultCount}>
@@ -176,7 +178,7 @@ export default function SearchScreen() {
         data={results}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <EquipmentCard item={item} />}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace }]}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <Text style={styles.resultCount}>
