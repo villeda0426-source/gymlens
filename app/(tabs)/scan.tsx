@@ -49,8 +49,17 @@ export default function ScanScreen() {
 
   const handleShowMe = async () => {
     if (!pendingResult) return;
+    if (!pendingResult.id) {
+      // The server now fails loudly when it can't save a new equipment
+      // record, but this stays as a second line of defense: don't silently
+      // navigate to a nonexistent /equipment/result route, which renders
+      // nothing and looks like a dead button.
+      Alert.alert(t("errors.identification_title"), t("scan_result.show_me_unavailable"));
+      setPendingResult(null);
+      return;
+    }
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.push(`/equipment/${pendingResult.id || "result"}`);
+    router.push(`/equipment/${pendingResult.id}`);
     setPendingResult(null);
   };
 

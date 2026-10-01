@@ -50,7 +50,8 @@
     "strong_match": "Strong match",
     "possible_match": "Possible match",
     "not_this_one": "Not this one",
-    "show_me": "Show me"
+    "show_me": "Show me",
+    "show_me_unavailable": "We couldn't save that result. Please try scanning again."
   },
   "home": {
     "good_morning": "Good morning",

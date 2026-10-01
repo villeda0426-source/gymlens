@@ -50,7 +50,8 @@
     "strong_match": "Coincidencia fuerte",
     "possible_match": "Posible coincidencia",
     "not_this_one": "No es este",
-    "show_me": "Mostrar"
+    "show_me": "Mostrar",
+    "show_me_unavailable": "No pudimos guardar ese resultado. Intenta escanear de nuevo."
   },
   "home": {
     "good_morning": "Buenos días",

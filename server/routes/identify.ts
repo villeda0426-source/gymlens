@@ -239,7 +239,17 @@ router.post("/", async (req: Request, res: Response) => {
       .select()
       .single();
 
-    if (upsertError) console.error("[identify] equipment upsert error:", upsertError.message);
+    if (upsertError) {
+      // Returning 200 with id: undefined here used to look like success: the
+      // client's ScanResultSheet still showed a confident match, but "Show
+      // me" then navigated to a nonexistent equipment id and rendered
+      // nothing. Fail loudly instead so the existing response.error handling
+      // (useEquipmentIdentify -> scan.tsx) shows a real message.
+      console.error("[identify] equipment upsert error:", upsertError.message);
+      return res.status(502).json({
+        error: "I identified the equipment but couldn't save it. Please try again.",
+      });
+    }
 
     let identificationId: string | null = null;
     if (equipment) {
