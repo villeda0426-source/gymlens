@@ -98,16 +98,28 @@ export async function apiFetch<T = any>(
   const maxAttempts = canRetryRequest(init) ? RETRY_DELAYS_MS.length + 1 : 1;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // The fetch must always listen on OUR controller, so the timeout below can
+    // actually abort it. A caller-supplied signal (init.signal) is forwarded
+    // into this same controller instead of replacing it — previously, when a
+    // caller passed its own signal, `signal` pointed at that external one
+    // while the timeout kept aborting this unused local `controller`, so the
+    // timeoutMs argument silently did nothing for every call that passed a
+    // signal (every Coach request — they all pass their own AbortController).
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
-    const signal = init.signal ?? controller.signal;
+    const externalSignal = init.signal;
+    const onExternalAbort = () => controller.abort();
+    if (externalSignal) {
+      if (externalSignal.aborted) controller.abort();
+      else externalSignal.addEventListener("abort", onExternalAbort);
+    }
     const headers = {
       ...getAppRequestHeaders(),
       ...(init.headers ?? {}),
     };
 
     try {
-      const response = await fetch(`${base}${path}`, { ...init, headers, signal });
+      const response = await fetch(`${base}${path}`, { ...init, headers, signal: controller.signal });
       const data = await parseResponseBody(response);
       if (!response.ok) {
         if (attempt < maxAttempts - 1 && RETRYABLE_STATUSES.has(response.status)) {
@@ -134,6 +146,7 @@ export async function apiFetch<T = any>(
       throw new ApiError(getApiUnavailableMessage(), { isNetworkError: true });
     } finally {
       clearTimeout(timeout);
+      if (externalSignal) externalSignal.removeEventListener("abort", onExternalAbort);
     }
   }
 

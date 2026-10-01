@@ -7,6 +7,13 @@
 // produces) it gets the mockup's strikethrough-and-arrow treatment; any
 // other shape (e.g. free-text changes from the AI path) falls back to a
 // plain bulleted list rather than guessing at a swap that isn't there.
+//
+// Deliberately does NOT also render response.summary here: handleResponse
+// (trainer.tsx) always posts it as the chat bubble immediately above this
+// card first, so repeating it inside the card read as a duplicated
+// paragraph — confirmed by screenshotting a real plan_updated shape against
+// Coach.png, where the card's body is a distinct, short line, not a repeat
+// of the message above it.
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -45,8 +52,6 @@ export default function CoachSuggestionCard({ response, onApply, onKeep }: Coach
           ))}
         </View>
       )}
-
-      <Text style={styles.summary}>{response.summary}</Text>
 
       <View style={styles.buttonRow}>
         <TouchableOpacity style={styles.applyButton} onPress={onApply} accessibilityRole="button">
@@ -87,7 +92,6 @@ const styles = StyleSheet.create({
   swapNew: { color: coachColors.text, fontFamily: coachFonts.headingSemiBold, fontSize: 17 },
   changeList: { gap: 4 },
   changeItem: { color: coachColors.text, fontFamily: coachFonts.bodySemiBold, fontSize: 15, lineHeight: 21 },
-  summary: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 14, lineHeight: 20 },
   buttonRow: { flexDirection: "row", gap: spacing.sm },
   applyButton: {
     flex: 1,
