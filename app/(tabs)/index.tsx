@@ -227,6 +227,16 @@ export default function HomeScreen() {
           <Ionicons name="chevron-forward" size={20} color={coachDark.textSecondary} />
         </TouchableOpacity>
 
+        <View style={styles.tipCard}>
+          <View style={styles.tipHeader}>
+            <View style={styles.tipBadge}>
+              <Text style={styles.tipBadgeText}>{t("home.todays_tip")}</Text>
+            </View>
+            <Ionicons name="bulb-outline" size={20} color={coachColors.lime} />
+          </View>
+          <Text style={styles.tipText}>{getTodaysTip(t)}</Text>
+        </View>
+
         {/* Below the fold: not part of the Coach Forward mockup, kept and
             re-skinned per the Phase 5 plan. */}
         <View style={styles.workoutSearch}>
@@ -269,16 +279,6 @@ export default function HomeScreen() {
           {workoutMessage ? (
             <Text style={styles.workoutMessage}>{workoutMessage}</Text>
           ) : null}
-        </View>
-
-        <View style={styles.tipCard}>
-          <View style={styles.tipHeader}>
-            <View style={styles.tipBadge}>
-              <Text style={styles.tipBadgeText}>{t("home.todays_tip")}</Text>
-            </View>
-            <Ionicons name="bulb-outline" size={20} color={coachColors.lime} />
-          </View>
-          <Text style={styles.tipText}>{getTodaysTip(t)}</Text>
         </View>
 
         <View style={styles.quickRow}>
