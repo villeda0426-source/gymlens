@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import SafeScreen from "@/components/Layout/SafeScreen";
 import { useAuthStore } from "@/store/authStore";
 import LanguageToggle from "@/components/UI/LanguageToggle";
-import { colors, fonts } from "@/constants/theme";
+import { coachColors, coachFonts } from "@/constants/theme";
 
 export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
@@ -108,6 +108,9 @@ export default function ProfileScreen() {
           ) : null}
         </View>
 
+        {/* Grouped section, per standard settings-page convention (QA #18):
+            a labeled header over a bordered card, instead of loose rows. */}
+        <Text style={styles.sectionLabel}>{t("profile.settings")}</Text>
         <View style={styles.section}>
           <View style={styles.profileRow}>
             <View style={styles.profileRowHeader}>
@@ -117,7 +120,7 @@ export default function ProfileScreen() {
               </View>
               {!editingName && (
                 <TouchableOpacity onPress={() => setEditingName(true)} style={styles.iconBtn}>
-                  <Ionicons name="create-outline" size={20} color={colors.coral} />
+                  <Ionicons name="create-outline" size={20} color={coachColors.coral} />
                 </TouchableOpacity>
               )}
             </View>
@@ -128,18 +131,18 @@ export default function ProfileScreen() {
                   value={name}
                   onChangeText={setName}
                   placeholder={t("profile.your_name")}
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor={coachColors.textSecondary}
                   autoCapitalize="words"
                   returnKeyType="done"
                   onSubmitEditing={handleSaveName}
                 />
                 <TouchableOpacity
-                  style={[styles.saveNameButton, savingName && styles.saveNameButtonDisabled]}
+                  style={[styles.saveNameButton, savingName && styles.buttonDisabled]}
                   onPress={handleSaveName}
                   disabled={savingName}
                 >
                   {savingName ? (
-                    <ActivityIndicator color={colors.white} />
+                    <ActivityIndicator color={coachColors.card} />
                   ) : (
                     <Text style={styles.saveNameText}>{t("common.save")}</Text>
                   )}
@@ -148,10 +151,10 @@ export default function ProfileScreen() {
             ) : null}
           </View>
 
-          <View style={styles.row}>
+          <View style={[styles.row, styles.rowLast]}>
             <View style={styles.rowLead}>
               <View style={styles.rowIcon}>
-                <Ionicons name="language-outline" size={19} color={colors.coral} />
+                <Ionicons name="language-outline" size={19} color={coachColors.coral} />
               </View>
               <Text style={styles.rowLabel}>{t("profile.language")}</Text>
             </View>
@@ -159,22 +162,27 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
-          <Ionicons name="log-out-outline" size={20} color={colors.danger} />
-          <Text style={styles.dangerText}>{t("auth.logout")}</Text>
-        </TouchableOpacity>
-        <View style={styles.deleteSection}>
-          <Text style={styles.deleteTitle}>{t("profile.delete_account")}</Text>
-          <Text style={styles.deleteHint}>{t("profile.delete_account_hint")}</Text>
+        {/* Destructive actions, visually separated and last (QA #18): Log Out
+            moved below the settings group instead of sitting right after it;
+            Delete Account de-emphasized further still, below Log Out, as a
+            plain link rather than its own bordered card+button — still
+            behind the same confirmation dialog, just no longer the kind of
+            prominent one-tap target a bordered destructive button reads as. */}
+        <View style={styles.dangerZone}>
+          <TouchableOpacity style={styles.logoutRow} onPress={handleSignOut}>
+            <Ionicons name="log-out-outline" size={19} color={coachColors.text} />
+            <Text style={styles.logoutText}>{t("auth.logout")}</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
-            style={[styles.deleteButton, deletingAccount && styles.saveNameButtonDisabled]}
+            style={styles.deleteLink}
             onPress={handleDeleteAccount}
             disabled={deletingAccount}
           >
             {deletingAccount ? (
-              <ActivityIndicator color={colors.danger} />
+              <ActivityIndicator color={coachColors.coral} size="small" />
             ) : (
-              <Text style={styles.dangerText}>{t("profile.delete_account_action")}</Text>
+              <Text style={styles.deleteLinkText}>{t("profile.delete_account_action")}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -186,82 +194,81 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   guest: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
   guestEmoji: { fontSize: 48, marginBottom: 16 },
-  guestTitle: { color: colors.text, fontSize: 24, fontFamily: fonts.heading, marginBottom: 12 },
-  guestSubtitle: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body, textAlign: "center", lineHeight: 20, marginBottom: 28 },
+  guestTitle: { color: coachColors.text, fontSize: 24, fontFamily: coachFonts.heading, marginBottom: 12 },
+  guestSubtitle: { color: coachColors.textSecondary, fontSize: 14, fontFamily: coachFonts.body, textAlign: "center", lineHeight: 20, marginBottom: 28 },
   signUpButton: {
-    backgroundColor: colors.coral, borderRadius: 14, paddingHorizontal: 32, paddingVertical: 14,
+    backgroundColor: coachColors.coral, borderRadius: 14, paddingHorizontal: 32, paddingVertical: 14,
     width: "100%", alignItems: "center", marginBottom: 12,
   },
-  signUpText: { color: colors.white, fontSize: 16, fontFamily: fonts.extraBold },
+  signUpText: { color: coachColors.card, fontSize: 16, fontFamily: coachFonts.bodyExtraBold },
   loginButton: { alignItems: "center", paddingVertical: 12 },
-  loginText: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.body },
+  loginText: { color: coachColors.textSecondary, fontSize: 14, fontFamily: coachFonts.body },
   heroCard: {
     alignItems: "center", paddingTop: 28, paddingBottom: 24, paddingHorizontal: 20,
-    marginHorizontal: 16, marginTop: 16, marginBottom: 16, borderRadius: 24,
-    backgroundColor: colors.coral + "0d", borderWidth: 1, borderColor: colors.coral + "24",
+    marginHorizontal: 16, marginTop: 16, marginBottom: 20, borderRadius: 24,
+    backgroundColor: coachColors.card, borderWidth: 1, borderColor: coachColors.border,
   },
   avatarRing: {
     width: 90, height: 90, borderRadius: 45, alignItems: "center", justifyContent: "center",
-    backgroundColor: colors.coral + "1f", marginBottom: 15,
+    backgroundColor: coachColors.bg, marginBottom: 15,
   },
   avatar: {
     width: 76, height: 76, borderRadius: 38,
-    backgroundColor: colors.coral, alignItems: "center", justifyContent: "center",
+    backgroundColor: coachColors.coral, alignItems: "center", justifyContent: "center",
   },
-  avatarText: { color: colors.white, fontSize: 32, fontFamily: fonts.extraBold },
-  username: { color: colors.text, fontSize: 20, fontFamily: fonts.bold },
-  email: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.body, marginTop: 3 },
-  memberSince: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.body, marginTop: 4 },
+  avatarText: { color: coachColors.card, fontSize: 32, fontFamily: coachFonts.bodyExtraBold },
+  username: { color: coachColors.text, fontSize: 20, fontFamily: coachFonts.headingSemiBold },
+  email: { color: coachColors.textSecondary, fontSize: 13, fontFamily: coachFonts.body, marginTop: 3 },
+  memberSince: { color: coachColors.textSecondary, fontSize: 13, fontFamily: coachFonts.body, marginTop: 4 },
+  sectionLabel: {
+    color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.bodyExtraBold,
+    letterSpacing: 1, textTransform: "uppercase",
+    marginHorizontal: 20, marginBottom: 8,
+  },
   section: {
-    backgroundColor: colors.card, borderRadius: 16, marginHorizontal: 16,
-    borderWidth: 1, borderColor: colors.cardBorder, overflow: "hidden",
+    backgroundColor: coachColors.card, borderRadius: 16, marginHorizontal: 16,
+    borderWidth: 1, borderColor: coachColors.border, overflow: "hidden",
   },
   row: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 20, paddingVertical: 16,
-    borderBottomWidth: 1, borderBottomColor: colors.cardBorder,
+    borderBottomWidth: 1, borderBottomColor: coachColors.border,
   },
+  rowLast: { borderBottomWidth: 0 },
   rowLead: { flexDirection: "row", alignItems: "center", gap: 12 },
   rowIcon: {
     width: 36, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center",
-    backgroundColor: colors.coral + "14",
+    backgroundColor: coachColors.bg,
   },
-  profileRow: { paddingHorizontal: 20, paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: colors.cardBorder, gap: 12 },
+  profileRow: { paddingHorizontal: 20, paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: coachColors.border, gap: 12 },
   profileRowHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 },
-  rowOverline: { color: colors.text, fontSize: 15, fontFamily: fonts.bold },
-  rowHint: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 3 },
-  iconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.coral + "14" },
+  rowOverline: { color: coachColors.text, fontSize: 15, fontFamily: coachFonts.bodyBold },
+  rowHint: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.body, marginTop: 3 },
+  iconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: coachColors.bg },
   nameEditor: { flexDirection: "row", gap: 10, alignItems: "center" },
   nameInput: {
     flex: 1,
-    backgroundColor: colors.input,
+    backgroundColor: coachColors.bg,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
-    color: colors.text,
+    borderColor: coachColors.border,
+    color: coachColors.text,
     fontSize: 15,
-    fontFamily: fonts.body,
+    fontFamily: coachFonts.body,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  saveNameButton: { minWidth: 74, height: 46, borderRadius: 10, backgroundColor: colors.coral, alignItems: "center", justifyContent: "center" },
-  saveNameButtonDisabled: { opacity: 0.7 },
-  saveNameText: { color: colors.white, fontSize: 14, fontFamily: fonts.bold },
-  rowLabel: { color: colors.text, fontSize: 15, fontFamily: fonts.body },
-  logoutButton: {
+  saveNameButton: { minWidth: 74, height: 46, borderRadius: 10, backgroundColor: coachColors.coralPressed, alignItems: "center", justifyContent: "center" },
+  buttonDisabled: { opacity: 0.7 },
+  saveNameText: { color: coachColors.card, fontSize: 14, fontFamily: coachFonts.bodyBold },
+  rowLabel: { color: coachColors.text, fontSize: 15, fontFamily: coachFonts.body },
+  dangerZone: { marginHorizontal: 16, marginTop: 28, marginBottom: 40, gap: 4 },
+  logoutRow: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9,
-    marginHorizontal: 16, marginTop: 14, marginBottom: 40, paddingVertical: 16,
-    backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.danger + "35",
+    paddingVertical: 16, borderRadius: 16,
+    backgroundColor: coachColors.card, borderWidth: 1, borderColor: coachColors.border,
   },
-  dangerText: { color: colors.danger, fontSize: 15, fontFamily: fonts.semiBold },
-  deleteSection: {
-    marginHorizontal: 16, marginBottom: 40, padding: 18, borderRadius: 16,
-    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.danger + "35",
-  },
-  deleteTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.bold },
-  deleteHint: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.body, lineHeight: 19, marginTop: 5, marginBottom: 14 },
-  deleteButton: {
-    alignItems: "center", justifyContent: "center", minHeight: 46, borderRadius: 12,
-    borderWidth: 1, borderColor: colors.danger,
-  },
+  logoutText: { color: coachColors.text, fontSize: 15, fontFamily: coachFonts.bodySemiBold },
+  deleteLink: { alignItems: "center", justifyContent: "center", paddingVertical: 16 },
+  deleteLinkText: { color: coachColors.coral, fontSize: 13, fontFamily: coachFonts.bodySemiBold },
 });
