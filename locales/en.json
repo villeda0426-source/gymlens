@@ -382,7 +382,8 @@
     "open_plan": "Open plan",
     "coach_week_button": "Weekly check-in",
     "build_plan_cta": "Build a plan",
-    "rebuild_plan": "Rebuild plan"
+    "rebuild_plan": "Rebuild plan",
+    "rebuild_plan_prompt": "I'd like to rebuild my plan. Right now it's {{goal}}, {{days}}x a week. Here's what I want to change: "
   },
   "app_status": {
     "update_required": "Update required",

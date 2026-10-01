@@ -382,7 +382,8 @@
     "open_plan": "Abrir plan",
     "coach_week_button": "Revisión semanal",
     "build_plan_cta": "Armar un plan",
-    "rebuild_plan": "Rehacer plan"
+    "rebuild_plan": "Rehacer plan",
+    "rebuild_plan_prompt": "Quiero rehacer mi plan. Ahora mismo es {{goal}}, {{days}} veces por semana. Esto es lo que quiero cambiar: "
   },
   "app_status": {
     "update_required": "Actualización requerida",

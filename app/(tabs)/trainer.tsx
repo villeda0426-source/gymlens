@@ -105,7 +105,7 @@ export default function TrainerScreen() {
   const voiceDraftSeedRef = useRef("");
   const speechModuleRef = useRef<SpeechRecognitionModule | null>(null);
   const reviewHydratedRef = useRef(false);
-  const { user, profile, isLoading: authLoading } = useAuthStore();
+  const { user, isLoading: authLoading } = useAuthStore();
   const {
     units,
     plan,
@@ -474,8 +474,18 @@ export default function TrainerScreen() {
         ? [{
             text: t("trainer.rebuild_plan"),
             onPress: () => {
-              usePlanSetupStore.getState().beginFromProfile(profile);
-              router.push("/plan-setup/goal");
+              // QA #12: this used to launch the tap-only setup flow from
+              // scratch (beginFromProfile + /plan-setup/goal), discarding the
+              // existing thread. Rebuild Plan should continue THIS
+              // conversation instead — seed the composer with a prompt
+              // referencing the current plan and let the user say what to
+              // change, same as any other in-thread request.
+              setDraft(
+                t("trainer.rebuild_plan_prompt", {
+                  goal: plan.goal,
+                  days: plan.days_per_week,
+                })
+              );
             },
           }]
         : []),
