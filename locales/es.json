@@ -281,7 +281,7 @@
     }
   },
   "trainer": {
-    "personal_trainer": "Entrenador personal",
+    "personal_trainer": "Coach",
     "meet_title": "Conoce a tu Coach",
     "intro_ready": "Tu entrenador ya está listo. Revisa tu configuración y entra al chat cuando quieras orientación.",
     "intro_create": "Crea el entrenador que guiará tus rutinas, cambios, progreso y ajustes del plan.",

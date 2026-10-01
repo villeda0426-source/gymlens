@@ -281,7 +281,7 @@
     }
   },
   "trainer": {
-    "personal_trainer": "Personal Trainer",
+    "personal_trainer": "Coach",
     "meet_title": "Meet your Coach",
     "intro_ready": "Your trainer is ready. Review your setup, then jump into the chat when you want guidance.",
     "intro_create": "Build the trainer who will guide your workouts, swaps, progress, and plan updates.",
