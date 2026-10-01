@@ -131,7 +131,7 @@ export default function HomeScreen() {
         >
           <View style={styles.coachCardHeader}>
             <View style={styles.coachCardIcon}>
-              <Ionicons name="star" size={18} color={coachColors.coachGold} />
+              <Ionicons name="star" size={18} color={coachColors.coral} />
             </View>
             <Text style={styles.coachCardTitle}>{t("trainer.coach_header_title")}</Text>
             {pendingPlanChange && !justApplied ? (
@@ -322,8 +322,14 @@ const styles = StyleSheet.create({
   },
   profileButtonText: { color: coachColors.text, fontFamily: coachFonts.headingSemiBold, fontSize: 17 },
 
+  // Restyled off coachNavy per explicit request (QA #15): the navy block
+  // clashed with Home's warm cream/coral rhythm (Today card, Scan tile).
+  // Rebuilt from the same tokens every other light card on this screen
+  // uses, rather than inventing a new one.
   coachCard: {
-    backgroundColor: coachColors.coachNavy,
+    backgroundColor: coachColors.card,
+    borderWidth: 1,
+    borderColor: coachColors.border,
     borderRadius: radii.cardLarge,
     padding: spacing.lg,
     gap: spacing.md,
@@ -333,34 +339,36 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radii.pill,
-    backgroundColor: "#1b3a61",
+    backgroundColor: coachColors.bg,
+    borderWidth: 1,
+    borderColor: coachColors.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  coachCardTitle: { flex: 1, color: coachColors.card, fontFamily: coachFonts.headingSemiBold, fontSize: 16 },
+  coachCardTitle: { flex: 1, color: coachColors.text, fontFamily: coachFonts.headingSemiBold, fontSize: 16 },
   coachCardBadge: { backgroundColor: coachColors.coachGold, borderRadius: radii.pill, paddingHorizontal: 8, paddingVertical: 4 },
   coachCardBadgeText: { color: coachColors.coachNavy, fontFamily: coachFonts.bodyBold, fontSize: 12 },
-  coachCardBody: { color: coachColors.card, fontFamily: coachFonts.body, fontSize: 16, lineHeight: 23 },
+  coachCardBody: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 16, lineHeight: 23 },
   coachCardActions: { flexDirection: "row", gap: spacing.sm },
   coachCardPrimaryPill: {
     height: 40,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.pill,
-    backgroundColor: coachColors.card,
+    backgroundColor: coachColors.coralPressed,
     alignItems: "center",
     justifyContent: "center",
   },
-  coachCardPrimaryPillText: { color: coachColors.coachNavy, fontFamily: coachFonts.bodyBold, fontSize: 14 },
+  coachCardPrimaryPillText: { color: coachColors.card, fontFamily: coachFonts.bodyBold, fontSize: 14 },
   coachCardSecondaryPill: {
     height: 40,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.pill,
     borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.35)",
+    borderColor: coachColors.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  coachCardSecondaryPillText: { color: coachColors.card, fontFamily: coachFonts.bodyBold, fontSize: 14 },
+  coachCardSecondaryPillText: { color: coachColors.text, fontFamily: coachFonts.bodyBold, fontSize: 14 },
 
   todayCard: {
     backgroundColor: coachColors.card,
