@@ -28,7 +28,6 @@ import { useWorkoutGuideStore } from "@/store/workoutGuideStore";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { coachColors, coachDark, coachFonts, radii, spacing } from "@/constants/theme";
 import { apiFetch } from "@/lib/api";
-import { ReliableSession } from "@/shared/reliableCoach";
 
 function getTodaysTip(t: (key: string) => string): string {
   return t(`home.tips.${new Date().getDay()}`);
@@ -97,7 +96,7 @@ export default function HomeScreen() {
     })
     .toUpperCase();
 
-  const todayBaseSession = (plan?.sessions?.[0] as ReliableSession | undefined) ?? null;
+  const todayBaseSession = plan?.sessions?.[0] ?? null;
   const totalExercises = plan?.sessions.reduce((sum, session) => sum + session.exercises.length, 0) ?? 0;
   const todaySets = todayBaseSession?.exercises.reduce((sum, exercise) => sum + exercise.sets, 0) ?? 0;
 

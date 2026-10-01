@@ -18,7 +18,6 @@ import { coachColors, coachDark, coachFonts, radii, spacing } from "@/constants/
 import Stepper from "@/components/UI/Stepper";
 import SegmentedProgressBar from "@/components/UI/SegmentedProgressBar";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
-import { ReliableSession } from "@/shared/reliableCoach";
 
 interface SessionExercise {
   id: string;
@@ -44,7 +43,7 @@ export default function WorkoutSessionScreen() {
   const { exercise: adHocExercise } = useLocalSearchParams<{ exercise?: string; muscles?: string }>();
   const { plan, units, markExerciseCompleted } = useCoachTrainerStore();
 
-  const todaySession = (plan?.sessions?.[0] as ReliableSession | undefined) ?? null;
+  const todaySession = plan?.sessions?.[0] ?? null;
 
   const exercises = useMemo<SessionExercise[]>(() => {
     if (adHocExercise) {
