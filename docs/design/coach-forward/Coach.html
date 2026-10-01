@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SpotLift Coach chat — Coach Forward</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f5f3ee}
+a{color:#c53838}a:hover{color:#a82e2e}
+button,input{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #f5f3ee; font-family: Figtree, sans-serif; color: #14171f; position: relative; overflow: hidden">
+  <div style="padding: 52px 20px 0; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <span style="width: 48px; height: 48px; border-radius: 999px; background: #0c2340; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="#e8b923"><path d="M12 3 L13.8 10.2 L21 12 L13.8 13.8 L12 21 L10.2 13.8 L3 12 L10.2 10.2 Z"></path></svg></span>
+      <div style="flex-grow: 1; display: flex; flex-direction: column">
+        <h1 style="margin: 0; font-family: Outfit, sans-serif; font-size: 26px; font-weight: 700; line-height: 1.1">Coach</h1>
+        <span style="font-size: 13px; color: #5b6270">Knows your plan, your gym and your progress</span>
+      </div>
+      <a href="CoachWeek.dc.html" aria-label="Weekly check-in" style="width: 44px; height: 44px; border-radius: 999px; background: #ffffff; color: #14171f; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(12,35,64,0.1)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20 V12 M10 20 V6 M16 20 V10 M22 20 H2"></path></svg></a>
+    </div>
+
+    <div style="background: #0c2340; color: #ffffff; border-radius: 22px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+      <div style="font-size: 14px; font-weight: 700">How does your body feel today?</div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+        <button style="height: 44px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,0.3); background: none; color: #ffffff; font-size: 14px; font-weight: 700">Fresh</button>
+        <button style="height: 44px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,0.3); background: none; color: #ffffff; font-size: 14px; font-weight: 700">Okay</button>
+        <button style="height: 44px; border-radius: 999px; border: none; background: #e8b923; color: #0c2340; font-size: 14px; font-weight: 800">A bit sore</button>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <div style="align-self: flex-end; max-width: 78%; background: #14171f; color: #ffffff; border-radius: 20px 20px 6px 20px; padding: 12px 14px; font-size: 15px; line-height: 1.4">My shoulder felt tight on chest press last time.</div>
+      <div style="align-self: flex-start; max-width: 88%; display: flex; flex-direction: column; gap: 10px">
+        <div style="background: #ffffff; border-radius: 20px 20px 20px 6px; padding: 12px 14px; font-size: 15px; line-height: 1.45; box-shadow: 0 1px 2px rgba(12,35,64,0.06)">Thanks for telling me. Let’s keep training chest but go easier on that shoulder today.</div>
+        <div style="background: #ffffff; border: 1.5px solid #e8b923; border-radius: 20px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.1em; color: #8a6700">SUGGESTED CHANGE</div>
+          <div style="display: flex; align-items: center; gap: 8px; font-family: Outfit, sans-serif; font-size: 17px; font-weight: 600"><span style="text-decoration: line-through; color: #5b6270">Chest press</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#14171f" stroke-width="2.4" stroke-linecap="round"><path d="M5 12 H19 M13 6 L19 12 L13 18"></path></svg><span>Cable fly</span></div>
+          <div style="font-size: 14px; color: #5b6270">Same muscles, less load on the shoulder joint.</div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+            <button style="height: 44px; border-radius: 999px; border: none; background: #c53838; color: #ffffff; font-size: 14px; font-weight: 800">Apply today</button>
+            <button style="height: 44px; border-radius: 999px; border: 1.5px solid #dcd8cf; background: #ffffff; color: #14171f; font-size: 14px; font-weight: 700">Keep plan</button>
+          </div>
+        </div>
+        <div style="font-size: 13px; color: #5b6270; line-height: 1.4">If the pain is sharp or lasts more than a few days, check with a physio.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 106px; display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; gap: 8px; overflow: hidden">
+      <button style="flex-shrink: 0; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid #dcd8cf; background: #ffffff; color: #14171f; font-size: 13px; font-weight: 600">What should I lift today?</button>
+      <button style="flex-shrink: 0; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid #dcd8cf; background: #ffffff; color: #14171f; font-size: 13px; font-weight: 600">Short on time</button>
+    </div>
+    <div style="height: 56px; background: #ffffff; border-radius: 999px; display: flex; align-items: center; gap: 6px; padding: 0 6px 0 18px; box-shadow: 0 1px 3px rgba(12,35,64,0.1)">
+      <label for="coach-msg" style="position: absolute; width: 1px; height: 1px; overflow: hidden">Message your coach</label>
+      <input id="coach-msg" placeholder="Ask your coach anything…" style="flex-grow: 1; border: none; outline: none; background: none; font-size: 15px; color: #14171f; min-width: 0">
+      <button aria-label="Ask about a machine with the camera" style="width: 44px; height: 44px; border-radius: 999px; border: none; background: #f5f3ee; color: #14171f; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9 V4 H9 M15 4 H20 V9 M20 15 V20 H15 M9 20 H4 V15"></path></svg></button>
+      <button aria-label="Talk to coach" style="width: 44px; height: 44px; border-radius: 999px; border: none; background: #0c2340; color: #ffffff; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11 C5 15 8 17 12 17 C16 17 19 15 19 11 M12 17 V21"></path></svg></button>
+    </div>
+  </div>
+
+  <nav style="position: absolute; left: 16px; right: 16px; bottom: 22px; height: 72px; background: #ffffff; border-radius: 999px; box-shadow: 0 10px 30px rgba(12,35,64,0.16); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; padding: 0 6px">
+    <a href="Main.dc.html" style="height: 56px; text-decoration: none; color: #5b6270; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11 L12 4 L20 11 V20 H14 V14 H10 V20 H4 Z"></path></svg>Home</a>
+    <a href="Main.dc.html" style="height: 56px; text-decoration: none; color: #5b6270; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M4 10 H20 M9 3 V7 M15 3 V7"></path></svg>Plan</a>
+    <a href="Scan.dc.html" aria-label="Scan" style="justify-self: center; width: 56px; height: 56px; border-radius: 999px; background: #c53838; color: #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 14px rgba(224,78,78,0.35)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 9 V4 H9 M15 4 H20 V9 M20 15 V20 H15 M9 20 H4 V15"></path></svg></a>
+    <a href="Coach.dc.html" style="height: 56px; text-decoration: none; color: #0c2340; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12px; font-weight: 800"><svg width="22" height="22" viewBox="0 0 24 24" fill="#e8b923" stroke="#0c2340" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3 L13.8 10.2 L21 12 L13.8 13.8 L12 21 L10.2 13.8 L3 12 L10.2 10.2 Z"></path></svg>Coach</a>
+    <a href="Main.dc.html" style="height: 56px; text-decoration: none; color: #5b6270; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20 C5 15 19 15 20 20"></path></svg>You</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

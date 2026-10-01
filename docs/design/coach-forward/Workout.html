@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SpotLift Workout — Coach Forward</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0e1116}
+a{color:#ff6b61}a:hover{color:#ff8a82}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0e1116; font-family: Figtree, sans-serif; color: #f5f3ee; display: flex; flex-direction: column; overflow: hidden">
+  <div style="flex-grow: 1; padding: 52px 20px 12px; display: flex; flex-direction: column; gap: 18px">
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <a href="Main.dc.html" aria-label="End workout" style="width: 44px; height: 44px; border-radius: 999px; background: #1a1e25; color: #f5f3ee; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6 L18 18 M18 6 L6 18"></path></svg></a>
+      <div style="display: flex; flex-direction: column; align-items: center"><span style="font-size: 12px; font-weight: 800; letter-spacing: 0.12em; color: #a9b1bd">PUSH DAY · 2 OF 6</span><span style="font-family: Outfit, sans-serif; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums">14:32</span></div>
+      <button aria-label="Pause" style="width: 44px; height: 44px; border-radius: 999px; border: none; background: #1a1e25; color: #f5f3ee; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"></rect><rect x="14" y="5" width="4" height="14" rx="1"></rect></svg></button>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <div style="font-family: Outfit, sans-serif; font-size: 38px; font-weight: 800; line-height: 1; letter-spacing: -0.02em">Cable fly</div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+        <div style="height: 8px; border-radius: 4px; background: #9ad63a"></div>
+        <div style="height: 8px; border-radius: 4px; background: #ff5f57"></div>
+        <div style="height: 8px; border-radius: 4px; background: #2a2f38"></div>
+      </div>
+      <div style="font-size: 13px; font-weight: 800; letter-spacing: 0.12em; color: #ff6b61">SET 2 OF 3</div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <div style="background: #1a1e25; border-radius: 24px; padding: 16px 12px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+        <span style="font-size: 12px; font-weight: 800; letter-spacing: 0.12em; color: #a9b1bd">KG</span>
+        <span style="font-family: Outfit, sans-serif; font-size: 96px; font-weight: 700; line-height: 0.95; font-variant-numeric: tabular-nums">15</span>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%">
+          <button aria-label="Decrease weight" style="height: 56px; border-radius: 999px; border: none; background: #2a2f38; color: #f5f3ee; font-size: 26px; font-weight: 700">−</button>
+          <button aria-label="Increase weight" style="height: 56px; border-radius: 999px; border: none; background: #2a2f38; color: #f5f3ee; font-size: 26px; font-weight: 700">+</button>
+        </div>
+      </div>
+      <div style="background: #1a1e25; border-radius: 24px; padding: 16px 12px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+        <span style="font-size: 12px; font-weight: 800; letter-spacing: 0.12em; color: #a9b1bd">REPS</span>
+        <span style="font-family: Outfit, sans-serif; font-size: 96px; font-weight: 700; line-height: 0.95; font-variant-numeric: tabular-nums">12</span>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%">
+          <button aria-label="Decrease reps" style="height: 56px; border-radius: 999px; border: none; background: #2a2f38; color: #f5f3ee; font-size: 26px; font-weight: 700">−</button>
+          <button aria-label="Increase reps" style="height: 56px; border-radius: 999px; border: none; background: #2a2f38; color: #f5f3ee; font-size: 26px; font-weight: 700">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="background: #0c2340; border-radius: 22px; padding: 12px 12px 12px 16px; display: flex; gap: 12px; align-items: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="#e8b923" style="flex-shrink: 0"><path d="M12 3 L13.8 10.2 L21 12 L13.8 13.8 L12 21 L10.2 13.8 L3 12 L10.2 10.2 Z"></path></svg>
+      <span style="flex-grow: 1; font-size: 15px; line-height: 1.35">Nice first set. Slow the return — 3 seconds back.</span>
+      <button aria-label="Talk to coach" style="width: 48px; height: 48px; flex-shrink: 0; border-radius: 999px; border: none; background: #e8b923; color: #0c2340; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11 C5 15 8 17 12 17 C16 17 19 15 19 11 M12 17 V21"></path></svg></button>
+    </div>
+  </div>
+
+  <div style="flex-shrink: 0; padding: 8px 20px 32px; display: flex; flex-direction: column; gap: 12px">
+    <button style="height: 72px; border: none; border-radius: 999px; background: #9ad63a; color: #0e1116; font-family: Outfit, sans-serif; font-size: 22px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12 L10 17 L19 7"></path></svg>Log set</button>
+    <div style="display: flex; justify-content: space-between; font-size: 14px; color: #a9b1bd; font-weight: 600"><span>Next: Shoulder press</span><span style="font-variant-numeric: tabular-nums">Rest 1:30</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
