@@ -190,6 +190,10 @@
     "confirming_email": "Confirming your email...",
     "signin_link_failed": "Sign-in link failed",
     "request_new_link": "Please request a new confirmation email.",
+    "complete_fields": "Enter all required fields to continue.",
+    "network_error": "SpotLift could not reach the sign-in service. Check your connection and try again.",
+    "sign_in_failed": "We could not sign you in. Please try again.",
+    "session_failed": "Sign-in completed, but a session could not be created. Please try again.",
     "email_busy_title": "Email is temporarily busy",
     "email_busy_message": "SpotLift sent too many verification emails in a short time. Please wait a few minutes, then try again. If you already verified your email, you can sign in now."
   },

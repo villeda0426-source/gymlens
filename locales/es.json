@@ -190,6 +190,10 @@
     "confirming_email": "Confirmando tu correo...",
     "signin_link_failed": "Falló el enlace de inicio de sesión",
     "request_new_link": "Solicita un nuevo correo de confirmación.",
+    "complete_fields": "Completa todos los campos obligatorios para continuar.",
+    "network_error": "SpotLift no pudo conectarse al servicio de inicio de sesión. Revisa tu conexión e inténtalo de nuevo.",
+    "sign_in_failed": "No pudimos iniciar tu sesión. Inténtalo de nuevo.",
+    "session_failed": "El inicio de sesión se completó, pero no se pudo crear una sesión. Inténtalo de nuevo.",
     "email_busy_title": "El correo está temporalmente ocupado",
     "email_busy_message": "SpotLift envió demasiados correos de verificación en poco tiempo. Espera unos minutos e inténtalo de nuevo. Si ya verificaste tu correo, puedes iniciar sesión ahora."
   },
