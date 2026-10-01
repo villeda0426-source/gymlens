@@ -584,7 +584,22 @@ export default function TrainerScreen() {
           </TouchableOpacity>
 
           {user ? (
-            <TouchableOpacity style={styles.authLinkButton} onPress={startNewThread}>
+            <TouchableOpacity
+              style={styles.authLinkButton}
+              onPress={() => {
+                // QA #4/#7 root cause: this used to call startNewThread()
+                // alone, dropping straight into the old open-ended chat
+                // intake — a second entry point parallel to "Build a plan"
+                // above, which is why the redesigned setup flow sometimes
+                // never appeared. Both buttons only ever show in the same
+                // "no threads yet" state, so there's no real case this one
+                // should behave differently. Route it through the same
+                // tap-only flow.
+                usePlanSetupStore.getState().reset();
+                startNewThread();
+                router.push("/plan-setup/goal");
+              }}
+            >
               <Text style={styles.authLinkText}>{t("trainer.new_conversation")}</Text>
             </TouchableOpacity>
           ) : (
