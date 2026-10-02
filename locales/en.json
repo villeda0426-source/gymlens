@@ -280,6 +280,18 @@
       "other": "Other"
     }
   },
+  "import_routine": {
+    "title": "Import a routine",
+    "input_subtitle": "Already have a routine? Type or paste it in and we'll match it to our exercise library.",
+    "input_hint": "One exercise per line, e.g. \"Bench press 3x8\". Start a line with \"Day 1\", \"Day 2\", etc. to separate workout days.",
+    "input_placeholder": "Day 1\nBench press 3x8\nSquat 4x6-8\nLat pulldown 3x10\n\nDay 2\nDeadlift 3x5\nBicep curls 3x12",
+    "parse_button": "Match my routine",
+    "review_subtitle": "Matched {{matched}} exercises, {{unmatched}} not recognized.",
+    "matched_as": "Matched to {{name}}",
+    "not_recognized": "Not recognized — won't be imported",
+    "unmatched_notice": "{{count}} exercises weren't recognized and will be left out. You can still log them manually or ask Coach to add them.",
+    "import_button": "Import {{count}} exercises"
+  },
   "trainer": {
     "personal_trainer": "Coach",
     "meet_title": "Meet your Coach",

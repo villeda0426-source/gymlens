@@ -280,6 +280,18 @@
       "other": "Otro"
     }
   },
+  "import_routine": {
+    "title": "Importar una rutina",
+    "input_subtitle": "¿Ya tienes una rutina? Escríbela o pégala y la relacionaremos con nuestra biblioteca de ejercicios.",
+    "input_hint": "Un ejercicio por línea, por ejemplo \"Press de banca 3x8\". Empieza una línea con \"Día 1\", \"Día 2\", etc. para separar los días de entrenamiento.",
+    "input_placeholder": "Día 1\nPress de banca 3x8\nSentadilla 4x6-8\nJalón al pecho 3x10\n\nDía 2\nPeso muerto 3x5\nCurl de bíceps 3x12",
+    "parse_button": "Relacionar mi rutina",
+    "review_subtitle": "{{matched}} ejercicios relacionados, {{unmatched}} no reconocidos.",
+    "matched_as": "Relacionado con {{name}}",
+    "not_recognized": "No reconocido — no se importará",
+    "unmatched_notice": "{{count}} ejercicios no fueron reconocidos y se omitirán. Puedes registrarlos manualmente o pedirle a Coach que los agregue.",
+    "import_button": "Importar {{count}} ejercicios"
+  },
   "trainer": {
     "personal_trainer": "Coach",
     "meet_title": "Conoce a tu Coach",

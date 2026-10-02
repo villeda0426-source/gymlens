@@ -667,6 +667,12 @@ export default function TrainerScreen() {
               <Text style={styles.authLinkText}>{t("trainer.go_to_sign_in")}</Text>
             </TouchableOpacity>
           )}
+
+          {user ? (
+            <TouchableOpacity style={styles.authLinkButton} onPress={() => router.push("/import-routine")}>
+              <Text style={styles.authLinkText}>{t("import_routine.title")}</Text>
+            </TouchableOpacity>
+          ) : null}
         </ScrollView>
       </SafeScreen>
     );
