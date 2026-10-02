@@ -155,6 +155,54 @@ export type Database = {
           recorded_at: string;
         };
       };
+      workout_set_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          workout_instance_id: string;
+          exercise_id: string;
+          exercise_name: string;
+          plan_thread_id: string | null;
+          session_index: number | null;
+          session_label: string | null;
+          plan_week: number | null;
+          set_number: number;
+          reps: number | null;
+          weight_value: number | null;
+          weight_unit: "kg" | "lbs";
+          weight_kg: number | null;
+          completed: boolean;
+          performed_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          workout_instance_id: string;
+          exercise_id: string;
+          exercise_name: string;
+          plan_thread_id?: string | null;
+          session_index?: number | null;
+          session_label?: string | null;
+          plan_week?: number | null;
+          set_number: number;
+          reps?: number | null;
+          weight_value?: number | null;
+          weight_unit: "kg" | "lbs";
+          weight_kg?: number | null;
+          completed?: boolean;
+          performed_at?: string;
+        };
+        Update: {
+          reps?: number | null;
+          weight_value?: number | null;
+          weight_unit?: "kg" | "lbs";
+          weight_kg?: number | null;
+          completed?: boolean;
+          performed_at?: string;
+        };
+      };
     };
   };
 };

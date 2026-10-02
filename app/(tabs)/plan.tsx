@@ -177,7 +177,7 @@ interface WorkoutDayCardProps {
   onCompleteExercise: (exercise: PlanExercise) => void;
   onUncompleteExercise: (exercise: PlanExercise) => void;
   onOpenWorkout: (session: CoachPlan["sessions"][number], index: number) => void;
-  onOpenExercise: (exercise: PlanExercise) => void;
+  onOpenExercise: (exercise: PlanExercise, session: CoachPlan["sessions"][number]) => void;
   onOpenStretch: (stretch: string, label: string, targetMuscles: string[]) => void;
   // QA: Plan screen hero removal — the whole-plan percentage the removed
   // hero showed moves onto the current/today card only, not every card in
@@ -281,13 +281,13 @@ function WorkoutDayCard({
                 <Ionicons name="ellipse-outline" size={18} color={coachColors.textSecondary} />
               )}
             </TouchableOpacity>
-            <TouchableOpacity style={{ flex: 1 }} onPress={() => onOpenExercise(exercise)} activeOpacity={0.78}>
+            <TouchableOpacity style={{ flex: 1 }} onPress={() => onOpenExercise(exercise, session)} activeOpacity={0.78}>
               <Text style={[styles.exerciseName, isDone && styles.exerciseDoneText]}>{exercise.name}</Text>
               <Text style={styles.exerciseDose}>
                 {exercise.sets} sets · {exercise.rep_range.min}-{exercise.rep_range.max} reps · {exercise.target_load}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => onOpenExercise(exercise)} hitSlop={10}>
+            <TouchableOpacity onPress={() => onOpenExercise(exercise, session)} hitSlop={10}>
               <Ionicons name="chevron-forward" size={18} color={PLAN_MUTED} />
             </TouchableOpacity>
           </View>
@@ -534,7 +534,7 @@ function WorkoutDetailModal({
   onCompleteExercise: (exercise: PlanExercise) => void;
   onUncompleteExercise: (exercise: PlanExercise) => void;
   onSwapExercise: (exercise: PlanExercise, replacementName: string, scope: "today" | "permanent") => void;
-  onOpenExercise: (exercise: PlanExercise) => void;
+  onOpenExercise: (exercise: PlanExercise, session: CoachPlan["sessions"][number]) => void;
   onOpenStretch: (stretch: string, label: string, targetMuscles: string[]) => void;
 }) {
   const { t } = useTranslation();
@@ -618,7 +618,7 @@ function WorkoutDetailModal({
                         <Ionicons name="ellipse-outline" size={18} color={coachColors.textSecondary} />
                       )}
                     </TouchableOpacity>
-                    <TouchableOpacity style={{ flex: 1 }} onPress={() => onOpenExercise(exercise)} activeOpacity={0.78}>
+                    <TouchableOpacity style={{ flex: 1 }} onPress={() => onOpenExercise(exercise, session)} activeOpacity={0.78}>
                       <Text style={styles.detailExerciseName}>{exercise.name}</Text>
                       <Text style={styles.detailExerciseDose}>
                         {exercise.sets} sets · {exercise.rep_range.min}-{exercise.rep_range.max} reps · {t("plan.rest_minutes", {
@@ -626,7 +626,7 @@ function WorkoutDetailModal({
                         })}
                       </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => onOpenExercise(exercise)} hitSlop={10}>
+                    <TouchableOpacity onPress={() => onOpenExercise(exercise, session)} hitSlop={10}>
                       <Ionicons name="chevron-forward" size={18} color={PLAN_MUTED} />
                     </TouchableOpacity>
                   </View>
@@ -948,24 +948,35 @@ export default function PlanScreen() {
     setWorkoutDetailVisible(true);
   };
 
-  const handleOpenExercise = async (exercise: PlanExercise) => {
-    const fallback = { id: exercise.exercise_id, ...fallbackExerciseGuide(exercise, i18n.language?.startsWith("es") === true) };
+  // Workout Log handoff: a Plan-tab exercise tap opens the dedicated set-log
+  // route instead of the standalone guide screen directly. Session context
+  // (index/label/week) is derived here rather than threaded through every
+  // prop layer — session is one of the same objects in plan.sessions.
+  const handleOpenExercise = (exercise: PlanExercise, session: CoachPlan["sessions"][number]) => {
+    // Seed the shared guide store with the same richer, target-load/RPE-aware
+    // fallback the old direct-to-guide-screen flow used, so workout-log.tsx
+    // has real content immediately instead of a thinner one it builds itself.
+    const fallback = fallbackExerciseGuide(exercise, i18n.language?.startsWith("es") === true);
     setCurrentWorkoutGuide(fallback);
     setWorkoutDetailVisible(false);
-    requestAnimationFrame(() => router.push("/equipment/workout-result"));
-
-    try {
-      const guide = await apiFetch<ExerciseGuide>("/api/workout-search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: exercise.name, language: i18n.language?.startsWith("es") ? "es" : "en" }),
-      }, 30000);
-      if (guide?.found && guide.steps?.length) {
-        setCurrentWorkoutGuide(guide);
-      }
-    } catch {
-      // Keep the local Coach-plan fallback visible when search is offline.
-    }
+    const sessionIndex = plan?.sessions.indexOf(session) ?? -1;
+    const planWeek = sessionIndex >= 0 ? Math.floor(sessionIndex / weekSize) + 1 : undefined;
+    requestAnimationFrame(() =>
+      router.push({
+        pathname: "/workout-log",
+        params: {
+          exerciseId: exercise.exercise_id,
+          exerciseName: exercise.name,
+          plannedSetCount: String(exercise.sets),
+          repMin: String(exercise.rep_range.min),
+          repMax: String(exercise.rep_range.max),
+          sessionLabel: session.day_label,
+          sessionIndex: sessionIndex >= 0 ? String(sessionIndex) : undefined,
+          planWeek: planWeek !== undefined ? String(planWeek) : undefined,
+          threadId: activeThreadId ?? undefined,
+        },
+      })
+    );
   };
 
   const handleOpenStretch = async (stretch: string, label: string, targetMuscles: string[]) => {

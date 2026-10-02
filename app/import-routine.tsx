@@ -16,8 +16,7 @@ type Step = "input" | "review";
 export default function ImportRoutineScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { profile } = useAuthStore();
-  const { setPlan, startNewThread } = useCoachTrainerStore();
+  const { setPlan, startNewThread, units: currentUnits } = useCoachTrainerStore();
   const [step, setStep] = useState<Step>("input");
   const [text, setText] = useState("");
   const [days, setDays] = useState<ParsedDay[]>([]);
@@ -34,7 +33,7 @@ export default function ImportRoutineScreen() {
 
   const handleImport = async () => {
     setImporting(true);
-    const plan = buildPlanFromParsedDays(days, profile?.preferred_units === "kg" ? "kg" : "lbs");
+    const plan = buildPlanFromParsedDays(days, currentUnits);
     setImporting(false);
     if (!plan) {
       return; // handleParse's review screen already shows 0-matched state; nothing to import
