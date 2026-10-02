@@ -465,7 +465,7 @@
     "done": "Listo",
     "workout_complete": "Rutina completa",
     "open_workout_details": "Ver detalles de la rutina",
-    "timeline_title": "Calendario del plan",
+    "timeline_title": "Días cumplidos",
     "visible_days": "{{visible}}/{{total}} días visibles",
     "unlock_hint": "Termina este bloque de 4 días para revelar las siguientes rutinas. Los días completados seguirán visibles aquí.",
     "all_unlocked_hint": "Todos los bloques están desbloqueados. Aún puedes revisar cada rutina completada.",

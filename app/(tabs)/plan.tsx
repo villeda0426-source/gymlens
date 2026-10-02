@@ -179,6 +179,11 @@ interface WorkoutDayCardProps {
   onOpenWorkout: (session: CoachPlan["sessions"][number], index: number) => void;
   onOpenExercise: (exercise: PlanExercise) => void;
   onOpenStretch: (stretch: string, label: string, targetMuscles: string[]) => void;
+  // QA: Plan screen hero removal — the whole-plan percentage the removed
+  // hero showed moves onto the current/today card only, not every card in
+  // the carousel (that would just redundantly repeat the same number).
+  isToday?: boolean;
+  planProgress?: number;
 }
 
 function WorkoutDayCard({
@@ -191,6 +196,8 @@ function WorkoutDayCard({
   onOpenWorkout,
   onOpenExercise,
   onOpenStretch,
+  isToday,
+  planProgress,
 }: WorkoutDayCardProps) {
   const { t } = useTranslation();
   const completedCount = session.exercises.filter((exercise) => completedIds.includes(exercise.exercise_id)).length;
@@ -214,6 +221,7 @@ function WorkoutDayCard({
           <Text style={styles.dayTitle}>{session.day_label.replace(/^Day\s*\d+\s*[-–]\s*/i, "")}</Text>
           <Text style={styles.dayMeta}>
             {session.estimated_minutes} {t("plan.min")} · {session.exercises.length} {t("plan.exercises")}
+            {isToday && planProgress !== undefined ? ` · ${planProgress}%` : ""}
           </Text>
         </View>
         <View style={[styles.statusPill, isComplete && styles.statusPillComplete]}>
@@ -844,7 +852,6 @@ export default function PlanScreen() {
     });
   }, [todaySessionIndex, visibleSessionCount]);
 
-  const highlightedSession = visibleSessions[activeSessionIndex] ?? visibleSessions[Math.min(todaySessionIndex, visibleSessions.length - 1)];
   const handlePlanMomentumEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const nextIndex = Math.round(event.nativeEvent.contentOffset.x / (PLAN_CARD_WIDTH + PLAN_CARD_GAP));
     setActiveSessionIndex(Math.max(0, Math.min(nextIndex, Math.max(visibleSessions.length, 1) - 1)));
@@ -1171,32 +1178,6 @@ export default function PlanScreen() {
 
         {plan ? (
           <>
-            <LinearGradient
-              colors={["rgba(255,255,255,0.075)", "rgba(255,255,255,0.025)"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.planHero}
-            >
-              <TouchableOpacity
-                style={{ flex: 1 }}
-                activeOpacity={0.82}
-                onPress={() => highlightedSession && handleOpenWorkout(highlightedSession)}
-              >
-                <Text style={styles.planHeroEyebrow}>{t("plan.todays_workout")}</Text>
-                <Text style={styles.planHeroTitle}>
-                  {highlightedSession?.day_label.replace(/^Day\s*\d+\s*[-–]\s*/i, "") || plan.split}
-                </Text>
-                <Text style={styles.planHeroText}>
-                  {highlightedSession
-                    ? `${highlightedSession.focus} · ${highlightedSession.estimated_minutes} ${t("plan.min")} · ${highlightedSession.exercises.length} ${t("plan.exercises")}`
-                    : plan.goal}
-                </Text>
-              </TouchableOpacity>
-              <LinearGradient colors={[coachColors.coral, "#ff6b6b"]} style={styles.progressRing}>
-                <Text style={styles.progressRingText}>{planProgress}%</Text>
-              </LinearGradient>
-            </LinearGradient>
-
             <View style={styles.timelineCard}>
               <View style={styles.timelineHeader}>
                 <Text style={styles.timelineTitle}>{t("plan.timeline_title")}</Text>
@@ -1248,6 +1229,8 @@ export default function PlanScreen() {
                   onOpenWorkout={handleOpenWorkout}
                   onOpenExercise={handleOpenExercise}
                   onOpenStretch={handleOpenStretch}
+                  isToday={index === todaySessionIndex}
+                  planProgress={planProgress}
                 />
               ))}
             </ScrollView>
@@ -1403,33 +1386,6 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   coachButtonText: { color: coachColors.coral, fontFamily: coachFonts.bodyBold, fontSize: 13 },
-  planHero: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    backgroundColor: PLAN_PANEL,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: PLAN_BORDER,
-    padding: 20,
-    marginBottom: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.28,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 12 },
-  },
-  planHeroEyebrow: { color: coachColors.coachGold, fontFamily: coachFonts.bodyExtraBold, fontSize: 11, textTransform: "uppercase", marginBottom: 4 },
-  planHeroTitle: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 27 },
-  planHeroText: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 14, lineHeight: 21, marginTop: 6 },
-  progressRing: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: coachColors.coral,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  progressRingText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 20 },
   timelineCard: {
     borderRadius: 16,
     borderWidth: 1,

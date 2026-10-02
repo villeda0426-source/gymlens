@@ -465,7 +465,7 @@
     "done": "Done",
     "workout_complete": "Workout complete",
     "open_workout_details": "Open workout details",
-    "timeline_title": "Plan timeline",
+    "timeline_title": "Days completed",
     "visible_days": "{{visible}}/{{total}} days visible",
     "unlock_hint": "Finish this 4-day block to reveal the next workouts. Completed days stay visible here.",
     "all_unlocked_hint": "All blocks are unlocked. You can still review every completed workout.",
