@@ -5,25 +5,22 @@ import { StatusBar } from "expo-status-bar";
 import * as Haptics from "expo-haptics";
 import CameraViewComponent from "@/components/Camera/CameraView";
 import ImagePreview from "@/components/Camera/ImagePreview";
-import ScanResultSheet from "@/components/Scan/ScanResultSheet";
+import ScanResultSheet, { ScanCandidate } from "@/components/Scan/ScanResultSheet";
 import LoadingSpinner from "@/components/UI/LoadingSpinner";
 import { useEquipmentIdentify } from "@/hooks/useEquipmentIdentify";
 import GuestPromptModal from "@/components/UI/GuestPromptModal";
 import { useTranslation } from "react-i18next";
 import { coachDark } from "@/constants/theme";
 
-interface PendingScanResult {
-  id?: string;
-  name: string;
-  confidence: number;
-}
-
 export default function ScanScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
   const [showGuestPrompt, setShowGuestPrompt] = useState(false);
-  const [pendingResult, setPendingResult] = useState<PendingScanResult | null>(null);
+  // QA #20: the primary result plus up to 2 alternates (below the 0.75
+  // confidence threshold, server/routes/identify.ts's findAlternates) — an
+  // empty array means no sheet is shown, same as the old null-pendingResult.
+  const [candidates, setCandidates] = useState<ScanCandidate[]>([]);
   const { identify, isLoading, error } = useEquipmentIdentify();
 
   const handleIdentify = async () => {
@@ -34,33 +31,36 @@ export default function ScanScreen() {
     if (response?.result) {
       // Coach Forward Phase 6: confirm the match with ScanResultSheet instead
       // of navigating straight through.
-      setPendingResult({
+      const primary: ScanCandidate = {
         id: response.result.id,
         name: response.result.name,
         confidence: response.result.confidence ?? 0,
-      });
+      };
+      const alternates: ScanCandidate[] = Array.isArray(response.result.alternates)
+        ? response.result.alternates.map((alt: any) => ({ id: alt.id, name: alt.name, confidence: alt.confidence ?? 0 }))
+        : [];
+      setCandidates([primary, ...alternates]);
     }
   };
 
   const handleRetake = () => {
-    setPendingResult(null);
+    setCandidates([]);
     setCapturedUri(null);
   };
 
-  const handleShowMe = async () => {
-    if (!pendingResult) return;
-    if (!pendingResult.id) {
+  const handleShowMe = async (candidate: ScanCandidate) => {
+    if (!candidate.id) {
       // The server now fails loudly when it can't save a new equipment
       // record, but this stays as a second line of defense: don't silently
       // navigate to a nonexistent /equipment/result route, which renders
       // nothing and looks like a dead button.
       Alert.alert(t("errors.identification_title"), t("scan_result.show_me_unavailable"));
-      setPendingResult(null);
+      setCandidates([]);
       return;
     }
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.push(`/equipment/${pendingResult.id}`);
-    setPendingResult(null);
+    router.push(`/equipment/${candidate.id}`);
+    setCandidates([]);
   };
 
   if (capturedUri) {
@@ -81,9 +81,8 @@ export default function ScanScreen() {
           />
         )}
         <ScanResultSheet
-          visible={!!pendingResult}
-          name={pendingResult?.name ?? ""}
-          confidence={pendingResult?.confidence ?? 0}
+          visible={candidates.length > 0}
+          candidates={candidates}
           onNotThisOne={handleRetake}
           onShowMe={handleShowMe}
         />

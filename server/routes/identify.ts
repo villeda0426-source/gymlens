@@ -68,6 +68,28 @@ function findBestMatch(
   return { match: bestScore >= 0.9 ? bestMatch : null, score: bestScore };
 }
 
+// QA #20: when the primary identification is below the same 0.75 threshold
+// the client already uses for its "Strong match"/"Possible match" badge
+// (components/Scan/ScanResultSheet.tsx), surface the next-closest known
+// equipment by name as swipeable alternates, instead of only ever showing
+// one guess. Reuses the existing name-similarity scoring against our own
+// equipment table rather than asking the vision model for multiple
+// candidates — keeps this self-contained and doesn't touch the
+// identification prompt/schema other callers rely on.
+function findAlternates(
+  primaryName: string,
+  excludeId: string | undefined,
+  list: { id: string; name: string }[],
+  max: number
+): Array<{ id: string; name: string; confidence: number }> {
+  return list
+    .filter((eq) => eq.id !== excludeId)
+    .map((eq) => ({ id: eq.id, name: eq.name, confidence: nameSimilarity(primaryName, eq.name) }))
+    .filter((eq) => eq.confidence > 0.3)
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, max);
+}
+
 // ─── Cache-hit identification tracking ───────────────────────────────────────
 
 async function upsertIdentificationRecord(
@@ -277,14 +299,20 @@ router.post("/", async (req: Request, res: Response) => {
       );
     }
 
+    const alternates =
+      identification.confidence < 0.75
+        ? findAlternates(identification.name, equipment?.id, allEquipment ?? [], 2)
+        : [];
+
     console.log(`SAVED TO DB: ${identification?.name}`);
-    console.log("[identify] returning new result for:", identification?.name);
+    console.log("[identify] returning new result for:", identification?.name, "| alternates:", alternates.length);
     return res.json({
       ...identification,
       id: equipment?.id,
       videos,
       identification_id: identificationId,
       fromCache: false,
+      alternates,
     });
   } catch (error: any) {
     console.error("[identify] error:", error.message ?? error);
