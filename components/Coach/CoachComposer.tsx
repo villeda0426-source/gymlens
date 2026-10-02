@@ -1,11 +1,11 @@
 // Coach Forward chat composer — Phase 3.
 //
-// Pill-shaped input row per the mockup, plus a camera button (new — routes
-// to the Scan tab) and a mic button that reuses the existing
-// speech-recognition wiring from trainer.tsx. The mockup shows only a mic
-// button since its static frame has an empty draft; real chat still needs a
-// way to send, so that same circle swaps to a send arrow once there's text
-// to send, and to a spinner while a request is in flight.
+// Pill-shaped input row per the mockup, plus a mic button that reuses the
+// existing speech-recognition wiring from trainer.tsx. That circle swaps to
+// a send arrow once there's text to send, and to a spinner while a request
+// is in flight. The camera button (QA #3) was a dead end — it just routed
+// to the Scan tab with no context carried over — removed rather than wired
+// to something invented for it.
 import React from "react";
 import { ActivityIndicator, Platform, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,7 +16,6 @@ interface CoachComposerProps {
   value: string;
   onChangeText: (text: string) => void;
   onSend: () => void;
-  onCameraPress: () => void;
   onVoicePress: () => void;
   listening: boolean;
   loading: boolean;
@@ -27,7 +26,6 @@ export default function CoachComposer({
   value,
   onChangeText,
   onSend,
-  onCameraPress,
   onVoicePress,
   listening,
   loading,
@@ -47,15 +45,6 @@ export default function CoachComposer({
         style={styles.input}
         accessibilityLabel={placeholder}
       />
-      <TouchableOpacity
-        style={styles.cameraButton}
-        onPress={onCameraPress}
-        disabled={loading}
-        accessibilityRole="button"
-        accessibilityLabel={t("trainer.coach_composer.camera")}
-      >
-        <Ionicons name="scan-outline" size={20} color={coachColors.text} />
-      </TouchableOpacity>
       <TouchableOpacity
         style={[styles.actionButton, listening && styles.actionButtonListening]}
         onPress={hasDraft ? onSend : onVoicePress}
@@ -105,14 +94,6 @@ const styles = StyleSheet.create({
     fontFamily: coachFonts.body,
     fontSize: 15,
     color: coachColors.text,
-  },
-  cameraButton: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.pill,
-    backgroundColor: coachColors.bg,
-    alignItems: "center",
-    justifyContent: "center",
   },
   actionButton: {
     width: 44,

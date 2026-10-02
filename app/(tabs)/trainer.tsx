@@ -778,7 +778,6 @@ export default function TrainerScreen() {
             value={draft}
             onChangeText={setDraft}
             onSend={() => submitMessage()}
-            onCameraPress={() => router.push("/(tabs)/scan")}
             onVoicePress={toggleVoiceInput}
             listening={listening}
             loading={loading}
