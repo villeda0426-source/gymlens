@@ -24,3 +24,6 @@ tmp/
 output/
 undefined/
 spotlift-expo-qr.png
+
+# Local Claude Code settings and skills
+.claude/
