@@ -27,3 +27,6 @@ spotlift-expo-qr.png
 
 # Local Claude Code settings and skills
 .claude/
+
+# Separate, unused Reddit ops project
+spotlift-reddit-ops/
