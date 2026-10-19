@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
 import { coachColors, coachFonts, radii } from "@/constants/theme";
+import CoachIcon from "@/components/Coach/CoachIcon";
 
 export const TAB_BAR_HEIGHT = 72;
 const SIDE = 16;
@@ -34,7 +35,6 @@ type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
 const ICONS: Record<string, [IoniconsName, IoniconsName]> = {
   index: ["home", "home-outline"],
   plan: ["calendar", "calendar-outline"],
-  trainer: ["star", "star-outline"],
   profile: ["person", "person-outline"],
 };
 
@@ -80,26 +80,42 @@ export function CoachTabBar({ state, navigation, hasCoachNews = false }: CoachTa
             }
           };
 
+          // Center camera action: a raised coral circle, labeled like the
+          // other tabs so it reads as "Scan" and never as an empty slot. The
+          // circle's color lives on an inner View (not a Pressable style
+          // function) so it always paints.
           if (route.name === "scan") {
             return (
-              <View key={route.key} style={styles.slot}>
-                <Pressable
-                  onPress={onPress}
-                  accessibilityRole="button"
-                  accessibilityLabel={label}
-                  style={({ pressed }) => [styles.scan, pressed && styles.scanPressed]}
-                >
-                  <Ionicons name="scan" size={26} color={coachColors.card} />
-                </Pressable>
-              </View>
+              <Pressable
+                key={route.key}
+                onPress={onPress}
+                style={styles.slot}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+              >
+                {({ pressed }) => (
+                  <>
+                    <View style={[styles.scan, pressed && styles.scanPressed]}>
+                      <Ionicons name="camera" size={24} color={coachColors.card} />
+                    </View>
+                    <Text
+                      numberOfLines={1}
+                      maxFontSizeMultiplier={1.4}
+                      style={[styles.label, styles.scanLabel, { fontFamily: focused ? coachFonts.bodyExtraBold : coachFonts.bodySemiBold }]}
+                    >
+                      {label}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
             );
           }
 
           const isCoach = route.name === "trainer";
           const [on, off] = ICONS[route.name] ?? ["ellipse", "ellipse-outline"];
-          // Spec: Coach icon is navy when inactive, gold filled when active;
-          // Coach's label stays navy either way. Non-Coach tabs turn coral
-          // on focus, grey otherwise.
+          // Coach's icon is the full-color AI Coach mark (dimmed when
+          // inactive); its label stays navy either way. Non-Coach tabs turn
+          // coral on focus, grey otherwise.
           const tint = focused
             ? isCoach
               ? coachColors.coachGold
@@ -118,7 +134,11 @@ export function CoachTabBar({ state, navigation, hasCoachNews = false }: CoachTa
               accessibilityLabel={isCoach && hasCoachNews ? `${label}, ${t("tabs.coach_unread_badge")}` : label}
             >
               <View>
-                <Ionicons name={focused ? on : off} size={22} color={tint} />
+                {isCoach ? (
+                  <CoachIcon size={24} dimmed={!focused} />
+                ) : (
+                  <Ionicons name={focused ? on : off} size={22} color={tint} />
+                )}
                 {isCoach && hasCoachNews ? (
                   <View style={styles.dot} accessibilityElementsHidden importantForAccessibility="no" />
                 ) : null}
@@ -162,10 +182,15 @@ const styles = StyleSheet.create({
   // 5 equal width — the bug this replaces had the scan slot sized to its
   // content instead.
   slot: { flex: 1, height: 56, alignItems: "center", justifyContent: "center", gap: 3 },
+  // Raised: lifted above the bar's centre line and ringed in the bar color
+  // so it sits "on" the pill rather than inside it.
   scan: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    marginTop: -22,
+    borderWidth: 3,
+    borderColor: coachColors.card,
     backgroundColor: coachColors.coral,
     alignItems: "center",
     justifyContent: "center",
@@ -177,6 +202,7 @@ const styles = StyleSheet.create({
   },
   scanPressed: { backgroundColor: coachColors.coralPressed },
   label: { fontSize: 12, lineHeight: 15 },
+  scanLabel: { color: coachColors.text },
   dot: {
     position: "absolute",
     top: -2,

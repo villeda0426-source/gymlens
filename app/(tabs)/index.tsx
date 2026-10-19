@@ -29,6 +29,7 @@ import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { coachColors, coachDark, coachFonts, radii, spacing } from "@/constants/theme";
 import { useTabBarSpace } from "@/components/CoachTabBar";
 import { apiFetch } from "@/lib/api";
+import CoachIcon from "@/components/Coach/CoachIcon";
 
 function getTodaysTip(t: (key: string) => string): string {
   return t(`home.tips.${new Date().getDay()}`);
@@ -133,7 +134,7 @@ export default function HomeScreen() {
         >
           <View style={styles.coachCardHeader}>
             <View style={styles.coachCardIcon}>
-              <Ionicons name="star" size={18} color={coachColors.coral} />
+              <CoachIcon size={24} />
             </View>
             <Text style={styles.coachCardTitle}>{t("trainer.coach_header_title")}</Text>
             {pendingPlanChange && !justApplied ? (

@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { coachColors, coachFonts, radii, spacing } from "@/constants/theme";
+import CoachIcon from "@/components/Coach/CoachIcon";
 
 export default function AskCoachCard({ equipmentName }: { equipmentName: string }) {
   const { t } = useTranslation();
@@ -30,7 +31,7 @@ export default function AskCoachCard({ equipmentName }: { equipmentName: string 
   return (
     <View style={styles.card}>
       <View style={styles.titleRow}>
-        <Ionicons name="star" size={16} color={coachColors.coachGold} />
+        <CoachIcon size={18} />
         <Text style={styles.title}>{t("equipment.ask_coach_title")}</Text>
       </View>
       <View style={styles.list}>

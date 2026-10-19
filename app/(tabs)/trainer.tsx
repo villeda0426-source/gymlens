@@ -50,6 +50,7 @@ import {
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { usePlanSetupStore, type SessionMinutes } from "@/store/planSetupStore";
 import { useAuthStore } from "@/store/authStore";
+import CoachIcon from "@/components/Coach/CoachIcon";
 
 // The step-by-step plan questions in progress. Answered pairs render from
 // here (not the conversation) until the last answer, so going back to change
@@ -865,9 +866,7 @@ export default function TrainerScreen() {
           <TouchableOpacity style={styles.libraryBackButton} onPress={openTrainerLibrary} accessibilityRole="button" accessibilityLabel={t("trainer.back_to_library")}>
             <Ionicons name="chevron-back" size={22} color={coachColors.text} />
           </TouchableOpacity>
-          <View style={styles.headerAvatar}>
-            <Ionicons name="star" size={18} color={coachColors.coachGold} />
-          </View>
+          <CoachIcon size={28} badgeSize={40} style={styles.headerAvatar} />
           <View style={styles.headerCopy}>
             <Text style={styles.headerTitle}>{t("trainer.coach_header_title")}</Text>
             <Text style={styles.headerSubtitle}>{t("trainer.coach_header_subtitle")}</Text>
@@ -1099,14 +1098,7 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: radii.pill, backgroundColor: coachColors.card,
     borderWidth: 1, borderColor: coachColors.border, alignItems: "center", justifyContent: "center",
   },
-  headerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.pill,
-    backgroundColor: coachColors.coachNavy,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  headerAvatar: { borderWidth: 1, borderColor: coachColors.border },
   headerPlanButton: {
     width: 40, height: 40, borderRadius: radii.pill, backgroundColor: coachColors.coachNavy,
     alignItems: "center", justifyContent: "center",

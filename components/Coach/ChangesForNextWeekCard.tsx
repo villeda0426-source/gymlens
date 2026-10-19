@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { coachColors, coachFonts, radii, spacing } from "@/constants/theme";
 import { CoachWeekChange } from "@/lib/coachWeekService";
+import CoachIcon from "@/components/Coach/CoachIcon";
 
 interface ChangesForNextWeekCardProps {
   changes: CoachWeekChange[];
@@ -23,7 +24,7 @@ export default function ChangesForNextWeekCard({ changes, onApprove, onEdit }: C
   return (
     <View style={styles.card}>
       <View style={styles.titleRow}>
-        <Ionicons name="star" size={18} color={coachColors.coachGold} />
+        <CoachIcon size={20} />
         <Text style={styles.title}>{t("coach_week.changes_title")}</Text>
       </View>
 

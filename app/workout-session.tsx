@@ -18,6 +18,7 @@ import { coachColors, coachDark, coachFonts, radii, spacing } from "@/constants/
 import Stepper from "@/components/UI/Stepper";
 import SegmentedProgressBar from "@/components/UI/SegmentedProgressBar";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
+import CoachIcon from "@/components/Coach/CoachIcon";
 
 interface SessionExercise {
   id: string;
@@ -209,7 +210,7 @@ export default function WorkoutSessionScreen() {
 
         {currentExercise!.coachNotes ? (
           <View style={styles.coachTipCard}>
-            <Ionicons name="star" size={18} color={coachColors.coachGold} />
+            <CoachIcon size={20} badgeSize={30} />
             <Text style={styles.coachTipText}>{currentExercise!.coachNotes}</Text>
             <TouchableOpacity
               onPress={askCoachAboutExercise}

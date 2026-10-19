@@ -21,6 +21,7 @@ import {
   type QuestionAnswer,
   type QuestionDef,
 } from "@/lib/coachQuestionFlow";
+import CoachIcon from "@/components/Coach/CoachIcon";
 
 interface CoachQuestionCardProps {
   question: QuestionDef;
@@ -93,9 +94,7 @@ export default function CoachQuestionCard({
 
       <View style={styles.header}>
         <View style={styles.coachRow}>
-          <View style={styles.coachBadge}>
-            <Text style={styles.coachStar}>★</Text>
-          </View>
+          <CoachIcon size={20} badgeSize={28} />
           <Text style={styles.coachLabel}>{t("plan_setup.coach_label")}</Text>
         </View>
         <Text style={styles.title}>{t(`trainer.question_flow.${question.id}.title`)}</Text>
@@ -169,15 +168,6 @@ const styles = StyleSheet.create({
   },
   header: { gap: 8 },
   coachRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  coachBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 999,
-    backgroundColor: coachColors.coachNavy,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  coachStar: { color: coachColors.coachGold, fontSize: 13 },
   coachLabel: { fontFamily: coachFonts.bodyBold, fontSize: 14, color: coachColors.textSecondary },
   title: { fontFamily: coachFonts.heading, fontSize: 24, lineHeight: 29, color: coachColors.text },
   helper: { fontFamily: coachFonts.body, fontSize: 15, color: coachColors.textSecondary },

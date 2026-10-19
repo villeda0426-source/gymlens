@@ -10,6 +10,7 @@ import OptionCard from "@/components/PlanSetup/OptionCard";
 import ContinueButton from "@/components/PlanSetup/ContinueButton";
 import { coachColors, coachFonts } from "@/constants/theme";
 import { usePlanSetupStore, type PlanSetupLocation } from "@/store/planSetupStore";
+import CoachIcon from "@/components/Coach/CoachIcon";
 
 const LOCATIONS: Array<{
   value: PlanSetupLocation;
@@ -39,9 +40,7 @@ export default function PlanSetupWhereScreen() {
 
         <View style={styles.header}>
           <View style={styles.coachRow}>
-            <View style={styles.coachBadge}>
-              <Text style={styles.coachStar}>★</Text>
-            </View>
+            <CoachIcon size={20} badgeSize={28} />
             <Text style={styles.coachLabel}>{t("plan_setup.coach_label")}</Text>
           </View>
           <Text style={styles.title}>{t("plan_setup.where.title")}</Text>
@@ -90,15 +89,6 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 8, gap: 20, paddingBottom: 24 },
   header: { gap: 10 },
   coachRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  coachBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 999,
-    backgroundColor: coachColors.coachNavy,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  coachStar: { color: coachColors.coachGold, fontSize: 13 },
   coachLabel: { fontFamily: coachFonts.bodyBold, fontSize: 14, color: coachColors.textSecondary },
   title: { fontFamily: coachFonts.heading, fontSize: 30, lineHeight: 35, color: coachColors.text },
   helper: { fontFamily: coachFonts.body, fontSize: 15, color: coachColors.textSecondary },

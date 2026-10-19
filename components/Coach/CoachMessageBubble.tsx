@@ -2,7 +2,7 @@
 //
 // User bubble: near-black, tail bottom-right. Assistant bubble: white card,
 // tail bottom-left. Matches the Coach.html mockup; no per-message avatar
-// (the screen header already carries the coach star, so repeating it on
+// (the screen header already carries the Coach icon, so repeating it on
 // every assistant row would be noise the mockup doesn't have either).
 import React from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";

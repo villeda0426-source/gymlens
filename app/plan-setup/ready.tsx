@@ -13,6 +13,7 @@ import { usePlanSetupStore } from "@/store/planSetupStore";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
+import CoachIcon from "@/components/Coach/CoachIcon";
 
 // Must match app/(tabs)/plan.tsx's DAY_NAMES/dayName exactly — the Plan tab
 // is the source of truth for which calendar day a session lands on, and this
@@ -78,9 +79,7 @@ export default function PlanSetupReadyScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.hero}>
           <View style={styles.heroRow}>
-            <View style={styles.heroBadge}>
-              <Text style={styles.heroStar}>★</Text>
-            </View>
+            <CoachIcon size={24} badgeSize={32} />
             <Text style={styles.heroEyebrow}>
               {profile?.display_name || profile?.username
                 ? t("plan_setup.ready.hero_greeting_named", { name: profile.display_name || profile.username })
@@ -118,7 +117,7 @@ export default function PlanSetupReadyScreen() {
 
           {plan.weekly_notes ? (
             <View style={styles.tipRow}>
-              <Text style={styles.tipStar}>★</Text>
+              <CoachIcon size={18} style={styles.tipIcon} />
               <Text style={styles.tipText}>{plan.weekly_notes}</Text>
             </View>
           ) : null}
@@ -171,8 +170,6 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   heroRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  heroBadge: { width: 32, height: 32, borderRadius: 999, backgroundColor: coachColors.coachGold, alignItems: "center", justifyContent: "center" },
-  heroStar: { color: coachColors.coachNavy, fontSize: 15 },
   heroEyebrow: { color: "rgba(255,255,255,0.85)", fontFamily: coachFonts.bodyBold, fontSize: 15 },
   heroTitle: { color: coachColors.card, fontFamily: coachFonts.heading, fontSize: 34, lineHeight: 38 },
   chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
@@ -187,7 +184,7 @@ const styles = StyleSheet.create({
   sessionFocus: { flex: 1, fontFamily: coachFonts.headingSemiBold, fontSize: 17, color: coachColors.text },
   sessionMoves: { fontFamily: coachFonts.body, fontSize: 13, color: coachColors.textSecondary },
   tipRow: { flexDirection: "row", gap: 8 },
-  tipStar: { color: coachColors.coachGold, fontSize: 15 },
+  tipIcon: { marginTop: 1 },
   tipText: { flex: 1, fontFamily: coachFonts.body, fontSize: 15, lineHeight: 21, color: coachColors.text },
   safetyNote: {
     flexDirection: "row",
