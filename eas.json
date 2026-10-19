@@ -34,7 +34,7 @@
       "autoIncrement": false,
       "ios": {
         "resourceClass": "m-medium",
-        "image": "latest"
+        "image": "sdk-54"
       }
     }
   },
