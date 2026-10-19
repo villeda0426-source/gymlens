@@ -19,6 +19,7 @@ import { coachColors, coachFonts, radii, spacing } from "@/constants/theme";
 import { useTabBarSpace } from "@/components/CoachTabBar";
 import CoachComposer from "@/components/Coach/CoachComposer";
 import CoachMessageBubble from "@/components/Coach/CoachMessageBubble";
+import CoachQuestionCard from "@/components/Coach/CoachQuestionCard";
 import CoachSuggestionCard from "@/components/Coach/CoachSuggestionCard";
 import FeelingCheckIn, { Feeling } from "@/components/Coach/FeelingCheckIn";
 import SafetyNote from "@/components/Coach/SafetyNote";
@@ -32,26 +33,36 @@ import {
   getLatestCoachWorkoutReview,
   makeFreeformWorkoutLog,
   recordCoachJobClientTiming,
+  runCoachTrainerJob,
   startCoachTrainerJob,
 } from "@/lib/coachTrainer";
+import { getCoachChips, getCoachPlanState, type CoachChip } from "@/lib/coachSuggestions";
+import {
+  answerLabel,
+  buildFlowIntakeMessage,
+  buildFlowTemplatePlan,
+  getQuestion,
+  remainingQuestions,
+  type QuestionAnswer,
+  type QuestionFlowAnswers,
+  type QuestionId,
+} from "@/lib/coachQuestionFlow";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
-import { usePlanSetupStore } from "@/store/planSetupStore";
+import { usePlanSetupStore, type SessionMinutes } from "@/store/planSetupStore";
 import { useAuthStore } from "@/store/authStore";
 
-// Live still has all 8 — "adjust_today" used to open a local rule-based
-// panel that doesn't exist in this codebase (it came from a line that
-// diverged after the App Store release). Dropped here: tapping it now just
-// asks Coach directly like any other quick action, which the backend
-// already handles fine via mode "adapt".
-const QUICK_ACTIONS = [
-  "trainer.quick_actions.create_plan",
-  "trainer.quick_actions.train_today",
-  "trainer.quick_actions.thirty_minutes",
-  "trainer.quick_actions.sore_today",
-  "trainer.quick_actions.swap_exercise",
-  "trainer.quick_actions.shorter",
-  "trainer.quick_actions.explain",
-];
+// The step-by-step plan questions in progress. Answered pairs render from
+// here (not the conversation) until the last answer, so going back to change
+// one doesn't leave stale bubbles behind.
+type QuestionFlowState = {
+  order: QuestionId[];
+  index: number;
+  answers: QuestionFlowAnswers;
+  sessionMinutes: SessionMinutes;
+  note?: string;
+};
+
+type FinishedQuestionFlow = Pick<QuestionFlowState, "answers" | "sessionMinutes" | "note">;
 
 const COACH_JOB_POLL_INTERVAL_MS = 2500;
 const COACH_JOB_MAX_WAIT_MS = 180000;
@@ -135,6 +146,9 @@ export default function TrainerScreen() {
     setLatestWorkoutReview,
     hasLoaded,
     loadTrainer,
+    activeThreadId,
+    completedExerciseIds,
+    sessionCompletedAt,
   } = useCoachTrainerStore();
 
   const [draft, setDraft] = useState("");
@@ -143,6 +157,19 @@ export default function TrainerScreen() {
   const [listening, setListening] = useState(false);
   const [feeling, setFeeling] = useState<Feeling | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [questionFlow, setQuestionFlow] = useState<QuestionFlowState | null>(null);
+  const [failedFlow, setFailedFlow] = useState<FinishedQuestionFlow | null>(null);
+
+  // Questions in progress belong to the thread they started in.
+  useEffect(() => {
+    setQuestionFlow(null);
+    setFailedFlow(null);
+  }, [activeThreadId]);
+
+  const chips = useMemo(
+    () => getCoachChips(getCoachPlanState({ plan, completedExerciseIds, sessionCompletedAt }), feeling),
+    [plan, completedExerciseIds, sessionCompletedAt, feeling]
+  );
 
   useEffect(() => {
     const speechModule = loadSpeechRecognitionModule();
@@ -247,17 +274,17 @@ export default function TrainerScreen() {
 
   useEffect(() => {
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
-  }, [conversation.length, notice]);
+  }, [conversation.length, notice, questionFlow?.index]);
 
   const visibleConversation = useMemo<CoachMessage[]>(() => {
     if (conversation.length > 0) return conversation;
     return [
       {
         role: "assistant",
-        content: t("trainer.starter_message"),
+        content: plan ? t("trainer.starter_message_plan") : t("trainer.starter_message"),
       },
     ];
-  }, [conversation, t]);
+  }, [conversation, plan, t]);
 
   const activeThreads = useMemo(() => threads.filter((thread) => !thread.archivedAt), [threads]);
   const archivedThreads = useMemo(() => threads.filter((thread) => thread.archivedAt), [threads]);
@@ -331,6 +358,23 @@ export default function TrainerScreen() {
     const text = (messageText ?? draft).trim();
     if (!text || loading) return;
 
+    // While a question card is up, typing is the free-text answer to it.
+    if (questionFlow) {
+      setDraft("");
+      handleQuestionAnswer({ values: [], text });
+      return;
+    }
+
+    // No plan yet and no Coach intake already underway: a statement ("I want
+    // to get stronger") starts the question cards with it as context; a
+    // question ("What can you help with?") is just answered.
+    const startsQuestions = !plan && intakeHistory.length === 0 && !/[?？]\s*$/.test(text);
+    if (startsQuestions) {
+      setDraft("");
+      startQuestionFlow({ userText: text, note: text, introKey: "intro_note" });
+      return;
+    }
+
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -354,7 +398,7 @@ export default function TrainerScreen() {
 
     try {
       const language = i18n.language?.startsWith("es") ? ("es" as const) : ("en" as const);
-      if (!plan) {
+      if (!plan && intakeHistory.length > 0) {
         const nextHistory =
           intakeHistory.length === 0
             ? [{ role: "user" as const, content: `CONTEXT: ${JSON.stringify({ mode: "intake", units })}\n\n${text}` }]
@@ -387,6 +431,16 @@ export default function TrainerScreen() {
           console.info("[coach-timing]", { jobId: job.jobId, ...completion.timings, ...clientTiming });
           void recordCoachJobClientTiming(job.jobId, clientTiming, { authToken: session.access_token }).catch(() => undefined);
         });
+        setFailedPrompt(null);
+      } else if (!plan) {
+        const response = await callCoachTrainer({
+          mode: "chat",
+          units,
+          language,
+          currentPlan: null,
+          question: text,
+        }, { authToken: session.access_token, signal: controller.signal });
+        handleResponse(response);
         setFailedPrompt(null);
       } else if (/goal|constraint|injur|days|equipment|schedule/i.test(text)) {
         const response = await callCoachTrainer({
@@ -432,6 +486,128 @@ export default function TrainerScreen() {
       setLoading(false);
       if (abortRef.current === controller) abortRef.current = null;
     }
+  };
+
+  const startQuestionFlow = ({
+    userText,
+    note,
+    introKey,
+    sessionMinutes = 45,
+  }: {
+    userText: string;
+    note?: string;
+    introKey: "intro_create" | "intro_thirty" | "intro_next_block" | "intro_note";
+    sessionMinutes?: SessionMinutes;
+  }) => {
+    if (loading) return;
+    setNotice("");
+    setFailedFlow(null);
+    addConversationMessage({ role: "user", content: userText });
+    addConversationMessage({ role: "assistant", content: t(`trainer.question_flow.${introKey}`) });
+    // Session length is never one of the cards: it comes from the path
+    // ("I only have 30 minutes") or defaults to 45.
+    const answers: QuestionFlowAnswers = {};
+    setQuestionFlow({ order: remainingQuestions(answers), index: 0, answers, sessionMinutes, note });
+  };
+
+  const handleQuestionAnswer = (answer: QuestionAnswer) => {
+    if (!questionFlow) return;
+    const id = questionFlow.order[questionFlow.index];
+    const answers = { ...questionFlow.answers, [id]: answer };
+    if (questionFlow.index + 1 < questionFlow.order.length) {
+      setQuestionFlow({ ...questionFlow, answers, index: questionFlow.index + 1 });
+      return;
+    }
+
+    // Last answer: the Q/A pairs become real chat history, then build.
+    for (const questionId of questionFlow.order) {
+      const given = answers[questionId];
+      if (!given) continue;
+      addConversationMessage({ role: "assistant", content: t(`trainer.question_flow.${questionId}.title`) });
+      addConversationMessage({ role: "user", content: answerLabel(t, questionId, given) });
+    }
+    setQuestionFlow(null);
+    void generatePlanFromFlow({ answers, sessionMinutes: questionFlow.sessionMinutes, note: questionFlow.note });
+  };
+
+  const handleQuestionBack = () => {
+    if (!questionFlow) return;
+    if (questionFlow.index === 0) {
+      setQuestionFlow(null);
+      addConversationMessage({ role: "assistant", content: t("trainer.question_flow.cancelled") });
+      return;
+    }
+    setQuestionFlow({ ...questionFlow, index: questionFlow.index - 1 });
+  };
+
+  const generatePlanFromFlow = async (finished: FinishedQuestionFlow) => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token || !user) {
+      setFailedFlow(finished);
+      setNotice(t("trainer.session_expired_send"));
+      resetChatSession();
+      return;
+    }
+
+    const language = i18n.language?.startsWith("es") ? ("es" as const) : ("en" as const);
+    const templatePlan = buildFlowTemplatePlan(finished.answers, {
+      sessionMinutes: finished.sessionMinutes,
+      units,
+      language,
+      hasNote: !!finished.note?.trim(),
+    });
+    if (templatePlan) {
+      setFailedFlow(null);
+      handleResponse({ status: "plan_ready", summary: templatePlan.weekly_notes, plan: templatePlan });
+      return;
+    }
+
+    const controller = new AbortController();
+    abortRef.current?.abort();
+    abortRef.current = controller;
+    setLoading(true);
+    setFailedFlow(null);
+    setFailedPrompt(null);
+    setNotice(t("trainer.coach_building_plan"));
+    try {
+      const userMessage = buildFlowIntakeMessage(t, finished.answers, {
+        sessionMinutes: finished.sessionMinutes,
+        note: finished.note,
+      });
+      const response = await runCoachTrainerJob(
+        { mode: "intake", units, language, history: [], userMessage },
+        { authToken: session.access_token, signal: controller.signal }
+      );
+      const nextHistory = [{ role: "user" as const, content: `CONTEXT: ${JSON.stringify({ mode: "intake", units })}\n\n${userMessage}` }];
+      setIntakeHistory(nextHistory);
+      handleResponse(response, nextHistory);
+    } catch (error: any) {
+      setFailedFlow(finished);
+      setNotice(error?.name === "AbortError" ? t("trainer.chat_interrupted") : t("trainer.coach_connect_error"));
+    } finally {
+      setLoading(false);
+      if (abortRef.current === controller) abortRef.current = null;
+    }
+  };
+
+  const handleChipPress = (chip: CoachChip) => {
+    const label = t(chip.key);
+    if (chip.action.type === "navigate") {
+      router.push(chip.action.pathname);
+      return;
+    }
+    if (chip.action.type === "flow") {
+      const introKey = chip.action.sessionMinutes
+        ? "intro_thirty"
+        : chip.key.endsWith("build_next_block")
+          ? "intro_next_block"
+          : "intro_create";
+      startQuestionFlow({ userText: label, introKey, sessionMinutes: chip.action.sessionMinutes });
+      return;
+    }
+    submitMessage(label);
   };
 
   const handleFeelingSelect = (nextFeeling: Feeling) => {
@@ -735,6 +911,32 @@ export default function TrainerScreen() {
             <CoachMessageBubble key={`${message.role}-${index}-${message.content.slice(0, 12)}`} message={message} />
           ))}
 
+          {questionFlow
+            ? questionFlow.order.slice(0, questionFlow.index).map((questionId) => {
+                const given = questionFlow.answers[questionId];
+                if (!given) return null;
+                return (
+                  <React.Fragment key={`flow-${questionId}`}>
+                    <CoachMessageBubble message={{ role: "assistant", content: t(`trainer.question_flow.${questionId}.title`) }} />
+                    <CoachMessageBubble message={{ role: "user", content: answerLabel(t, questionId, given) }} />
+                  </React.Fragment>
+                );
+              })
+            : null}
+
+          {questionFlow ? (
+            <CoachQuestionCard
+              key={questionFlow.order[questionFlow.index]}
+              question={getQuestion(questionFlow.order[questionFlow.index])}
+              step={questionFlow.index + 1}
+              totalSteps={questionFlow.order.length}
+              initialAnswer={questionFlow.answers[questionFlow.order[questionFlow.index]]}
+              onSubmit={handleQuestionAnswer}
+              onBack={handleQuestionBack}
+              disabled={loading}
+            />
+          ) : null}
+
           {pendingPlanChange ? (
             <View style={styles.suggestionWrap}>
               <CoachSuggestionCard
@@ -759,7 +961,11 @@ export default function TrainerScreen() {
             <View style={styles.noticeCard}>
               <Ionicons name="sparkles" size={17} color={coachColors.coachGoldText} />
               <Text style={styles.noticeText}>{notice}</Text>
-              {failedPrompt ? (
+              {failedFlow ? (
+                <TouchableOpacity style={styles.resendButton} onPress={() => generatePlanFromFlow(failedFlow)} disabled={loading}>
+                  <Text style={styles.resendText}>{t("trainer.resend")}</Text>
+                </TouchableOpacity>
+              ) : failedPrompt ? (
                 <TouchableOpacity style={styles.resendButton} onPress={() => submitMessage(failedPrompt)} disabled={loading}>
                   <Text style={styles.resendText}>{t("trainer.resend")}</Text>
                 </TouchableOpacity>
@@ -772,12 +978,17 @@ export default function TrainerScreen() {
           ) : null}
         </ScrollView>
 
-        <View style={styles.quickActions}>
-          <SuggestedPrompts
-            prompts={QUICK_ACTIONS.map((action) => ({ key: action, label: t(action) }))}
-            onPress={(action) => submitMessage(t(action))}
-          />
-        </View>
+        {questionFlow ? null : (
+          <View style={styles.quickActions}>
+            <SuggestedPrompts
+              prompts={chips.map((chip) => ({ key: chip.key, label: t(chip.key) }))}
+              onPress={(key) => {
+                const chip = chips.find((item) => item.key === key);
+                if (chip) handleChipPress(chip);
+              }}
+            />
+          </View>
+        )}
 
         <View style={[styles.composerWrap, { paddingBottom: tabBarSpace }]}>
           <CoachComposer
@@ -787,7 +998,13 @@ export default function TrainerScreen() {
             onVoicePress={toggleVoiceInput}
             listening={listening}
             loading={loading}
-            placeholder={plan ? t("trainer.placeholder_plan") : t("trainer.placeholder_intake")}
+            placeholder={
+              questionFlow
+                ? t("trainer.question_flow.composer_placeholder")
+                : plan
+                  ? t("trainer.placeholder_plan")
+                  : t("trainer.placeholder_intake")
+            }
           />
         </View>
 

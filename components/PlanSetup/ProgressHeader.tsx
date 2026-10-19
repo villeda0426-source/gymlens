@@ -15,9 +15,10 @@ interface ProgressHeaderProps {
   onBack: () => void;
   backLabel: string;
   stepLabel: string; // e.g. "1 of 5" / "1 de 5", already localized
+  totalSteps?: number; // defaults to the wizard's 5
 }
 
-export default function ProgressHeader({ step, onBack, backLabel, stepLabel }: ProgressHeaderProps) {
+export default function ProgressHeader({ step, onBack, backLabel, stepLabel, totalSteps = TOTAL_STEPS }: ProgressHeaderProps) {
   const isFirst = step <= 1;
   const reduceMotion = useReduceMotion();
 
@@ -34,7 +35,7 @@ export default function ProgressHeader({ step, onBack, backLabel, stepLabel }: P
       </Pressable>
 
       <View style={styles.segments}>
-        {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
+        {Array.from({ length: totalSteps }).map((_, index) => (
           <View
             key={index}
             style={[

@@ -347,7 +347,8 @@
     "unarchive_thread": "Unarchive",
     "archived_count": "{{count}} archived conversation",
     "archived_count_plural": "{{count}} archived conversations",
-    "starter_message": "I am Coach. Tell me what you are training for, how many days you can lift, what equipment you have, and anything that hurts. I will turn it into a 21-24 day plan you can use in the Plan tab.",
+    "starter_message": "I'm Coach. Tap \"Create my 21-day plan\" and I'll ask you five quick questions, one at a time, then build your plan. You can also just ask me anything.",
+    "starter_message_plan": "I'm Coach. I know your plan — ask me to swap an exercise, work around soreness, or fit a short day.",
     "plan_ready_notice": "Your 21-24 day plan is ready in the Plan tab.",
     "session_expired_page": "Your session expired. Please continue from your Coach page.",
     "session_expired_send": "Your session expired. Please sign in again before sending this to Coach.",
@@ -395,7 +396,15 @@
       "swap_exercise": "Swap an exercise",
       "shorter": "Make this workout shorter",
       "adjust_today": "Adjust today's workout",
-      "explain": "Explain this exercise"
+      "explain": "Explain this exercise",
+      "what_can_you_do": "What can you help me with?",
+      "start_today": "Start today's workout",
+      "review_week": "Review this week",
+      "recovery_ideas": "Stretch & recovery ideas",
+      "whats_next": "What's next?",
+      "build_next_block": "Build my next block",
+      "review_progress": "Review my progress",
+      "lighter_today": "Make today lighter"
     },
     "coach_header_title": "Coach",
     "coach_header_subtitle": "Knows your plan, your gym and your progress",
@@ -407,6 +416,89 @@
       "fresh_message": "I'm feeling fresh and ready to train today.",
       "okay_message": "I'm feeling okay today.",
       "sore_message": "I'm feeling a bit sore today."
+    },
+    "question_flow": {
+      "step_of": "{{step}} of {{total}}",
+      "type_hint": "Or type your own answer below.",
+      "composer_placeholder": "Or type your own answer...",
+      "intro_create": "Let's build it. Five quick questions — tap an answer, or type your own.",
+      "intro_thirty": "Got it — I'll keep every session to 30 minutes. Five quick questions so I can build around that.",
+      "intro_next_block": "Nice work finishing your block! Five quick questions and I'll build the next one.",
+      "intro_note": "Got it. Five quick questions so I can turn that into your plan.",
+      "cancelled": "No problem. Tap \\\"Create my 21-day plan\\\" whenever you're ready.",
+      "not_answered": "not answered",
+      "intake_message": "Please build my plan now. My main goal: {{goal}}. Days per week: {{days}}. Equipment: {{equipment}}. Experience: {{experience}}. Injuries, pain, medical conditions, pregnancy, or movement limits: {{limitations}}. Session length: {{minutes}} minutes.",
+      "intake_note": "In my own words: {{note}}",
+      "goal": {
+        "title": "What's your main goal?",
+        "helper": "Pick one. You can change it anytime.",
+        "options": {
+          "strength": "Get stronger",
+          "hypertrophy": "Build muscle",
+          "fat_loss": "Lose fat",
+          "general_fitness": "General fitness",
+          "other": "Other"
+        },
+        "descriptions": {
+          "strength": "Lift more, move better",
+          "hypertrophy": "Add size and shape",
+          "fat_loss": "Burn more, keep your muscle",
+          "general_fitness": "More energy, less stiffness",
+          "other": "Tell me in your own words"
+        },
+        "text_label": "What's your goal?",
+        "text_placeholder": "e.g. Train for a hiking trip"
+      },
+      "days": {
+        "title": "How many days a week can you train?",
+        "helper": "Be realistic — consistency beats a perfect plan.",
+        "options": {
+          "1": "1 day",
+          "2": "2 days",
+          "3": "3 days",
+          "4": "4 days"
+        }
+      },
+      "equipment": {
+        "title": "What equipment do you have?",
+        "helper": "Pick all that apply.",
+        "options": {
+          "full_gym": "Full gym",
+          "barbell": "Barbell + plates",
+          "dumbbells": "Dumbbells only",
+          "kettlebells": "Kettlebells",
+          "bands": "Resistance bands",
+          "bodyweight": "Bodyweight only"
+        }
+      },
+      "experience": {
+        "title": "How much lifting experience do you have?",
+        "helper": "Pick the closest one.",
+        "options": {
+          "beginner": "Beginner",
+          "intermediate": "Intermediate",
+          "advanced": "Advanced"
+        },
+        "descriptions": {
+          "beginner": "Less than 6 months",
+          "intermediate": "6–36 months",
+          "advanced": "3+ years"
+        }
+      },
+      "limitations": {
+        "title": "Any injuries, pain, or limits I should work around?",
+        "helper": "Includes medical conditions, pregnancy, or movement limits.",
+        "options": {
+          "none": "None",
+          "yes": "Yes"
+        },
+        "descriptions": {
+          "none": "Nothing to work around",
+          "yes": "Tell me what's going on"
+        },
+        "text_label": "What should I work around?",
+        "text_placeholder": "e.g. Left knee pain on deep squats"
+      }
     },
     "coach_composer": {
       "send": "Send"

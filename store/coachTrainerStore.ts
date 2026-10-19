@@ -17,6 +17,9 @@ export type CoachTrainerThread = {
   units: Units;
   plan: CoachPlan | null;
   completedExerciseIds: string[];
+  // ISO timestamps, one per plan session finished. completedExerciseIds has
+  // no dates, so this is what tells Coach's chips "already trained today".
+  sessionCompletedAt: string[];
   intakeHistory: CoachMessage[];
   conversation: TrainerConversation[];
   latestWorkoutReview: CoachWorkoutReview | null;
@@ -56,6 +59,7 @@ interface CoachTrainerState {
   hasEnteredCoachChat: boolean;
   failedPrompt: string | null;
   completedExerciseIds: string[];
+  sessionCompletedAt: string[];
   intakeHistory: CoachMessage[];
   conversation: TrainerConversation[];
   latestWorkoutReview: CoachWorkoutReview | null;
@@ -110,7 +114,7 @@ function threadTitle(plan: CoachPlan | null, conversation: TrainerConversation[]
 
 function syncActiveThread(
   state: CoachTrainerState,
-  changes: Partial<Pick<CoachTrainerState, "units" | "plan" | "completedExerciseIds" | "intakeHistory" | "conversation" | "latestWorkoutReview">>
+  changes: Partial<Pick<CoachTrainerState, "units" | "plan" | "completedExerciseIds" | "sessionCompletedAt" | "intakeHistory" | "conversation" | "latestWorkoutReview">>
 ) {
   const now = new Date().toISOString();
   const activeThreadId = state.activeThreadId ?? makeThreadId();
@@ -125,6 +129,7 @@ function syncActiveThread(
     units: changes.units ?? state.units,
     plan,
     completedExerciseIds: changes.completedExerciseIds ?? state.completedExerciseIds,
+    sessionCompletedAt: changes.sessionCompletedAt ?? state.sessionCompletedAt,
     intakeHistory: changes.intakeHistory ?? state.intakeHistory,
     conversation,
     latestWorkoutReview: changes.latestWorkoutReview !== undefined ? changes.latestWorkoutReview : state.latestWorkoutReview,
@@ -199,6 +204,7 @@ async function persist(
     | "hasEnteredCoachChat"
     | "failedPrompt"
     | "completedExerciseIds"
+    | "sessionCompletedAt"
     | "intakeHistory"
     | "conversation"
     | "latestWorkoutReview"
@@ -216,6 +222,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
   hasEnteredCoachChat: false,
   failedPrompt: null,
   completedExerciseIds: [],
+  sessionCompletedAt: [],
   intakeHistory: [],
   conversation: [],
   latestWorkoutReview: null,
@@ -232,7 +239,12 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
   setPlan: (plan) => {
     set((state) => {
       const normalizedPlan = normalizePlanTimeline(plan);
-      return { plan: normalizedPlan, completedExerciseIds: [], ...syncActiveThread(state, { plan: normalizedPlan, completedExerciseIds: [] }) };
+      return {
+        plan: normalizedPlan,
+        completedExerciseIds: [],
+        sessionCompletedAt: [],
+        ...syncActiveThread(state, { plan: normalizedPlan, completedExerciseIds: [], sessionCompletedAt: [] }),
+      };
     });
     persist(get());
   },
@@ -273,6 +285,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
       units: thread.units,
       plan: normalizePlanTimeline(thread.plan),
       completedExerciseIds: thread.completedExerciseIds,
+      sessionCompletedAt: thread.sessionCompletedAt ?? [],
       intakeHistory: thread.intakeHistory,
       conversation: thread.conversation,
       latestWorkoutReview: thread.latestWorkoutReview,
@@ -288,6 +301,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
       activeThreadId: null,
       plan: null,
       completedExerciseIds: [],
+      sessionCompletedAt: [],
       intakeHistory: [],
       conversation: [],
       latestWorkoutReview: null,
@@ -325,7 +339,12 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
     set((state) => {
       if (state.completedExerciseIds.includes(exerciseId)) return state;
       const completedExerciseIds = [...state.completedExerciseIds, exerciseId];
-      return { completedExerciseIds, ...syncActiveThread(state, { completedExerciseIds }) };
+      const session = state.plan?.sessions.find((item) => item.exercises.some((exercise) => exercise.exercise_id === exerciseId));
+      const finishedSession = !!session && session.exercises.every((exercise) => completedExerciseIds.includes(exercise.exercise_id));
+      const sessionCompletedAt = finishedSession
+        ? [...state.sessionCompletedAt, new Date().toISOString()]
+        : state.sessionCompletedAt;
+      return { completedExerciseIds, sessionCompletedAt, ...syncActiveThread(state, { completedExerciseIds, sessionCompletedAt }) };
     });
     persist(get());
   },
@@ -333,7 +352,11 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
   unmarkExerciseCompleted: (exerciseId) => {
     set((state) => {
       const completedExerciseIds = state.completedExerciseIds.filter((id) => id !== exerciseId);
-      return { completedExerciseIds, ...syncActiveThread(state, { completedExerciseIds }) };
+      // Un-finishing a session takes back the most recent completion stamp.
+      const session = state.plan?.sessions.find((item) => item.exercises.some((exercise) => exercise.exercise_id === exerciseId));
+      const wasFinished = !!session && session.exercises.every((exercise) => state.completedExerciseIds.includes(exercise.exercise_id));
+      const sessionCompletedAt = wasFinished ? state.sessionCompletedAt.slice(0, -1) : state.sessionCompletedAt;
+      return { completedExerciseIds, sessionCompletedAt, ...syncActiveThread(state, { completedExerciseIds, sessionCompletedAt }) };
     });
     persist(get());
   },
@@ -384,6 +407,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
       hasEnteredCoachChat: false,
       failedPrompt: null,
       completedExerciseIds: [],
+      sessionCompletedAt: [],
       intakeHistory: [],
       conversation: [],
       latestWorkoutReview: null,
@@ -403,6 +427,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
       hasEnteredCoachChat: false,
       failedPrompt: null,
       completedExerciseIds: [],
+      sessionCompletedAt: [],
       intakeHistory: [],
       conversation: [],
       latestWorkoutReview: null,
@@ -428,7 +453,11 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
       // Threads saved before archiving existed won't have archivedAt at all;
       // default them to active (null) rather than leaving it undefined.
       const savedThreads: CoachTrainerThread[] = (Array.isArray(saved.threads) ? saved.threads : []).map(
-        (thread: CoachTrainerThread) => ({ ...thread, archivedAt: thread.archivedAt ?? null })
+        (thread: CoachTrainerThread) => ({
+          ...thread,
+          archivedAt: thread.archivedAt ?? null,
+          sessionCompletedAt: Array.isArray(thread.sessionCompletedAt) ? thread.sessionCompletedAt : [],
+        })
       );
       const shouldMigrateLegacy = savedThreads.length === 0 && (savedPlan || savedConversation.length > 0);
       const migratedId = shouldMigrateLegacy ? makeThreadId() : null;
@@ -441,6 +470,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
             units: saved.units === "kg" ? "kg" as const : "lbs" as const,
             plan: savedPlan,
             completedExerciseIds: Array.isArray(saved.completedExerciseIds) ? saved.completedExerciseIds : [],
+            sessionCompletedAt: Array.isArray(saved.sessionCompletedAt) ? saved.sessionCompletedAt : [],
             intakeHistory: Array.isArray(saved.intakeHistory) ? saved.intakeHistory : [],
             conversation: savedConversation,
             latestWorkoutReview: saved.latestWorkoutReview ?? null,
@@ -454,6 +484,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
         hasEnteredCoachChat: saved.hasEnteredCoachChat === true,
         failedPrompt: typeof saved.failedPrompt === "string" ? saved.failedPrompt : null,
         completedExerciseIds: Array.isArray(saved.completedExerciseIds) ? saved.completedExerciseIds : [],
+        sessionCompletedAt: Array.isArray(saved.sessionCompletedAt) ? saved.sessionCompletedAt : [],
         intakeHistory: Array.isArray(saved.intakeHistory) ? saved.intakeHistory : [],
         conversation: savedConversation,
         latestWorkoutReview: saved.latestWorkoutReview ?? null,

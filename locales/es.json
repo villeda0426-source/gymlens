@@ -347,7 +347,8 @@
     "unarchive_thread": "Restaurar",
     "archived_count": "{{count}} conversación archivada",
     "archived_count_plural": "{{count}} conversaciones archivadas",
-    "starter_message": "Soy Coach. Cuéntame para qué estás entrenando, cuántos días puedes levantar, qué equipo tienes y si hay algo que te molesta o duele. Lo convertiré en un plan de 21 a 24 días que podrás usar en la pestaña Plan.",
+    "starter_message": "Soy Coach. Toca \"Crear mi plan de 21 días\" y te haré cinco preguntas rápidas, una por una, y luego armaré tu plan. También puedes preguntarme lo que quieras.",
+    "starter_message_plan": "Soy Coach. Conozco tu plan: pídeme cambiar un ejercicio, adaptarme si estás adolorido o ajustar un día corto.",
     "plan_ready_notice": "Tu plan de 21 a 24 días está listo en la pestaña Plan.",
     "session_expired_page": "Tu sesión expiró. Continúa desde tu página de Coach.",
     "session_expired_send": "Tu sesión expiró. Inicia sesión de nuevo antes de enviar esto a Coach.",
@@ -395,7 +396,15 @@
       "swap_exercise": "Cambiar un ejercicio",
       "shorter": "Hacer esta rutina más corta",
       "adjust_today": "Ajustar la rutina de hoy",
-      "explain": "Explicar este ejercicio"
+      "explain": "Explicar este ejercicio",
+      "what_can_you_do": "¿En qué me puedes ayudar?",
+      "start_today": "Empezar la rutina de hoy",
+      "review_week": "Revisar esta semana",
+      "recovery_ideas": "Ideas de estiramiento y recuperación",
+      "whats_next": "¿Qué sigue?",
+      "build_next_block": "Crear mi siguiente bloque",
+      "review_progress": "Revisar mi progreso",
+      "lighter_today": "Hacer hoy más ligero"
     },
     "coach_header_title": "Coach",
     "coach_header_subtitle": "Conoce tu plan, tu gimnasio y tu progreso",
@@ -407,6 +416,89 @@
       "fresh_message": "Hoy me siento con energía y listo para entrenar.",
       "okay_message": "Hoy me siento bien.",
       "sore_message": "Hoy me siento algo adolorido."
+    },
+    "question_flow": {
+      "step_of": "{{step}} de {{total}}",
+      "type_hint": "O escribe tu propia respuesta abajo.",
+      "composer_placeholder": "O escribe tu propia respuesta...",
+      "intro_create": "Vamos a armarlo. Cinco preguntas rápidas: toca una respuesta o escribe la tuya.",
+      "intro_thirty": "Entendido: cada sesión será de 30 minutos. Cinco preguntas rápidas para armar tu plan con eso en mente.",
+      "intro_next_block": "¡Buen trabajo terminando tu bloque! Cinco preguntas rápidas y armo el siguiente.",
+      "intro_note": "Entendido. Cinco preguntas rápidas para convertir eso en tu plan.",
+      "cancelled": "No hay problema. Toca \\\"Crear mi plan de 21 días\\\" cuando quieras.",
+      "not_answered": "sin respuesta",
+      "intake_message": "Por favor arma mi plan ahora. Mi objetivo principal: {{goal}}. Días por semana: {{days}}. Equipo: {{equipment}}. Experiencia: {{experience}}. Lesiones, dolor, condiciones médicas, embarazo o limitaciones de movimiento: {{limitations}}. Duración de la sesión: {{minutes}} minutos.",
+      "intake_note": "En mis propias palabras: {{note}}",
+      "goal": {
+        "title": "¿Cuál es tu objetivo principal?",
+        "helper": "Elige uno. Puedes cambiarlo cuando quieras.",
+        "options": {
+          "strength": "Ganar fuerza",
+          "hypertrophy": "Ganar músculo",
+          "fat_loss": "Perder grasa",
+          "general_fitness": "Condición física general",
+          "other": "Otro"
+        },
+        "descriptions": {
+          "strength": "Levanta más, muévete mejor",
+          "hypertrophy": "Gana tamaño y forma",
+          "fat_loss": "Quema más, conserva tu músculo",
+          "general_fitness": "Más energía, menos rigidez",
+          "other": "Cuéntamelo con tus propias palabras"
+        },
+        "text_label": "¿Cuál es tu objetivo?",
+        "text_placeholder": "p. ej. Prepararme para una caminata en la montaña"
+      },
+      "days": {
+        "title": "¿Cuántos días a la semana puedes entrenar?",
+        "helper": "Sé realista: la constancia vale más que un plan perfecto.",
+        "options": {
+          "1": "1 día",
+          "2": "2 días",
+          "3": "3 días",
+          "4": "4 días"
+        }
+      },
+      "equipment": {
+        "title": "¿Con qué equipo cuentas?",
+        "helper": "Elige todos los que apliquen.",
+        "options": {
+          "full_gym": "Gimnasio completo",
+          "barbell": "Barra + discos",
+          "dumbbells": "Solo mancuernas",
+          "kettlebells": "Pesas rusas",
+          "bands": "Bandas de resistencia",
+          "bodyweight": "Solo peso corporal"
+        }
+      },
+      "experience": {
+        "title": "¿Cuánta experiencia tienes levantando pesas?",
+        "helper": "Elige la más cercana.",
+        "options": {
+          "beginner": "Principiante",
+          "intermediate": "Intermedio",
+          "advanced": "Avanzado"
+        },
+        "descriptions": {
+          "beginner": "Menos de 6 meses",
+          "intermediate": "De 6 a 36 meses",
+          "advanced": "3 años o más"
+        }
+      },
+      "limitations": {
+        "title": "¿Alguna lesión, dolor o limitación que deba tomar en cuenta?",
+        "helper": "Incluye condiciones médicas, embarazo o limitaciones de movimiento.",
+        "options": {
+          "none": "Ninguna",
+          "yes": "Sí"
+        },
+        "descriptions": {
+          "none": "Nada que tomar en cuenta",
+          "yes": "Cuéntame qué pasa"
+        },
+        "text_label": "¿Qué debo tomar en cuenta?",
+        "text_placeholder": "p. ej. Dolor en la rodilla izquierda en sentadillas profundas"
+      }
     },
     "coach_composer": {
       "send": "Enviar"
