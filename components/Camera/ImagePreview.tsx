@@ -2,6 +2,7 @@ import React from "react";
 import { View, Image, TouchableOpacity, Text, StyleSheet, Dimensions } from "react-native";
 import { useTranslation } from "react-i18next";
 import { coachColors, coachFonts } from "@/constants/theme";
+import { useTabBarSpace } from "@/components/CoachTabBar";
 
 const { width, height } = Dimensions.get("window");
 
@@ -15,6 +16,8 @@ interface ImagePreviewProps {
 
 export default function ImagePreview({ uri, onIdentify, onRetake, isLoading, error }: ImagePreviewProps) {
   const { t } = useTranslation();
+  // Above the floating tab bar, which otherwise covers these buttons.
+  const tabBarSpace = useTabBarSpace();
 
   return (
     <View style={styles.container}>
@@ -25,7 +28,7 @@ export default function ImagePreview({ uri, onIdentify, onRetake, isLoading, err
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : null}
-      <View style={styles.actions}>
+      <View style={[styles.actions, { bottom: tabBarSpace }]}>
         <TouchableOpacity onPress={onRetake} style={styles.retakeButton} disabled={isLoading}>
           <Text style={styles.retakeText}>{t("camera.retake")}</Text>
         </TouchableOpacity>
@@ -58,7 +61,6 @@ const styles = StyleSheet.create({
   },
   actions: {
     position: "absolute",
-    bottom: 50,
     left: 0,
     right: 0,
     flexDirection: "row",

@@ -1,5 +1,10 @@
 // Coach Forward Scan viewfinder — Phase 6.
-import React, { useRef, useState, useEffect } from "react";
+//
+// The Scan tab sits under the floating tab bar (components/CoachTabBar.tsx),
+// so the shutter and upload controls are lifted above it with
+// useTabBarSpace() — they used to sit at a fixed bottom: 40, i.e. directly
+// underneath the bar, where every tap on the shutter hit the bar instead.
+import React, { useCallback, useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,8 +14,11 @@ import {
   Animated,
   Easing,
   Linking,
+  Alert,
+  AppState,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
+import { useNavigation, useRouter } from "expo-router";
 import { CameraView as ExpoCameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
@@ -18,6 +26,7 @@ import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import LanguageToggle from "@/components/UI/LanguageToggle";
 import { coachColors, coachDark, coachFonts } from "@/constants/theme";
+import { useTabBarSpace } from "@/components/CoachTabBar";
 
 const { width, height } = Dimensions.get("window");
 
@@ -28,8 +37,13 @@ interface CameraViewComponentProps {
 export default function CameraViewComponent({ onCapture }: CameraViewComponentProps) {
   const { t } = useTranslation();
   const router = useRouter();
-  const [permission, requestPermission] = useCameraPermissions();
+  const navigation = useNavigation();
+  const isFocused = useIsFocused();
+  const tabBarSpace = useTabBarSpace();
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
   const cameraRef = useRef<ExpoCameraView>(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -41,21 +55,56 @@ export default function CameraViewComponent({ onCapture }: CameraViewComponentPr
     ).start();
   }, []);
 
-  const handleCapture = async () => {
-    if (!cameraRef.current) return;
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const photo = await cameraRef.current.takePictureAsync({ quality: 0.8, base64: false });
-    if (photo?.uri) onCapture(photo.uri);
-  };
+  // Coming back from Settings after granting access: re-read the
+  // permission instead of leaving the "denied" screen up.
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") getPermission().catch(() => undefined);
+    });
+    return () => subscription.remove();
+  }, [getPermission]);
+
+  // Tabs stay mounted, so the camera is only live while Scan is on screen;
+  // a fresh session each visit (the old one could come back frozen/black).
+  useEffect(() => {
+    if (!isFocused) setCameraReady(false);
+  }, [isFocused]);
+
+  const handleCapture = useCallback(async () => {
+    if (!cameraRef.current || !cameraReady || capturing) return;
+    setCapturing(true);
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8, base64: false });
+      if (photo?.uri) onCapture(photo.uri);
+    } catch {
+      Alert.alert(t("camera.capture_failed_title"), t("camera.capture_failed_message"));
+    } finally {
+      setCapturing(false);
+    }
+  }, [cameraReady, capturing, onCapture, t]);
+
+  // The raised Scan button in the tab bar doubles as a shutter while
+  // Scan is already open.
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("tabPress" as never, () => {
+      if (isFocused && permission?.granted) handleCapture();
+    });
+    return unsubscribe;
+  }, [handleCapture, isFocused, navigation, permission?.granted]);
 
   const handleUpload = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]) {
-      onCapture(result.assets[0].uri);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        onCapture(result.assets[0].uri);
+      }
+    } catch {
+      Alert.alert(t("camera.capture_failed_title"), t("camera.upload_failed_message"));
     }
   };
 
@@ -72,7 +121,7 @@ export default function CameraViewComponent({ onCapture }: CameraViewComponentPr
           {t(canRequestPermission ? "camera.permission_message" : "camera.permission_denied_message")}
         </Text>
         <TouchableOpacity
-          onPress={canRequestPermission ? requestPermission : () => Linking.openSettings()}
+          onPress={canRequestPermission ? () => requestPermission() : () => Linking.openSettings()}
           style={styles.permissionButton}
         >
           <Text style={styles.permissionButtonText}>
@@ -95,7 +144,17 @@ export default function CameraViewComponent({ onCapture }: CameraViewComponentPr
 
   return (
     <View style={styles.container}>
-      <ExpoCameraView ref={cameraRef} style={styles.camera} facing="back" />
+      {isFocused ? (
+        <ExpoCameraView
+          ref={cameraRef}
+          style={styles.camera}
+          facing="back"
+          onCameraReady={() => setCameraReady(true)}
+          onMountError={() => Alert.alert(t("camera.capture_failed_title"), t("camera.unavailable_message"))}
+        />
+      ) : (
+        <View style={styles.camera} />
+      )}
 
       <View style={styles.overlay} pointerEvents="box-none">
         <View style={styles.header}>
@@ -112,7 +171,7 @@ export default function CameraViewComponent({ onCapture }: CameraViewComponentPr
 
         <Text style={styles.hint}>{t("camera.capture")}</Text>
 
-        <View style={styles.controls}>
+        <View style={[styles.controls, { bottom: tabBarSpace + 16 }]}>
           <TouchableOpacity onPress={handleUpload} style={styles.uploadButton}>
             <View style={styles.uploadIconWrap}>
               <Ionicons name="images-outline" size={26} color={coachDark.text} />
@@ -121,7 +180,14 @@ export default function CameraViewComponent({ onCapture }: CameraViewComponentPr
           </TouchableOpacity>
 
           <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-            <TouchableOpacity onPress={handleCapture} style={styles.captureOuter} activeOpacity={0.9}>
+            <TouchableOpacity
+              onPress={handleCapture}
+              style={[styles.captureOuter, (!cameraReady || capturing) && styles.captureDisabled]}
+              activeOpacity={0.9}
+              disabled={!cameraReady || capturing}
+              accessibilityRole="button"
+              accessibilityLabel={t("camera.take_photo")}
+            >
               <View style={styles.captureInner} />
             </TouchableOpacity>
           </Animated.View>
@@ -189,7 +255,6 @@ const styles = StyleSheet.create({
   hint: { color: coachDark.textSecondary, fontFamily: coachFonts.body, textAlign: "center", marginTop: 16, fontSize: 13 },
   controls: {
     position: "absolute",
-    bottom: 40,
     left: 0,
     right: 0,
     flexDirection: "row",
@@ -220,6 +285,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  captureDisabled: { opacity: 0.6 },
   captureInner: {
     width: 60,
     height: 60,

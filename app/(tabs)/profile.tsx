@@ -22,11 +22,10 @@ export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const tabBarSpace = useTabBarSpace();
-  const { user, profile, signOut, updateProfileName, deleteAccount } = useAuthStore();
+  const { user, profile, signOut, updateProfileName } = useAuthStore();
   const [name, setName] = useState(profile?.username || "");
   const [editingName, setEditingName] = useState(!profile?.username);
   const [savingName, setSavingName] = useState(false);
-  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     setName(profile?.username || "");
@@ -48,22 +47,6 @@ export default function ProfileScreen() {
     Alert.alert(t("auth.logout"), t("profile.sign_out_confirm"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("auth.logout"), style: "destructive", onPress: signOut },
-    ]);
-  };
-
-  const handleDeleteAccount = () => {
-    Alert.alert(t("profile.delete_account"), t("profile.delete_account_confirm"), [
-      { text: t("common.cancel"), style: "cancel" },
-      {
-        text: t("profile.delete_account_action"),
-        style: "destructive",
-        onPress: async () => {
-          setDeletingAccount(true);
-          const result = await deleteAccount();
-          setDeletingAccount(false);
-          if (result.error) Alert.alert(t("profile.delete_account_error"), result.error);
-        },
-      },
     ]);
   };
 
@@ -153,7 +136,7 @@ export default function ProfileScreen() {
             ) : null}
           </View>
 
-          <View style={[styles.row, styles.rowLast]}>
+          <View style={styles.row}>
             <View style={styles.rowLead}>
               <View style={styles.rowIcon}>
                 <Ionicons name="language-outline" size={19} color={coachColors.coral} />
@@ -162,30 +145,29 @@ export default function ProfileScreen() {
             </View>
             <LanguageToggle />
           </View>
+
+          <TouchableOpacity
+            style={[styles.row, styles.rowLast]}
+            onPress={() => router.push("/account-settings")}
+            accessibilityRole="button"
+          >
+            <View style={styles.rowLead}>
+              <View style={styles.rowIcon}>
+                <Ionicons name="settings-outline" size={19} color={coachColors.coral} />
+              </View>
+              <Text style={styles.rowLabel}>{t("account_settings.title")}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={coachColors.textSecondary} />
+          </TouchableOpacity>
         </View>
 
-        {/* Destructive actions, visually separated and last (QA #18): Log Out
-            moved below the settings group instead of sitting right after it;
-            Delete Account de-emphasized further still, below Log Out, as a
-            plain link rather than its own bordered card+button — still
-            behind the same confirmation dialog, just no longer the kind of
-            prominent one-tap target a bordered destructive button reads as. */}
+        {/* Log Out, visually separated and last (QA #18). Delete Account
+            lives only in Account Settings now, behind its own confirmation
+            screen — never on this main tab. */}
         <View style={styles.dangerZone}>
           <TouchableOpacity style={styles.logoutRow} onPress={handleSignOut}>
             <Ionicons name="log-out-outline" size={19} color={coachColors.text} />
             <Text style={styles.logoutText}>{t("auth.logout")}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.deleteLink}
-            onPress={handleDeleteAccount}
-            disabled={deletingAccount}
-          >
-            {deletingAccount ? (
-              <ActivityIndicator color={coachColors.coral} size="small" />
-            ) : (
-              <Text style={styles.deleteLinkText}>{t("profile.delete_account_action")}</Text>
-            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -271,6 +253,4 @@ const styles = StyleSheet.create({
     backgroundColor: coachColors.card, borderWidth: 1, borderColor: coachColors.border,
   },
   logoutText: { color: coachColors.text, fontSize: 15, fontFamily: coachFonts.bodySemiBold },
-  deleteLink: { alignItems: "center", justifyContent: "center", paddingVertical: 16 },
-  deleteLinkText: { color: coachColors.coral, fontSize: 13, fontFamily: coachFonts.bodySemiBold },
 });

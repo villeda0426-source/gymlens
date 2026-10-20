@@ -6,7 +6,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  InputAccessoryView,
   Keyboard,
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -36,6 +38,10 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { useWorkoutGuideStore } from "@/store/workoutGuideStore";
+
+// iOS number pads have no return key; this bar rides on top of the keyboard
+// so a set can be added (or the keyboard closed) mid-entry.
+const SET_KEYBOARD_BAR = "workout-log-set-keyboard";
 
 interface LocalSet {
   id: string | null; // null = draft, not yet written to the database
@@ -317,6 +323,8 @@ export default function WorkoutLogScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+          keyboardDismissMode="interactive"
         >
           <Text style={styles.exerciseName}>{exerciseName}</Text>
           <Text style={styles.prescription}>{t("workout_log.planned_sets_reps", { count: plannedSetCount, min: repMin, max: repMax })}</Text>
@@ -356,6 +364,7 @@ export default function WorkoutLogScreen() {
                     onBlur={() => persistSet(set)}
                     keyboardType="number-pad"
                     maxLength={3}
+                    inputAccessoryViewID={Platform.OS === "ios" ? SET_KEYBOARD_BAR : undefined}
                     accessibilityLabel={t("workout_log.reps_label", { set: set.setNumber })}
                   />
                 </View>
@@ -369,6 +378,7 @@ export default function WorkoutLogScreen() {
                     onBlur={() => persistSet(set)}
                     onSubmitEditing={() => Keyboard.dismiss()}
                     keyboardType="decimal-pad"
+                    inputAccessoryViewID={Platform.OS === "ios" ? SET_KEYBOARD_BAR : undefined}
                     placeholder={t("workout_log.bodyweight")}
                     placeholderTextColor={coachColors.textSecondary}
                     maxLength={6}
@@ -395,6 +405,13 @@ export default function WorkoutLogScreen() {
               </View>
             ))}
 
+            {/* Right under the last set, inside the table, so it's in reach
+                while entering reps/weight — not at the bottom of the page. */}
+            <TouchableOpacity style={styles.addSetButton} onPress={handleAddSet} accessibilityRole="button">
+              <Ionicons name="add" size={18} color={DARK_TEXT} />
+              <Text style={styles.addSetText}>{t("workout_log.add_set")}</Text>
+            </TouchableOpacity>
+
             {sets.some((s) => s.error) ? (
               <View style={styles.errorRow}>
                 <Ionicons name="alert-circle-outline" size={16} color={coachColors.coral} />
@@ -412,13 +429,22 @@ export default function WorkoutLogScreen() {
           </View>
 
           {guide ? <ExerciseLearningCard guide={guide} embedded /> : null}
-
-          <TouchableOpacity style={styles.addSetButton} onPress={handleAddSet} accessibilityRole="button">
-            <Ionicons name="add" size={18} color={coachColors.text} />
-            <Text style={styles.addSetText}>{t("workout_log.add_set")}</Text>
-          </TouchableOpacity>
         </ScrollView>
       )}
+
+      {Platform.OS === "ios" ? (
+        <InputAccessoryView nativeID={SET_KEYBOARD_BAR}>
+          <View style={styles.keyboardBar}>
+            <TouchableOpacity style={styles.keyboardBarAdd} onPress={handleAddSet} accessibilityRole="button">
+              <Ionicons name="add" size={18} color={DARK_TEXT} />
+              <Text style={styles.addSetText}>{t("workout_log.add_set")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => Keyboard.dismiss()} accessibilityRole="button" hitSlop={8}>
+              <Text style={styles.keyboardBarDone}>{t("workout_log.keyboard_done")}</Text>
+            </TouchableOpacity>
+          </View>
+        </InputAccessoryView>
+      ) : null}
     </SafeScreen>
   );
 }
@@ -519,11 +545,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    height: 52,
+    height: 48,
     borderRadius: radii.pill,
     borderWidth: 1.5,
-    borderColor: DARK_BORDER,
-    marginBottom: spacing.xl,
+    borderStyle: "dashed",
+    borderColor: "rgba(255,255,255,0.28)",
+    marginTop: spacing.xs,
   },
+  keyboardBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: DARK_PANEL,
+    borderTopWidth: 1,
+    borderTopColor: DARK_BORDER,
+  },
+  keyboardBarAdd: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    height: 38,
+    paddingHorizontal: 14,
+    borderRadius: radii.pill,
+    backgroundColor: "rgba(255,255,255,0.1)",
+  },
+  keyboardBarDone: { color: coachColors.coral, fontFamily: coachFonts.bodyExtraBold, fontSize: 15 },
   addSetText: { color: DARK_TEXT, fontFamily: coachFonts.bodyExtraBold, fontSize: 15 },
 });

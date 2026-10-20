@@ -12,7 +12,6 @@
     "back": "Back",
     "next": "Next",
     "done": "Done",
-    "continue": "Continue",
     "or": "or",
     "and": "and"
   },
@@ -43,7 +42,12 @@
     "permission_denied_message": "To scan gym equipment, allow camera access for SpotLift in Settings. You can still use the rest of the app without it.",
     "open_settings": "Open Settings",
     "search_manually": "Search manually instead",
-    "no_camera": "No camera available"
+    "no_camera": "No camera available",
+    "take_photo": "Take photo",
+    "capture_failed_title": "Couldn't take the photo",
+    "capture_failed_message": "Something went wrong with the camera. Try again, or upload a photo from your library.",
+    "upload_failed_message": "Couldn't open your photo library. Try again.",
+    "unavailable_message": "The camera couldn't start. Close and reopen Scan, or upload a photo from your library."
   },
   "scan_result": {
     "looks_like": "Looks like",
@@ -110,7 +114,14 @@
       "4": "Progressive overload — gradually increase weight or reps each week.",
       "5": "Sleep is when your muscles grow. Aim for 7–9 hours per night.",
       "6": "Compound movements like squats and deadlifts give the best ROI."
-    }
+    },
+    "next_workout_eyebrow": "Up next · Workout {{number}}",
+    "workouts_progress": "{{done}} OF {{total}} WORKOUTS DONE",
+    "rest_day_note": "Coach suggests a rest day first. Train when you feel ready.",
+    "plan_complete_eyebrow": "Plan complete",
+    "plan_complete_title": "You finished every workout",
+    "plan_complete_body": "Build your next block with Coach to keep progressing.",
+    "plan_complete_cta": "Build my next block"
   },
   "equipment": {
     "tutorial": "Tutorial",
@@ -315,7 +326,8 @@
     "pr_label": "Personal record for set {{set}}",
     "set_label": "Set {{set}}",
     "could_not_load": "Couldn't load your sets. Try again.",
-    "back": "Back"
+    "back": "Back",
+    "keyboard_done": "Done"
   },
   "trainer": {
     "personal_trainer": "Coach",
@@ -498,6 +510,20 @@
         },
         "text_label": "What should I work around?",
         "text_placeholder": "e.g. Left knee pain on deep squats"
+      },
+      "instructions": {
+        "title": "Anything else I should know before I build it?",
+        "helper": "Optional. Instructions here win over your answers above.",
+        "options": {
+          "none": "No, build my plan",
+          "add": "Add instructions"
+        },
+        "descriptions": {
+          "none": "Use my answers as they are",
+          "add": "e.g. no running, only dumbbells"
+        },
+        "text_label": "Your instructions",
+        "text_placeholder": "e.g. No running this week, keep it to 30 minutes"
       }
     },
     "coach_composer": {
@@ -570,11 +596,11 @@
     "done_button": "Done"
   },
   "plan": {
-    "title": "This Week",
+    "title": "Your plan",
     "eyebrow": "Plan",
     "coach": "Coach",
-    "empty_title": "No weekly plan yet",
-    "empty_text": "Chat with Coach in the Trainer tab and ask for a weekly plan. It will appear here automatically.",
+    "empty_title": "No plan yet",
+    "empty_text": "Ask Coach for a plan. It will appear here, with your workouts in order.",
     "create_with_coach": "Create Plan With Coach",
     "todays_workout": "Today's Workout",
     "min": "min",
@@ -656,6 +682,48 @@
       "worlds_greatest": "World’s greatest stretch — 4/side",
       "jumping_jacks": "Jumping jacks — 45 sec",
       "inchworm": "Inchworm walkouts — 6 reps"
+    },
+    "workout_number": "Workout {{number}}",
+    "workout_short": "W{{number}}",
+    "workout_of": "Workout {{current}} of {{total}}",
+    "all_workouts_done": "All {{total}} workouts done",
+    "done_to_go": "{{done}} done · {{left}} to go",
+    "per_week": "{{count}}×/week",
+    "up_next": "Up next · Workout {{number}}",
+    "up_next_rest": "Up next · Recovery",
+    "start_workout_number": "Start workout {{number}}",
+    "continue_workout": "Continue workout",
+    "view_details": "View exercises",
+    "rest_day": "Rest day",
+    "rest_then": "Then Workout {{number}}.",
+    "train_anyway": "Feeling fresh? Start Workout {{number}}",
+    "rest_tips": {
+      "lower": "Your legs did the heavy lifting. A 20-minute walk and some hip and calf mobility will help them bounce back.",
+      "upper": "Give your upper body a break. Gentle shoulder circles and a chest stretch keep things loose.",
+      "full": "Recovery is where you get stronger. Sleep 7–9 hours, drink water, and keep moving lightly."
+    },
+    "your_workouts": "Your workouts",
+    "in_order_hint": "Do them in order, on whatever days suit you.",
+    "week_label": "Week {{number}}",
+    "next": "NEXT",
+    "row_meta": "{{minutes}} min · {{count}} exercise",
+    "row_meta_plural": "{{minutes}} min · {{count}} exercises",
+    "dose": "{{sets}} sets · {{min}}-{{max}} reps",
+    "complete_eyebrow": "Plan complete",
+    "build_next_plan_cta": "Build my next block",
+    "goal_names": {
+      "strength": "Get stronger",
+      "hypertrophy": "Build muscle",
+      "fat_loss": "Lose fat",
+      "general_fitness": "General fitness"
+    },
+    "goal_types": {
+      "strength": "Strength",
+      "hypertrophy": "Muscle",
+      "fat_loss": "Fat loss",
+      "endurance": "Endurance",
+      "general_fitness": "General fitness",
+      "sport_specific": "Sport"
     }
   },
   "avatar_progress": {
@@ -748,7 +816,15 @@
     "changes_title": "Changes for next week",
     "approve": "Approve changes",
     "edit": "Edit",
-    "approved_notice": "Approved. Coach will use these changes starting next week."
+    "approved_notice": "Approved. Coach will use these changes starting next week.",
+    "mock": {
+      "headline": "workouts done. Nice week.",
+      "leg_press_progress": "Leg press is up 10 kg since week 1.",
+      "last_workout_skipped": "The last workout of the week keeps getting skipped.",
+      "shorter_last_workout": "Make the last workout of the week 15 minutes shorter.",
+      "add_leg_press_load": "Add 2.5 kg to leg press.",
+      "keep_cable_fly": "Keep cable fly instead of chest press."
+    }
   },
   "plan_setup": {
     "close": "Close",
@@ -846,7 +922,10 @@
       "area_label": "Which area?",
       "area_placeholder": "e.g. left knee",
       "disclaimer": "SpotLift gives general fitness guidance, not medical advice.",
-      "session_expired": "Sign in again before building your plan."
+      "session_expired": "Sign in again before building your plan.",
+      "instructions_label": "Anything else? (optional)",
+      "instructions_placeholder": "e.g. no running, only dumbbells, 30-minute workouts",
+      "instructions_hint": "These override your answers above for this plan."
     },
     "consent": {
       "title": "Use this to tailor your plan?",
@@ -874,7 +953,7 @@
       "chip_minutes": "{{minutes}} min",
       "week_1": "Week 1",
       "moves_count": "{{count}} moves",
-      "start_day_1": "Start day 1",
+      "start_day_1": "Start Workout 1",
       "tweak_with_coach": "Tweak it with Coach",
       "plan_name_fallback": "Your training plan"
     }
@@ -889,5 +968,71 @@
     "blocked_title": "Not old enough yet",
     "blocked_body": "You need to be at least {{age}} to use SpotLift. Please check back when you meet the minimum age.",
     "sign_out": "Sign out"
+  },
+  "account_settings": {
+    "title": "Account settings",
+    "account": "Account",
+    "email": "Email",
+    "member_since": "Member since",
+    "data_note": "Your plans, Coach chats, workout logs, and scans are stored with this account.",
+    "delete_hint": "Opens a confirmation screen. Nothing is deleted yet."
+  },
+  "delete_account": {
+    "title": "Delete your account?",
+    "intro": "Deleting your account removes everything SpotLift has saved for you:",
+    "lost": {
+      "profile": "Your profile, name, and sign-in account",
+      "plans": "Your workout plans and every Coach conversation",
+      "workouts": "Workout logs, personal bests, feedback, and muscle progress",
+      "scans": "Equipment scans and saved equipment"
+    },
+    "permanent": "This is permanent and can't be undone. You'd need to start over with a new account.",
+    "confirm_word": "DELETE",
+    "type_to_confirm": "Type {{word}} to confirm",
+    "keep": "Keep my account"
+  },
+  "plan_options": {
+    "eyebrow_plan": "PICK YOUR PLAN",
+    "eyebrow_workout": "PICK YOUR WORKOUT",
+    "hint": "Swipe to compare. Nothing is saved until you choose.",
+    "option": "Option {{id}}",
+    "intensity": {
+      "light": "Light",
+      "moderate": "Moderate",
+      "high": "High intensity"
+    },
+    "per_week": "per week",
+    "exercises": "exercises",
+    "minutes": "minutes",
+    "choose": "Choose this",
+    "choose_label": "Choose option {{id}}",
+    "adjust": "Adjust this",
+    "adjust_label": "Adjust option {{id}}",
+    "adjust_placeholder": "e.g. no running, only dumbbells, make it 30 minutes",
+    "adjust_submit": "Update option",
+    "adjusting": "Coach is adjusting this option…",
+    "adjust_failed": "Coach couldn't adjust that option. Try again.",
+    "adjust_message": "Adjust option {{id}}: {{instructions}}",
+    "intro_plan": "I built two different plans for you. Compare them and pick the one you like — or tell me what to change.",
+    "intro_workout": "Here are two takes on your next workout with your instructions. Pick one — it only replaces that workout.",
+    "only_one": "Coach could only build one option this time. Pick it, or type what you'd like changed to try again.",
+    "chose": "Option {{id}}",
+    "workout_updated": "Done — Workout {{number}} now follows your instructions. The rest of your plan stays the same.",
+    "composer_placeholder": "Add instructions to rebuild both options…",
+    "no_next_workout": "You've finished every workout in this plan. Tap \"Build my next block\" and I'll use your instructions there.",
+    "profile_question": "That sounds like a lasting change. Want me to update your saved profile too ({{change}})?",
+    "profile_yes": "Update my profile",
+    "profile_no": "Just this time",
+    "profile_saved": "Saved. I'll use that for your future plans.",
+    "profile_save_failed": "I couldn't save that to your profile. Your plan is still updated — try again later.",
+    "profile_kept": "Okay, your saved profile stays the same.",
+    "location": {
+      "full_gym": "full gym",
+      "dumbbells_home": "dumbbells only",
+      "bodyweight": "bodyweight only"
+    },
+    "minutes_value": "{{count}} minutes",
+    "choose_title": "Pick your plan",
+    "choose_helper": "Coach built two different plans from your answers. Compare them, adjust either one, then choose."
   }
 }

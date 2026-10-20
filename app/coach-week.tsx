@@ -22,13 +22,13 @@ export default function CoachWeekScreen() {
 
   useEffect(() => {
     let active = true;
-    getCoachWeekSummary(plan).then((result) => {
+    getCoachWeekSummary(plan, t).then((result) => {
       if (active) setSummary(result);
     });
     return () => {
       active = false;
     };
-  }, [plan]);
+  }, [plan, t]);
 
   const handleApprove = () => {
     if (!summary) return;

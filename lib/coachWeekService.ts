@@ -46,7 +46,10 @@ export type CoachWeekSummary = {
 
 // TODO: backend. Mock content, mirroring the Coach Forward mockup
 // (CoachWeek.html) until a real weekly-check-in endpoint exists.
-export async function getCoachWeekSummary(plan: CoachPlan | null): Promise<CoachWeekSummary> {
+export async function getCoachWeekSummary(
+  plan: CoachPlan | null,
+  t: (key: string, options?: Record<string, unknown>) => string
+): Promise<CoachWeekSummary> {
   const workoutsPlanned = plan?.days_per_week ?? 4;
   const workoutsCompleted = Math.min(workoutsPlanned, 3);
 
@@ -54,24 +57,21 @@ export async function getCoachWeekSummary(plan: CoachPlan | null): Promise<Coach
     weekNumber: 3,
     workoutsCompleted,
     workoutsPlanned,
-    headline: "workouts done. Nice week.",
-    days: [
-      { label: "M", status: "done", intensity: 0.7 },
-      { label: "T", status: "rest", intensity: 0.1 },
-      { label: "W", status: "done", intensity: 0.9 },
-      { label: "T", status: "rest", intensity: 0.1 },
-      { label: "F", status: "rest", intensity: 0.1 },
-      { label: "S", status: "done", intensity: 1 },
-      { label: "S", status: "rest", intensity: 0.1 },
-    ],
+    headline: t("coach_week.mock.headline"),
+    // One bar per workout in order (no weekdays — workouts aren't tied to them).
+    days: Array.from({ length: Math.max(workoutsPlanned, 1) }, (_, index) => ({
+      label: t("plan.workout_short", { number: index + 1 }),
+      status: index < workoutsCompleted ? ("done" as const) : ("rest" as const),
+      intensity: [0.7, 0.9, 1, 0.8, 0.6, 0.75][index % 6],
+    })),
     observations: [
-      { id: "leg-press-progress", tone: "positive", text: "Leg press is up 10 kg since week 1." },
-      { id: "friday-skipped", tone: "attention", text: "Friday sessions keep getting skipped." },
+      { id: "leg-press-progress", tone: "positive", text: t("coach_week.mock.leg_press_progress") },
+      { id: "last-workout-skipped", tone: "attention", text: t("coach_week.mock.last_workout_skipped") },
     ],
     changes: [
-      { id: "move-friday", text: "Move Friday's workout to Saturday morning." },
-      { id: "add-leg-press-load", text: "Add 2.5 kg to leg press." },
-      { id: "keep-cable-fly", text: "Keep cable fly instead of chest press." },
+      { id: "shorter-last-workout", text: t("coach_week.mock.shorter_last_workout") },
+      { id: "add-leg-press-load", text: t("coach_week.mock.add_leg_press_load") },
+      { id: "keep-cable-fly", text: t("coach_week.mock.keep_cable_fly") },
     ],
   };
 }

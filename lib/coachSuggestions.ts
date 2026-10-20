@@ -4,6 +4,7 @@
 // sees "Create my 21-day plan".
 import type { CoachPlan } from "@/lib/coachTrainer";
 import type { Feeling } from "@/components/Coach/FeelingCheckIn";
+import { buildPlanSequence, nextSequenceItem } from "@/lib/planSequence";
 
 export type CoachPlanState = "no_plan" | "workout_today" | "rest_or_done" | "plan_finished";
 
@@ -19,18 +20,6 @@ export interface CoachChip {
   action: CoachChipAction;
 }
 
-function isSameLocalDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-function startOfLocalWeek(now: Date): Date {
-  // Monday-start week, matching the Coach week view.
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const offset = (start.getDay() + 6) % 7;
-  start.setDate(start.getDate() - offset);
-  return start;
-}
-
 export function getCoachPlanState(args: {
   plan: CoachPlan | null;
   completedExerciseIds: string[];
@@ -40,22 +29,12 @@ export function getCoachPlanState(args: {
   const { plan, completedExerciseIds, sessionCompletedAt, now = new Date() } = args;
   if (!plan || plan.sessions.length === 0) return "no_plan";
 
-  const allDone = plan.sessions.every(
-    (session) =>
-      session.exercises.length > 0 &&
-      session.exercises.every((exercise) => completedExerciseIds.includes(exercise.exercise_id))
-  );
-  if (allDone) return "plan_finished";
-
-  const completions = sessionCompletedAt.map((iso) => new Date(iso)).filter((date) => !Number.isNaN(date.getTime()));
-  if (completions.some((date) => isSameLocalDay(date, now))) return "rest_or_done";
-
-  // Plans are a sequence of sessions, not calendar days — so "rest day" means
-  // this week's target is already met.
-  const weekStart = startOfLocalWeek(now);
-  const doneThisWeek = completions.filter((date) => date >= weekStart).length;
-  if (doneThisWeek >= Math.max(1, Math.round(plan.days_per_week || 1))) return "rest_or_done";
-
+  // Plans are an ordered sequence (Workout 1, Workout 2, Rest, ...), not
+  // calendar days: "rest" means the next thing in order is a rest day.
+  const sequence = buildPlanSequence({ plan, completedExerciseIds, sessionCompletedAt, now });
+  const next = nextSequenceItem(sequence);
+  if (!next) return "plan_finished";
+  if (next.type === "rest") return "rest_or_done";
   return "workout_today";
 }
 

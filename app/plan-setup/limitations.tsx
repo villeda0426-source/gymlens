@@ -37,6 +37,8 @@ export default function PlanSetupLimitationsScreen() {
     setLimitationArea,
     setChestPainCleared,
     setConsentGranted,
+    instructions,
+    setInstructions,
     submit,
   } = usePlanSetupStore();
 
@@ -132,7 +134,12 @@ export default function PlanSetupLimitationsScreen() {
 
   return (
     <SafeScreen edges={["top", "bottom"]} style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+      >
         <ProgressHeader
           step={5}
           onBack={() => router.back()}
@@ -202,6 +209,22 @@ export default function PlanSetupLimitationsScreen() {
           </View>
         ) : null}
 
+        {/* Optional custom instructions. They override the answers above
+            for this plan (e.g. "no running", "only dumbbells"). */}
+        <View style={styles.areaField}>
+          <Text style={styles.areaLabel}>{t("plan_setup.limitations.instructions_label")}</Text>
+          <TextInput
+            value={instructions}
+            onChangeText={setInstructions}
+            placeholder={t("plan_setup.limitations.instructions_placeholder")}
+            placeholderTextColor={coachColors.textSecondary}
+            style={[styles.areaInput, styles.instructionsInput]}
+            multiline
+            accessibilityLabel={t("plan_setup.limitations.instructions_label")}
+          />
+          <Text style={styles.instructionsHint}>{t("plan_setup.limitations.instructions_hint")}</Text>
+        </View>
+
         <Text style={styles.disclaimer}>{t("plan_setup.limitations.disclaimer")}</Text>
         {submitError ? <Text style={styles.error}>{submitError}</Text> : null}
       </ScrollView>
@@ -269,6 +292,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: coachColors.text,
   },
+  instructionsInput: { height: undefined, minHeight: 72, paddingTop: 12, paddingBottom: 12, textAlignVertical: "top" },
+  instructionsHint: { fontFamily: coachFonts.body, fontSize: 13, color: coachColors.textSecondary },
   disclaimer: { fontFamily: coachFonts.body, fontSize: 13, lineHeight: 19, color: coachColors.textSecondary },
   error: { fontFamily: coachFonts.bodyBold, fontSize: 13, color: coachColors.coralPressed },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 },

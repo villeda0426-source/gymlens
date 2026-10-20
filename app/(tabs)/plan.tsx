@@ -2,10 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
+  Animated,
+  Easing,
   Modal,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
+  Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Switch,
@@ -15,7 +16,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Circle } from "react-native-svg";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import SafeScreen from "@/components/Layout/SafeScreen";
@@ -29,7 +30,17 @@ import MuscleMapView from "@/components/Equipment/MuscleMapView";
 import SafetyTips from "@/components/Equipment/SafetyTips";
 import TutorialSteps from "@/components/Equipment/TutorialSteps";
 import VideoList, { VideoItem } from "@/components/Equipment/VideoList";
-import { coachColors, coachFonts } from "@/constants/theme";
+import { coachColors, coachFonts, radii, spacing } from "@/constants/theme";
+import CoachIcon from "@/components/Coach/CoachIcon";
+import { useReduceMotion } from "@/hooks/useReduceMotion";
+import {
+  buildPlanSequence,
+  nextSequenceItem,
+  nextWorkoutItem,
+  sessionDisplayName,
+  type PlanSequenceItem,
+  type RestTipKey,
+} from "@/lib/planSequence";
 import { useTabBarSpace } from "@/components/CoachTabBar";
 import { apiFetch } from "@/lib/api";
 import {
@@ -73,16 +84,13 @@ async function waitForNextPlan(jobId: string, authToken: string) {
   throw new Error("Next plan generation timed out.");
 }
 
-const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const PLAN_CARD_WIDTH = SCREEN_WIDTH - 40;
-const PLAN_CARD_GAP = 12;
-const PLAN_DARK = "#0d0d0e";
-const PLAN_PANEL = "#181819";
-const PLAN_PANEL_SOFT = "#222224";
-const PLAN_BORDER = "rgba(255,255,255,0.12)";
-const PLAN_MUTED = "rgba(255,255,255,0.62)";
-const PLAN_TEXT = "#f7f7f7";
+// Light Coach Forward palette, same tokens as Home and Coach.
+const PLAN_DARK = coachColors.bg;
+const PLAN_PANEL = coachColors.card;
+const PLAN_PANEL_SOFT = "#ebe7de";
+const PLAN_BORDER = coachColors.border;
+const PLAN_MUTED = coachColors.textSecondary;
+const PLAN_TEXT = coachColors.text;
 const LEVEL_MULTIPLIERS: Record<Level, number> = { Beginner: 1, Intermediate: 1.35, Advanced: 1.65 };
 
 function estimateLoadFactor(muscles: string[]): number {
@@ -94,10 +102,6 @@ function estimateLoadFactor(muscles: string[]): number {
   return 0.25;
 }
 
-function dayName(index: number): string {
-  return DAY_NAMES[index % DAY_NAMES.length];
-}
-
 function uniqueMuscles(exercises: PlanExercise[]): string[] {
   const seen = new Set<string>();
   for (const exercise of exercises) {
@@ -106,10 +110,6 @@ function uniqueMuscles(exercises: PlanExercise[]): string[] {
     }
   }
   return Array.from(seen).slice(0, 4);
-}
-
-function isSessionComplete(session: CoachPlan["sessions"][number], completedIds: string[]): boolean {
-  return session.exercises.length > 0 && session.exercises.every((exercise) => completedIds.includes(exercise.exercise_id));
 }
 
 function fallbackExerciseGuide(exercise: PlanExercise, isEs: boolean): ExerciseGuide {
@@ -166,145 +166,6 @@ function PlanEmptyState() {
         <Text style={styles.primaryButtonText}>{t("plan.create_with_coach")}</Text>
       </TouchableOpacity>
     </View>
-  );
-}
-
-interface WorkoutDayCardProps {
-  session: CoachPlan["sessions"][number];
-  index: number;
-  completedIds: string[];
-  completingId: string | null;
-  onCompleteExercise: (exercise: PlanExercise) => void;
-  onUncompleteExercise: (exercise: PlanExercise) => void;
-  onOpenWorkout: (session: CoachPlan["sessions"][number], index: number) => void;
-  onOpenExercise: (exercise: PlanExercise, session: CoachPlan["sessions"][number]) => void;
-  onOpenStretch: (stretch: string, label: string, targetMuscles: string[]) => void;
-  // QA: Plan screen hero removal — the whole-plan percentage the removed
-  // hero showed moves onto the current/today card only, not every card in
-  // the carousel (that would just redundantly repeat the same number).
-  isToday?: boolean;
-  planProgress?: number;
-}
-
-function WorkoutDayCard({
-  session,
-  index,
-  completedIds,
-  completingId,
-  onCompleteExercise,
-  onUncompleteExercise,
-  onOpenWorkout,
-  onOpenExercise,
-  onOpenStretch,
-  isToday,
-  planProgress,
-}: WorkoutDayCardProps) {
-  const { t } = useTranslation();
-  const completedCount = session.exercises.filter((exercise) => completedIds.includes(exercise.exercise_id)).length;
-  const isComplete = completedCount === session.exercises.length && session.exercises.length > 0;
-  const muscles = uniqueMuscles(session.exercises);
-
-  const stretches = recommendedStretchKeys(session);
-
-  return (
-    <LinearGradient
-      colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0.025)"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[styles.dayCard, isComplete && styles.dayCardComplete]}
-    >
-      <TouchableOpacity style={styles.dayHeader} onPress={() => onOpenWorkout(session, index)} activeOpacity={0.82}>
-        <View style={styles.dayBadge}>
-          <Text style={styles.dayBadgeText}>{dayName(index)}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.dayTitle}>{session.day_label.replace(/^Day\s*\d+\s*[-–]\s*/i, "")}</Text>
-          <Text style={styles.dayMeta}>
-            {session.estimated_minutes} {t("plan.min")} · {session.exercises.length} {t("plan.exercises")}
-            {isToday && planProgress !== undefined ? ` · ${planProgress}%` : ""}
-          </Text>
-        </View>
-        <View style={[styles.statusPill, isComplete && styles.statusPillComplete]}>
-          <Text style={[styles.statusText, isComplete && styles.statusTextComplete]}>
-            {isComplete ? t("plan.done") : `${completedCount}/${session.exercises.length}`}
-          </Text>
-        </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => onOpenWorkout(session, index)} activeOpacity={0.82}>
-        <Text style={styles.dayFocus}>{session.focus}</Text>
-      </TouchableOpacity>
-
-      <View style={styles.muscleChips}>
-        {muscles.map((muscle) => (
-          <View key={muscle} style={styles.muscleChip}>
-            <Text style={styles.muscleChipText}>{muscle}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.prepBlock}>
-        <Text style={styles.prepLabel}>{t("plan.preworkout_stretches")}</Text>
-        {stretches.map((stretch) => (
-          <TouchableOpacity
-            key={stretch}
-            style={styles.prepRow}
-            activeOpacity={0.78}
-            onPress={() => onOpenStretch(stretch, t(`plan.stretch.${stretch}`), muscles)}
-          >
-            <View style={styles.prepIcon}>
-              <Ionicons name="body" size={16} color={coachColors.coachGold} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.prepName}>{t(`plan.stretch.${stretch}`)}</Text>
-              <Text style={styles.prepMeta}>{t("plan.prep_meta")}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {session.exercises.map((exercise) => {
-        const isDone = completedIds.includes(exercise.exercise_id);
-        const isCompleting = completingId === exercise.exercise_id;
-        return (
-          <View key={exercise.exercise_id} style={styles.exerciseRow}>
-            <TouchableOpacity
-              style={[styles.exerciseCheck, isDone && styles.exerciseCheckDone]}
-              disabled={isCompleting}
-              onPress={() => (isDone ? onUncompleteExercise(exercise) : onCompleteExercise(exercise))}
-            >
-              {isCompleting ? (
-                <ActivityIndicator size="small" color={coachColors.coral} />
-              ) : isDone ? (
-                <Ionicons name="checkmark" size={15} color={coachColors.card} />
-              ) : (
-                <Ionicons name="ellipse-outline" size={18} color={coachColors.textSecondary} />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity style={{ flex: 1 }} onPress={() => onOpenExercise(exercise, session)} activeOpacity={0.78}>
-              <Text style={[styles.exerciseName, isDone && styles.exerciseDoneText]}>{exercise.name}</Text>
-              <Text style={styles.exerciseDose}>
-                {exercise.sets} sets · {exercise.rep_range.min}-{exercise.rep_range.max} reps · {exercise.target_load}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => onOpenExercise(exercise, session)} hitSlop={10}>
-              <Ionicons name="chevron-forward" size={18} color={PLAN_MUTED} />
-            </TouchableOpacity>
-          </View>
-        );
-      })}
-
-      <TouchableOpacity
-        style={[styles.startButton, isComplete && styles.startButtonComplete]}
-        onPress={() => onOpenWorkout(session, index)}
-        disabled={isComplete}
-      >
-        <Ionicons name={isComplete ? "checkmark-circle" : "reader"} size={17} color={isComplete ? coachColors.lime : coachColors.card} />
-        <Text style={[styles.startButtonText, isComplete && styles.startButtonTextComplete]}>
-          {isComplete ? t("plan.workout_complete") : t("plan.open_workout_details")}
-        </Text>
-      </TouchableOpacity>
-    </LinearGradient>
   );
 }
 
@@ -525,9 +386,13 @@ function WorkoutDetailModal({
   onSwapExercise,
   onOpenExercise,
   onOpenStretch,
+  sessionNumber,
+  onStart,
 }: {
   visible: boolean;
   session: CoachPlan["sessions"][number] | null;
+  sessionNumber: number | null;
+  onStart: () => void;
   completedIds: string[];
   completingId: string | null;
   onClose: () => void;
@@ -548,8 +413,10 @@ function WorkoutDetailModal({
         <ScrollView style={styles.detailScroll} contentContainerStyle={styles.detailContent} showsVerticalScrollIndicator={false}>
           <View style={styles.detailHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.detailEyebrow}>{t("plan.detail_eyebrow")}</Text>
-              <Text style={styles.detailTitle}>{session.day_label.replace(/^Day\s*\d+\s*[-–]\s*/i, "")}</Text>
+              <Text style={styles.detailEyebrow}>
+                {sessionNumber ? t("plan.workout_number", { number: sessionNumber }) : t("plan.detail_eyebrow")}
+              </Text>
+              <Text style={styles.detailTitle}>{session.focus}</Text>
               <Text style={styles.detailMeta}>
                 {session.estimated_minutes} {t("plan.min")} · {t("plan.complete_count", {
                   completed: completedCount,
@@ -562,9 +429,20 @@ function WorkoutDetailModal({
             </TouchableOpacity>
           </View>
 
+          {completedCount < session.exercises.length ? (
+            <Pressable
+              style={({ pressed }) => [styles.detailStartButton, pressed && styles.pressed]}
+              onPress={onStart}
+              accessibilityRole="button"
+            >
+              <Ionicons name="play" size={16} color={coachColors.card} />
+              <Text style={styles.detailStartText}>{t(completedCount > 0 ? "plan.continue_workout" : "home.start_workout")}</Text>
+            </Pressable>
+          ) : null}
+
           <View style={styles.detailPanel}>
             <Text style={styles.detailSectionTitle}>{t("plan.coach_focus")}</Text>
-            <Text style={styles.detailBody}>{session.focus}</Text>
+            <Text style={styles.detailBody}>{sessionDisplayName(session)}</Text>
             <View style={styles.muscleChips}>
               {uniqueMuscles(session.exercises).map((muscle) => (
                 <View key={muscle} style={styles.muscleChip}>
@@ -621,7 +499,7 @@ function WorkoutDetailModal({
                     <TouchableOpacity style={{ flex: 1 }} onPress={() => onOpenExercise(exercise, session)} activeOpacity={0.78}>
                       <Text style={styles.detailExerciseName}>{exercise.name}</Text>
                       <Text style={styles.detailExerciseDose}>
-                        {exercise.sets} sets · {exercise.rep_range.min}-{exercise.rep_range.max} reps · {t("plan.rest_minutes", {
+                        {t("plan.dose", { sets: exercise.sets, min: exercise.rep_range.min, max: exercise.rep_range.max })} · {t("plan.rest_minutes", {
                           count: Math.max(1, Math.round(exercise.rest_seconds / 60)),
                         })}
                       </Text>
@@ -676,89 +554,262 @@ function WorkoutDetailModal({
   );
 }
 
-function PlanOverviewModal({
-  visible,
-  plan,
-  completedIds,
-  visibleSessionCount,
-  onClose,
-  onSelectSession,
-}: {
-  visible: boolean;
-  plan: CoachPlan | null;
-  completedIds: string[];
-  visibleSessionCount: number;
-  onClose: () => void;
-  onSelectSession: (session: CoachPlan["sessions"][number], index: number) => void;
-}) {
-  const { t } = useTranslation();
-  if (!plan) return null;
+function planTitle(plan: CoachPlan, t: (key: string, options?: Record<string, unknown>) => string): string {
+  // Template plans store the goal as its key ("strength"); AI plans store
+  // the person's own words.
+  const known = ["strength", "hypertrophy", "fat_loss", "general_fitness"];
+  if (known.includes(plan.goal)) return t(`plan.goal_names.${plan.goal}`);
+  return plan.goal || t("plan.title");
+}
 
-  const totalSessions = plan.sessions.length;
-  const completedSessions = plan.sessions.filter((session) =>
-    session.exercises.every((exercise) => completedIds.includes(exercise.exercise_id))
-  ).length;
-  const overallProgress = totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0;
+const RING_SIZE = 76;
+const RING_STROKE = 8;
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+function ProgressRing({ progress }: { progress: number }) {
+  const reduceMotion = useReduceMotion();
+  const radius = (RING_SIZE - RING_STROKE) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const animated = useRef(new Animated.Value(reduceMotion ? progress : 0)).current;
+
+  useEffect(() => {
+    if (reduceMotion) {
+      animated.setValue(progress);
+      return;
+    }
+    Animated.timing(animated, {
+      toValue: progress,
+      duration: 700,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [animated, progress, reduceMotion]);
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeScreen edges={["top"]} style={styles.detailSafe}>
-        <ScrollView style={styles.detailScroll} contentContainerStyle={styles.detailContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.detailHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.detailEyebrow}>{t("plan.overview_eyebrow")}</Text>
-              <Text style={styles.detailTitle}>{t("plan.overview_title")}</Text>
-              <Text style={styles.detailMeta}>
-                {t("plan.overview_duration", { weeks: plan.timeline_weeks, days: plan.days_per_week })}
-                {" · "}
-                {t("plan.overview_progress", { done: completedSessions, total: totalSessions })}
-              </Text>
+    <Svg width={RING_SIZE} height={RING_SIZE}>
+      <Circle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={radius} stroke={coachColors.bg} strokeWidth={RING_STROKE} fill="none" />
+      <AnimatedCircle
+        cx={RING_SIZE / 2}
+        cy={RING_SIZE / 2}
+        r={radius}
+        stroke={coachColors.lime}
+        strokeWidth={RING_STROKE}
+        fill="none"
+        strokeLinecap="round"
+        strokeDasharray={`${circumference} ${circumference}`}
+        strokeDashoffset={animated.interpolate({ inputRange: [0, 1], outputRange: [circumference, 0] })}
+        transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
+      />
+    </Svg>
+  );
+}
+
+function PlanHeader({
+  title,
+  subtitle,
+  completed,
+  total,
+  current,
+  onCoach,
+}: {
+  title: string;
+  subtitle: string;
+  completed: number;
+  total: number;
+  current: number;
+  onCoach: () => void;
+}) {
+  const { t } = useTranslation();
+  const progress = total > 0 ? completed / total : 0;
+  const allDone = total > 0 && completed >= total;
+  return (
+    <View style={styles.headerBlock}>
+      <View style={styles.header}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.eyebrow}>{t("plan.eyebrow")}</Text>
+          <Text style={styles.planName} numberOfLines={2}>{title}</Text>
+          <Text style={styles.planSubtitle} numberOfLines={1}>{subtitle}</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.coachButton}
+          onPress={onCoach}
+          accessibilityRole="button"
+          accessibilityLabel={t("plan.continue_coach")}
+        >
+          <CoachIcon size={24} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.progressCard}>
+        <View style={styles.ringWrap}>
+          <ProgressRing progress={progress} />
+          <Text style={styles.ringPercent}>{Math.round(progress * 100)}%</Text>
+        </View>
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={styles.progressTitle}>
+            {allDone ? t("plan.all_workouts_done", { total }) : t("plan.workout_of", { current, total })}
+          </Text>
+          <Text style={styles.progressText}>
+            {t("plan.done_to_go", { done: completed, left: Math.max(0, total - completed) })}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function NextWorkoutHero({
+  item,
+  onStart,
+  onDetails,
+}: {
+  item: Extract<PlanSequenceItem, { type: "workout" }>;
+  onStart: () => void;
+  onDetails: () => void;
+}) {
+  const { t } = useTranslation();
+  const { session } = item;
+  const sets = session.exercises.reduce((sum, exercise) => sum + exercise.sets, 0);
+  const name = sessionDisplayName(session);
+  const inProgress = item.completedCount > 0;
+  return (
+    <View style={styles.hero}>
+      <View style={styles.heroTopRow}>
+        <Text style={styles.heroEyebrow}>
+          {t("plan.up_next", { number: item.number }).toUpperCase()}
+        </Text>
+        {inProgress ? (
+          <View style={styles.inProgressPill}>
+            <Text style={styles.inProgressText}>
+              {t("plan.complete_count", { completed: item.completedCount, total: session.exercises.length })}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+      <Text style={styles.heroTitle}>{session.focus}</Text>
+      {name !== session.focus ? <Text style={styles.heroSubtitle}>{name}</Text> : null}
+      <View style={styles.heroStats}>
+        <View style={styles.heroStat}>
+          <Text style={styles.heroStatValue}>{session.exercises.length}</Text>
+          <Text style={styles.heroStatLabel}>{t("home.today_exercises")}</Text>
+        </View>
+        <View style={styles.heroStat}>
+          <Text style={styles.heroStatValue}>{sets}</Text>
+          <Text style={styles.heroStatLabel}>{t("home.today_sets")}</Text>
+        </View>
+        <View style={styles.heroStat}>
+          <Text style={styles.heroStatValue}>~{session.estimated_minutes}</Text>
+          <Text style={styles.heroStatLabel}>{t("home.today_minutes")}</Text>
+        </View>
+      </View>
+      <View style={styles.muscleChips}>
+        {uniqueMuscles(session.exercises).map((muscle) => (
+          <View key={muscle} style={styles.muscleChip}>
+            <Text style={styles.muscleChipText}>{muscle}</Text>
+          </View>
+        ))}
+      </View>
+      <Pressable
+        style={({ pressed }) => [styles.heroStartButton, pressed && styles.pressed]}
+        onPress={onStart}
+        accessibilityRole="button"
+        accessibilityLabel={t("plan.start_workout_number", { number: item.number })}
+      >
+        <Ionicons name="play" size={16} color={coachColors.card} />
+        <Text style={styles.heroStartText}>{t(inProgress ? "plan.continue_workout" : "home.start_workout")}</Text>
+      </Pressable>
+      <TouchableOpacity style={styles.heroLink} onPress={onDetails} accessibilityRole="button">
+        <Text style={styles.heroLinkText}>{t("plan.view_details")}</Text>
+        <Ionicons name="chevron-forward" size={16} color={coachColors.text} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function RestHero({ tip, nextNumber, onStartAnyway }: { tip: RestTipKey; nextNumber: number; onStartAnyway: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <View style={[styles.hero, styles.restHero]}>
+      <View style={styles.restHeroIcon}>
+        <Ionicons name="moon" size={24} color={coachColors.limeText} />
+      </View>
+      <Text style={[styles.heroEyebrow, styles.restEyebrow]}>{t("plan.up_next_rest").toUpperCase()}</Text>
+      <Text style={styles.heroTitle}>{t("plan.rest_day")}</Text>
+      <Text style={styles.restHeroText}>{t(`plan.rest_tips.${tip}`)}</Text>
+      <Text style={styles.restHeroNext}>{t("plan.rest_then", { number: nextNumber })}</Text>
+      <Pressable
+        style={({ pressed }) => [styles.restHeroButton, pressed && styles.pressed]}
+        onPress={onStartAnyway}
+        accessibilityRole="button"
+      >
+        <Text style={styles.restHeroButtonText}>{t("plan.train_anyway", { number: nextNumber })}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function WorkoutRow({
+  item,
+  isNext,
+  onPress,
+}: {
+  item: Extract<PlanSequenceItem, { type: "workout" }>;
+  isNext: boolean;
+  onPress: () => void;
+}) {
+  const { t } = useTranslation();
+  const { session } = item;
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.workoutRow,
+        isNext && styles.workoutRowNext,
+        item.complete && styles.workoutRowDone,
+        pressed && styles.pressed,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={`${t("plan.workout_number", { number: item.number })}, ${session.focus}${item.complete ? `, ${t("plan.done")}` : ""}`}
+    >
+      <View style={[styles.rowBadge, isNext && styles.rowBadgeNext, item.complete && styles.rowBadgeDone]}>
+        {item.complete ? (
+          <Ionicons name="checkmark" size={18} color={coachColors.card} />
+        ) : (
+          <Text style={[styles.rowBadgeText, isNext && styles.rowBadgeTextNext]}>{item.number}</Text>
+        )}
+      </View>
+      <View style={{ flex: 1 }}>
+        <View style={styles.rowTitleLine}>
+          <Text style={styles.rowTitle}>{t("plan.workout_number", { number: item.number })}</Text>
+          {isNext ? (
+            <View style={styles.nextPill}>
+              <Text style={styles.nextPillText}>{t("plan.next")}</Text>
             </View>
-            <TouchableOpacity style={styles.detailClose} onPress={onClose}>
-              <Ionicons name="close" size={22} color={PLAN_TEXT} />
-            </TouchableOpacity>
-          </View>
+          ) : null}
+        </View>
+        <Text style={styles.rowFocus} numberOfLines={1}>{session.focus}</Text>
+        <Text style={styles.rowMeta}>
+          {t("plan.row_meta", { minutes: session.estimated_minutes, count: session.exercises.length })}
+          {!item.complete && item.completedCount > 0 ? ` · ${item.completedCount}/${session.exercises.length}` : ""}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={coachColors.textSecondary} />
+    </Pressable>
+  );
+}
 
-          <View style={styles.overviewProgressTrack}>
-            <View style={[styles.overviewProgressFill, { width: `${overallProgress}%` }]} />
-          </View>
-
-          <View style={styles.detailPanel}>
-            {plan.sessions.map((session, index) => {
-              const doneCount = session.exercises.filter((exercise) => completedIds.includes(exercise.exercise_id)).length;
-              const isDone = session.exercises.length > 0 && doneCount === session.exercises.length;
-              const isUpcoming = index >= visibleSessionCount;
-              return (
-                <TouchableOpacity
-                  key={session.day_label}
-                  activeOpacity={0.78}
-                  onPress={() => onSelectSession(session, index)}
-                  style={[styles.overviewRow, isUpcoming && styles.overviewRowUpcoming]}
-                >
-                  <View style={[styles.overviewBadge, isDone && styles.overviewBadgeDone]}>
-                    {isDone ? (
-                      <Ionicons name="checkmark" size={16} color={coachColors.card} />
-                    ) : (
-                      <Text style={styles.overviewBadgeText}>{dayName(index)}</Text>
-                    )}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.overviewRowTitle}>
-                      {session.day_label.replace(/^Day\s*\d+\s*[-–]\s*/i, "")}
-                    </Text>
-                    <Text style={styles.overviewRowMeta}>
-                      {`${session.estimated_minutes} ${t("plan.min")} · ${doneCount}/${session.exercises.length} ${t("plan.exercises")}`}
-                      {isUpcoming ? " · Upcoming" : ""}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={PLAN_MUTED} />
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </ScrollView>
-      </SafeScreen>
-    </Modal>
+function RestRow({ tip, complete, isNext }: { tip: RestTipKey; complete: boolean; isNext: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <View style={[styles.restRow, isNext && styles.restRowNext, complete && styles.workoutRowDone]}>
+      <View style={styles.restBadge}>
+        <Ionicons name={complete ? "checkmark" : "moon-outline"} size={16} color={coachColors.limeText} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.restTitle}>{t("plan.rest_day")}</Text>
+        <Text style={styles.restTip} numberOfLines={2}>{t(`plan.rest_tips.${tip}`)}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -771,6 +822,7 @@ export default function PlanScreen() {
     plan,
     setPlan,
     completedExerciseIds,
+    sessionCompletedAt,
     updatePlan,
     markExerciseCompleted,
     unmarkExerciseCompleted,
@@ -792,10 +844,8 @@ export default function PlanScreen() {
   const [muscleSummary, setMuscleSummary] = useState<MuscleSummaryEntry[]>([]);
   const [summaryVisible, setSummaryVisible] = useState(false);
   const [showGuestPrompt, setShowGuestPrompt] = useState(false);
-  const [activeSessionIndex, setActiveSessionIndex] = useState(0);
   const [selectedSession, setSelectedSession] = useState<CoachPlan["sessions"][number] | null>(null);
   const [workoutDetailVisible, setWorkoutDetailVisible] = useState(false);
-  const [overviewVisible, setOverviewVisible] = useState(false);
   const [selectedGuideSubject, setSelectedGuideSubject] = useState<GuideSubject | null>(null);
   const [exerciseGuideVisible, setExerciseGuideVisible] = useState(false);
   const [exerciseGuide, setExerciseGuide] = useState<ExerciseGuide | null>(null);
@@ -805,7 +855,6 @@ export default function PlanScreen() {
   const [feedbackWeekNumber, setFeedbackWeekNumber] = useState(1);
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [feedbackPlanComplete, setFeedbackPlanComplete] = useState(false);
-  const planScrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     loadTrainer();
@@ -817,55 +866,31 @@ export default function PlanScreen() {
   const isFullPlanComplete = totalExercises > 0 && planProgress >= 100;
   const weekSize = Math.max(1, Math.round(plan?.days_per_week || 1));
 
-  const todaySessionIndex = useMemo(() => {
-    if (!plan?.sessions.length) return 0;
-    const nextIndex = plan.sessions.findIndex((session) =>
-      session.exercises.some((exercise) => !completedExerciseIds.includes(exercise.exercise_id))
-    );
-    return nextIndex >= 0 ? nextIndex : 0;
-  }, [plan?.sessions, completedExerciseIds]);
-
-  const visibleSessionCount = useMemo(() => {
-    if (!plan?.sessions.length) return 0;
-    let leadingCompletedSessions = 0;
-    for (const session of plan.sessions) {
-      if (!isSessionComplete(session, completedExerciseIds)) break;
-      leadingCompletedSessions += 1;
-    }
-    const unlockedWeeks = Math.floor(leadingCompletedSessions / weekSize) + 1;
-    return Math.min(plan.sessions.length, unlockedWeeks * weekSize);
-  }, [completedExerciseIds, plan?.sessions, weekSize]);
-
-  const visibleSessions = useMemo(
-    () => plan?.sessions.slice(0, visibleSessionCount) ?? [],
-    [plan?.sessions, visibleSessionCount]
+  // Workout 1, Workout 2, Rest, Workout 3... — order, not weekdays.
+  const sequence = useMemo(
+    () => (plan ? buildPlanSequence({ plan, completedExerciseIds, sessionCompletedAt }) : []),
+    [plan, completedExerciseIds, sessionCompletedAt]
   );
+  const nextItem = nextSequenceItem(sequence);
+  const nextWorkout = nextWorkoutItem(sequence);
+  const completedWorkouts = sequence.filter((item) => item.type === "workout" && item.complete).length;
 
-  useEffect(() => {
-    const nextIndex = Math.min(todaySessionIndex, Math.max(0, visibleSessionCount - 1));
-    setActiveSessionIndex(nextIndex);
-    requestAnimationFrame(() => {
-      planScrollRef.current?.scrollTo({
-        x: nextIndex * (PLAN_CARD_WIDTH + PLAN_CARD_GAP),
-        animated: false,
-      });
-    });
-  }, [todaySessionIndex, visibleSessionCount]);
+  const selectedSessionIndex =
+    selectedSession && plan ? plan.sessions.findIndex((session) => session.day_label === selectedSession.day_label) : -1;
 
-  const handlePlanMomentumEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / (PLAN_CARD_WIDTH + PLAN_CARD_GAP));
-    setActiveSessionIndex(Math.max(0, Math.min(nextIndex, Math.max(visibleSessions.length, 1) - 1)));
+  const handleStartWorkout = (sessionIndex: number) => {
+    setWorkoutDetailVisible(false);
+    requestAnimationFrame(() =>
+      router.push({ pathname: "/workout-session", params: { sessionIndex: String(sessionIndex) } })
+    );
   };
 
-  const handleOpenOverview = () => {
-    if (!plan?.sessions.length) return;
-    setOverviewVisible(true);
-  };
-
-  const handleSelectFromOverview = (session: CoachPlan["sessions"][number], index: number) => {
-    setOverviewVisible(false);
-    setActiveSessionIndex(Math.min(index, Math.max(visibleSessions.length - 1, 0)));
-    handleOpenWorkout(session);
+  // Review labels are stored as the session's internal label
+  // ("Week 1 Day 2 - Upper A"); show the workout number instead.
+  const reviewTitle = (label: string) => {
+    const index = plan?.sessions.findIndex((session) => session.day_label === label) ?? -1;
+    if (index < 0 || !plan) return label;
+    return `${t("plan.workout_number", { number: index + 1 })} · ${sessionDisplayName(plan.sessions[index])}`;
   };
 
   const handleCompleteExercise = async (exercise: PlanExercise) => {
@@ -1176,112 +1201,86 @@ export default function PlanScreen() {
     <SafeScreen edges={["top"]} style={styles.safe}>
       <MuscleGainToast gains={gains} />
       <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.eyebrow}>{t("plan.eyebrow")}</Text>
-            <Text style={styles.title}>{t("plan.title")}</Text>
-          </View>
-          <TouchableOpacity style={styles.coachButton} onPress={handleContinueWithCoach}>
-            <Ionicons name="chatbubble-ellipses" size={17} color={coachColors.coral} />
-            <Text style={styles.coachButtonText}>{t("plan.coach")}</Text>
-          </TouchableOpacity>
-        </View>
-
         {plan ? (
           <>
-            <View style={styles.timelineCard}>
-              <View style={styles.timelineHeader}>
-                <Text style={styles.timelineTitle}>{t("plan.timeline_title")}</Text>
-                <Text style={styles.timelineMeta}>
-                  {t("plan.visible_days", { visible: visibleSessionCount, total: plan.sessions.length })}
-                </Text>
-              </View>
-              <View style={styles.timelineDots}>
-                {plan.sessions.map((session, index) => {
-                  const isVisible = index < visibleSessionCount;
-                  const isDone = isSessionComplete(session, completedExerciseIds);
-                  return (
-                    <View
-                      key={session.day_label}
-                      style={[styles.timelineDot, isVisible && styles.timelineDotVisible, isDone && styles.timelineDotDone]}
-                    >
-                      {!isVisible ? <Ionicons name="lock-closed" size={10} color="rgba(255,255,255,0.55)" /> : null}
-                    </View>
-                  );
-                })}
-              </View>
-              {visibleSessionCount < plan.sessions.length ? (
-                <Text style={styles.timelineHint}>{t("plan.unlock_hint")}</Text>
-              ) : (
-                <Text style={styles.timelineHint}>{t("plan.all_unlocked_hint")}</Text>
-              )}
-            </View>
+            <PlanHeader
+              title={planTitle(plan, t)}
+              subtitle={[t(`plan.goal_types.${plan.goal_type}`), plan.split, t("plan.per_week", { count: plan.days_per_week })].filter(Boolean).join(" · ")}
+              completed={completedWorkouts}
+              total={plan.sessions.length}
+              current={nextWorkout ? nextWorkout.number : plan.sessions.length}
+              onCoach={handleContinueWithCoach}
+            />
 
-            <ScrollView
-              ref={planScrollRef}
-              horizontal
-              pagingEnabled
-              directionalLockEnabled
-              decelerationRate="fast"
-              snapToInterval={PLAN_CARD_WIDTH + PLAN_CARD_GAP}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.planSlider}
-              onMomentumScrollEnd={handlePlanMomentumEnd}
-            >
-              {visibleSessions.map((session, index) => (
-                <WorkoutDayCard
-                  key={session.day_label}
-                  session={session}
-                  index={index}
-                  completedIds={completedExerciseIds}
-                  completingId={completingId}
-                  onCompleteExercise={handleCompleteExercise}
-                  onUncompleteExercise={handleUncompleteExercise}
-                  onOpenWorkout={handleOpenWorkout}
-                  onOpenExercise={handleOpenExercise}
-                  onOpenStretch={handleOpenStretch}
-                  isToday={index === todaySessionIndex}
-                  planProgress={planProgress}
-                />
-              ))}
-            </ScrollView>
-
-            <View style={styles.planDots}>
-              {visibleSessions.map((session, index) => (
-                <View
-                  key={session.day_label}
-                  style={[styles.planDot, activeSessionIndex === index && styles.planDotActive]}
-                />
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={styles.summaryButton}
-              onPress={handleOpenOverview}
-            >
-              <Ionicons name="calendar" size={18} color={coachColors.coral} />
-              <Text style={styles.summaryButtonText}>{t("plan.view_full_plan")}</Text>
-              <Ionicons name="chevron-forward" size={18} color={PLAN_MUTED} />
-            </TouchableOpacity>
+            {nextItem?.type === "rest" && nextWorkout ? (
+              <RestHero
+                tip={nextItem.tip}
+                nextNumber={nextWorkout.number}
+                onStartAnyway={() => handleStartWorkout(nextWorkout.sessionIndex)}
+              />
+            ) : nextWorkout ? (
+              <NextWorkoutHero
+                item={nextWorkout}
+                onStart={() => handleStartWorkout(nextWorkout.sessionIndex)}
+                onDetails={() => handleOpenWorkout(nextWorkout.session)}
+              />
+            ) : (
+              <TouchableOpacity style={styles.completeHero} onPress={handleRetryCompletedPlan} activeOpacity={0.88}>
+                <View style={styles.completeHeroIcon}>
+                  <Ionicons name="trophy" size={26} color={coachColors.coachGoldText} />
+                </View>
+                <Text style={styles.heroEyebrow}>{t("plan.complete_eyebrow").toUpperCase()}</Text>
+                <Text style={styles.completeHeroTitle}>{t("plan.build_next_plan")}</Text>
+                <Text style={styles.completeHeroText}>{t("plan.build_next_plan_text")}</Text>
+                <View style={styles.heroStartButton}>
+                  <Ionicons name="sparkles" size={16} color={coachColors.card} />
+                  <Text style={styles.heroStartText}>{t("plan.build_next_plan_cta")}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
 
             {sessionDeltas.length > 0 ? (
               <TouchableOpacity style={styles.progressSummaryButton} onPress={handleWorkoutSummary}>
-                <Ionicons name="analytics" size={16} color={coachColors.coachGold} />
+                <Ionicons name="analytics" size={16} color={coachColors.coachGoldText} />
                 <Text style={styles.progressSummaryText}>{t("plan.progress_summary")}</Text>
               </TouchableOpacity>
             ) : null}
 
+            <View style={styles.listHeader}>
+              <Text style={styles.listTitle}>{t("plan.your_workouts")}</Text>
+              <Text style={styles.listSubtitle}>{t("plan.in_order_hint")}</Text>
+            </View>
+
+            <View style={styles.sequenceList}>
+              {sequence.map((item, index) => {
+                const showWeek = item.week !== sequence[index - 1]?.week && plan.timeline_weeks > 1;
+                return (
+                  <React.Fragment key={item.key}>
+                    {showWeek ? <Text style={styles.weekDivider}>{t("plan.week_label", { number: item.week })}</Text> : null}
+                    {item.type === "workout" ? (
+                      <WorkoutRow
+                        item={item}
+                        isNext={nextWorkout?.key === item.key && nextItem?.type !== "rest"}
+                        onPress={() => handleOpenWorkout(item.session)}
+                      />
+                    ) : (
+                      <RestRow tip={item.tip} complete={item.complete} isNext={nextItem?.key === item.key} />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </View>
 
             {latestWorkoutReview ? (
               <TouchableOpacity style={styles.coachReviewCard} onPress={handleContinueWithCoach} activeOpacity={0.82}>
                 <View style={styles.coachReviewHeader}>
                   <View style={styles.coachReviewBadge}>
-                    <Ionicons name="fitness" size={14} color={coachColors.card} />
+                    <CoachIcon size={14} />
                     <Text style={styles.coachReviewBadgeText}>{t("plan.coach_follow_up")}</Text>
                   </View>
                   <Text style={styles.coachReviewSource}>{t(latestWorkoutReview.source === "ai" ? "plan.ai_reviewed" : "plan.rules_reviewed")}</Text>
                 </View>
-                <Text style={styles.coachReviewTitle}>{latestWorkoutReview.sessionLabel}</Text>
+                <Text style={styles.coachReviewTitle}>{reviewTitle(latestWorkoutReview.sessionLabel)}</Text>
                 <Text style={styles.coachReviewText}>{latestWorkoutReview.reason}</Text>
                 <Text style={styles.coachReviewChange}>
                   {latestWorkoutReview.changes.length
@@ -1290,28 +1289,20 @@ export default function PlanScreen() {
                 </Text>
                 <View style={styles.coachReviewLink}>
                   <Text style={styles.coachReviewLinkText}>{t("plan.continue_coach")}</Text>
-                  <Ionicons name="arrow-forward" size={16} color={coachColors.coachGold} />
+                  <Ionicons name="arrow-forward" size={16} color={coachColors.coachGoldText} />
                 </View>
-              </TouchableOpacity>
-            ) : null}
-
-            {isFullPlanComplete ? (
-              <TouchableOpacity style={styles.feedbackCheckInCard} onPress={handleRetryCompletedPlan} activeOpacity={0.84}>
-                <View style={styles.feedbackCheckInIcon}>
-                  <Ionicons name="sparkles" size={19} color={coachColors.coral} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.feedbackCheckInTitle}>{t("plan.build_next_plan")}</Text>
-                  <Text style={styles.feedbackCheckInText}>{t("plan.build_next_plan_text")}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={PLAN_MUTED} />
               </TouchableOpacity>
             ) : null}
           </>
         ) : (
-          <PlanEmptyState />
+          <>
+            <View style={styles.emptyHeader}>
+              <Text style={styles.eyebrow}>{t("plan.eyebrow")}</Text>
+              <Text style={styles.title}>{t("plan.title")}</Text>
+            </View>
+            <PlanEmptyState />
+          </>
         )}
-
       </ScrollView>
 
       <WorkoutSummaryModal
@@ -1324,6 +1315,10 @@ export default function PlanScreen() {
       <WorkoutDetailModal
         visible={workoutDetailVisible}
         session={selectedSession}
+        sessionNumber={selectedSessionIndex >= 0 ? selectedSessionIndex + 1 : null}
+        onStart={() => {
+          if (selectedSessionIndex >= 0) handleStartWorkout(selectedSessionIndex);
+        }}
         completedIds={completedExerciseIds}
         completingId={completingId}
         onClose={() => setWorkoutDetailVisible(false)}
@@ -1350,15 +1345,6 @@ export default function PlanScreen() {
         onSubmit={handleSubmitFeedback}
       />
 
-      <PlanOverviewModal
-        visible={overviewVisible}
-        plan={plan}
-        completedIds={completedExerciseIds}
-        visibleSessionCount={visibleSessionCount}
-        onClose={() => setOverviewVisible(false)}
-        onSelectSession={handleSelectFromOverview}
-      />
-
       <GuestPromptModal
         visible={showGuestPrompt}
         onClose={() => setShowGuestPrompt(false)}
@@ -1372,99 +1358,199 @@ export default function PlanScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: PLAN_DARK },
-  scroll: { flex: 1, backgroundColor: PLAN_DARK },
-  content: { paddingHorizontal: 20, paddingBottom: 34 },
+  safe: { flex: 1, backgroundColor: coachColors.bg },
+  scroll: { flex: 1, backgroundColor: coachColors.bg },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, gap: spacing.lg },
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
-  header: {
-    paddingTop: 12,
-    paddingBottom: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  eyebrow: { color: PLAN_MUTED, fontFamily: coachFonts.bodyBold, fontSize: 12, textTransform: "uppercase" },
-  title: { color: PLAN_TEXT, fontFamily: coachFonts.heading, fontSize: 42 },
+  pressed: { opacity: 0.92, transform: [{ scale: 0.985 }] },
+
+  // Header: plan name, goal, progress ring — Home's greeting-row rhythm.
+  headerBlock: { gap: spacing.md },
+  header: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md, paddingTop: spacing.xs },
+  emptyHeader: { paddingTop: spacing.xs },
+  eyebrow: { color: coachColors.textSecondary, fontFamily: coachFonts.bodyBold, fontSize: 13, letterSpacing: 1.4, textTransform: "uppercase" },
+  title: { color: coachColors.text, fontFamily: coachFonts.heading, fontSize: 30, marginTop: 2 },
+  planName: { color: coachColors.text, fontFamily: coachFonts.heading, fontSize: 30, lineHeight: 35, marginTop: 2, textTransform: "capitalize" },
+  planSubtitle: { color: coachColors.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 14, marginTop: 2 },
   coachButton: {
-    minHeight: 42,
-    borderRadius: 13,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
-    backgroundColor: PLAN_TEXT,
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-  },
-  coachButtonText: { color: coachColors.coral, fontFamily: coachFonts.bodyBold, fontSize: 13 },
-  timelineCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: PLAN_BORDER,
-    backgroundColor: PLAN_PANEL,
-    padding: 14,
-    marginBottom: 14,
-  },
-  timelineHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  timelineTitle: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 15 },
-  timelineMeta: { color: coachColors.coachGold, fontFamily: coachFonts.bodyExtraBold, fontSize: 12 },
-  timelineDots: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 12 },
-  timelineDot: {
-    width: 25,
-    height: 25,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(255,255,255,0.05)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  timelineDotVisible: { backgroundColor: "rgba(255,255,255,0.16)", borderColor: "rgba(255,255,255,0.24)" },
-  timelineDotDone: { backgroundColor: coachColors.lime, borderColor: coachColors.lime },
-  timelineHint: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 12, lineHeight: 17, marginTop: 10 },
-  planSlider: { gap: PLAN_CARD_GAP, paddingBottom: 2 },
-  planDots: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 16 },
-  planDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.18)" },
-  planDotActive: { width: 18, backgroundColor: coachColors.coral },
-  dayCard: {
-    width: PLAN_CARD_WIDTH,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: PLAN_BORDER,
-    padding: 16,
-    marginBottom: 14,
-    overflow: "hidden",
-  },
-  dayCardComplete: { borderColor: coachColors.lime + "70" },
-  dayHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
-  dayBadge: {
     width: 44,
     height: 44,
-    borderRadius: 14,
-    backgroundColor: "rgba(224,78,78,0.18)",
+    borderRadius: radii.pill,
+    backgroundColor: coachColors.card,
+    borderWidth: 1,
+    borderColor: coachColors.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  dayBadgeText: { color: coachColors.coral, fontFamily: coachFonts.bodyExtraBold, fontSize: 13 },
-  dayTitle: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 20 },
-  dayMeta: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 13, marginTop: 2 },
-  statusPill: { backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5 },
-  statusPillComplete: { backgroundColor: coachColors.lime + "18" },
-  statusText: { color: "rgba(255,255,255,0.75)", fontFamily: coachFonts.bodyBold, fontSize: 11 },
-  statusTextComplete: { color: coachColors.lime },
-  dayFocus: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 13, lineHeight: 19, marginTop: 12 },
-  muscleChips: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 12 },
-  muscleChip: { borderRadius: 9, backgroundColor: "rgba(255,255,255,0.12)", paddingHorizontal: 9, paddingVertical: 5 },
-  muscleChipText: { color: "rgba(255,255,255,0.78)", fontFamily: coachFonts.bodySemiBold, fontSize: 11, textTransform: "capitalize" },
-  prepBlock: {
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
-    marginTop: 12,
-    paddingTop: 12,
-    gap: 9,
+  progressCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.lg,
+    backgroundColor: coachColors.card,
+    borderRadius: radii.cardLarge,
+    borderWidth: 1,
+    borderColor: coachColors.border,
+    padding: spacing.lg,
   },
-  prepLabel: { color: coachColors.coachGold, fontFamily: coachFonts.bodyExtraBold, fontSize: 11, textTransform: "uppercase" },
-  prepRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  ringWrap: { width: 76, height: 76, alignItems: "center", justifyContent: "center" },
+  ringPercent: { position: "absolute", color: coachColors.text, fontFamily: coachFonts.headingSemiBold, fontSize: 17 },
+  progressTitle: { color: coachColors.text, fontFamily: coachFonts.headingSemiBold, fontSize: 20 },
+  progressText: { color: coachColors.limeText, fontFamily: coachFonts.bodyBold, fontSize: 13, letterSpacing: 0.4 },
+
+  // Next workout hero — same card as Home's Today card.
+  hero: {
+    backgroundColor: coachColors.card,
+    borderRadius: radii.cardLarge,
+    padding: spacing.lg,
+    gap: spacing.md,
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+      android: { elevation: 3 },
+      default: { boxShadow: "0 1px 2px rgba(12,35,64,0.06), 0 8px 20px rgba(12,35,64,0.05)" },
+    }),
+  },
+  heroTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+  heroEyebrow: { color: coachColors.coral, fontFamily: coachFonts.bodyExtraBold, fontSize: 12, letterSpacing: 1.4 },
+  inProgressPill: { backgroundColor: coachColors.lime + "1f", borderRadius: radii.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  inProgressText: { color: coachColors.limeText, fontFamily: coachFonts.bodyBold, fontSize: 12 },
+  heroTitle: { color: coachColors.text, fontFamily: coachFonts.headingExtraBold, fontSize: 34, lineHeight: 38, letterSpacing: -0.5 },
+  heroSubtitle: { color: coachColors.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 14, marginTop: -6 },
+  heroStats: { flexDirection: "row", gap: spacing.xl },
+  heroStat: { gap: 2 },
+  heroStatValue: { color: coachColors.text, fontFamily: coachFonts.headingSemiBold, fontSize: 24 },
+  heroStatLabel: { color: coachColors.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 13 },
+  heroStartButton: {
+    height: 56,
+    borderRadius: radii.pill,
+    backgroundColor: coachColors.coralPressed,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  heroStartText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 17 },
+  heroLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 2 },
+  heroLinkText: { color: coachColors.text, fontFamily: coachFonts.bodyBold, fontSize: 14 },
+
+  // Rest: softer — tinted, no shadow, no coral.
+  restHero: {
+    backgroundColor: "#eef6e0",
+    ...Platform.select({ ios: { shadowOpacity: 0 }, android: { elevation: 0 }, default: { boxShadow: "none" } }),
+  },
+  restHeroIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: radii.pill,
+    backgroundColor: coachColors.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  restEyebrow: { color: coachColors.limeText },
+  restHeroText: { color: coachColors.text, fontFamily: coachFonts.body, fontSize: 16, lineHeight: 23 },
+  restHeroNext: { color: coachColors.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 13 },
+  restHeroButton: {
+    height: 48,
+    borderRadius: radii.pill,
+    borderWidth: 1.5,
+    borderColor: coachColors.limeText + "55",
+    backgroundColor: coachColors.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  restHeroButtonText: { color: coachColors.text, fontFamily: coachFonts.bodyBold, fontSize: 15 },
+
+  completeHero: {
+    backgroundColor: coachColors.card,
+    borderRadius: radii.cardLarge,
+    borderWidth: 1.5,
+    borderColor: coachColors.coachGold,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  completeHeroIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: radii.pill,
+    backgroundColor: coachColors.coachGold + "26",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  completeHeroTitle: { color: coachColors.text, fontFamily: coachFonts.headingExtraBold, fontSize: 28 },
+  completeHeroText: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 15, lineHeight: 21 },
+
+  // Ordered list: Workout 1, Workout 2, Rest, Workout 3...
+  listHeader: { gap: 2, marginTop: spacing.xs },
+  listTitle: { color: coachColors.text, fontFamily: coachFonts.headingSemiBold, fontSize: 20 },
+  listSubtitle: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 14 },
+  sequenceList: { gap: spacing.sm },
+  weekDivider: {
+    color: coachColors.textSecondary,
+    fontFamily: coachFonts.bodyExtraBold,
+    fontSize: 12,
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    marginTop: spacing.sm,
+  },
+  workoutRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: coachColors.card,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: coachColors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    minHeight: 76,
+  },
+  workoutRowNext: { borderColor: coachColors.coral, borderWidth: 1.5 },
+  workoutRowDone: { opacity: 0.6 },
+  rowBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.pill,
+    backgroundColor: coachColors.bg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowBadgeNext: { backgroundColor: coachColors.coral },
+  rowBadgeDone: { backgroundColor: coachColors.lime },
+  rowBadgeText: { color: coachColors.text, fontFamily: coachFonts.headingSemiBold, fontSize: 16 },
+  rowBadgeTextNext: { color: coachColors.card },
+  rowTitleLine: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  rowTitle: { color: coachColors.text, fontFamily: coachFonts.bodyExtraBold, fontSize: 15 },
+  nextPill: { backgroundColor: coachColors.coral + "18", borderRadius: radii.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  nextPillText: { color: coachColors.coralPressed, fontFamily: coachFonts.bodyExtraBold, fontSize: 11, letterSpacing: 0.6 },
+  rowFocus: { color: coachColors.text, fontFamily: coachFonts.body, fontSize: 14, marginTop: 1 },
+  rowMeta: { color: coachColors.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 12, marginTop: 2 },
+  restRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: "#eef6e0",
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: coachColors.lime + "66",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  restRowNext: { borderStyle: "solid", borderWidth: 1.5, borderColor: coachColors.limeText },
+  restBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.pill,
+    backgroundColor: coachColors.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  restTitle: { color: coachColors.limeText, fontFamily: coachFonts.bodyExtraBold, fontSize: 15 },
+  restTip: { color: coachColors.text, fontFamily: coachFonts.body, fontSize: 13, lineHeight: 18, marginTop: 2 },
+
+  // Shared with the workout detail sheet.
+  muscleChips: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
+  muscleChip: { borderRadius: radii.pill, backgroundColor: coachColors.bg, paddingHorizontal: 10, paddingVertical: 5 },
+  muscleChipText: { color: coachColors.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 12, textTransform: "capitalize" },
   prepIcon: {
     width: 42,
     height: 42,
@@ -1475,61 +1561,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: coachColors.coachGold + "30",
   },
-  prepName: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 14 },
-  prepMeta: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 12, marginTop: 2 },
-  exerciseRow: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
-    marginTop: 12,
-    paddingTop: 12,
-  },
-  exerciseCheck: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" },
+  exerciseCheck: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: coachColors.bg },
   exerciseCheckDone: { borderRadius: 21, backgroundColor: coachColors.lime },
-  exerciseName: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 16 },
-  exerciseDoneText: { color: PLAN_MUTED, textDecorationLine: "line-through" },
-  exerciseDose: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 12, marginTop: 3 },
-  startButton: {
-    marginTop: 14,
-    minHeight: 46,
-    borderRadius: 13,
-    backgroundColor: coachColors.coral,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-  },
-  startButtonComplete: { backgroundColor: coachColors.lime + "14", borderWidth: 1, borderColor: coachColors.lime + "50" },
-  startButtonText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 14 },
-  startButtonTextComplete: { color: coachColors.lime },
-  summaryButton: {
-    minHeight: 48,
-    borderRadius: 18,
-    backgroundColor: PLAN_PANEL,
-    borderWidth: 1,
-    borderColor: PLAN_BORDER,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 12,
-  },
-  summaryButtonText: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 16 },
   progressSummaryButton: {
-    minHeight: 42,
-    borderRadius: 14,
+    minHeight: 44,
+    borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: coachColors.coachGold + "45",
+    borderColor: coachColors.coachGold + "55",
     backgroundColor: coachColors.coachGold + "14",
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
-    marginBottom: 18,
   },
-  progressSummaryText: { color: coachColors.coachGold, fontFamily: coachFonts.bodyBold, fontSize: 13 },
+  progressSummaryText: { color: coachColors.coachGoldText, fontFamily: coachFonts.bodyBold, fontSize: 13 },
   emptyPlan: {
     backgroundColor: PLAN_PANEL,
     borderRadius: 20,
@@ -1574,7 +1619,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: coachColors.bg,
     borderWidth: 1,
     borderColor: PLAN_BORDER,
     borderRadius: 14,
@@ -1587,7 +1632,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: "#d9dbe8",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.85)",
+    borderColor: coachColors.card,
   },
   legendSwatchActive: { backgroundColor: coachColors.coral },
   legendText: { color: PLAN_MUTED, fontFamily: coachFonts.bodySemiBold, fontSize: 12 },
@@ -1606,8 +1651,19 @@ const styles = StyleSheet.create({
   detailScroll: { flex: 1, backgroundColor: PLAN_DARK },
   detailContent: { padding: 20, paddingBottom: 34 },
   detailHeader: { flexDirection: "row", alignItems: "flex-start", gap: 14, marginBottom: 16 },
-  detailEyebrow: { color: coachColors.coachGold, fontFamily: coachFonts.bodyExtraBold, fontSize: 11, textTransform: "uppercase" },
-  detailTitle: { color: PLAN_TEXT, fontFamily: coachFonts.heading, fontSize: 36, marginTop: 2 },
+  detailEyebrow: { color: coachColors.coachGoldText, fontFamily: coachFonts.bodyExtraBold, fontSize: 11, textTransform: "uppercase" },
+  detailTitle: { color: PLAN_TEXT, fontFamily: coachFonts.heading, fontSize: 32, lineHeight: 37, marginTop: 2 },
+  detailStartButton: {
+    height: 52,
+    borderRadius: radii.pill,
+    backgroundColor: coachColors.coralPressed,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    marginBottom: 14,
+  },
+  detailStartText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 16 },
   detailMeta: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 13, marginTop: 4 },
   detailClose: {
     width: 42,
@@ -1665,24 +1721,23 @@ const styles = StyleSheet.create({
     borderColor: coachColors.coachGold + "66",
     backgroundColor: PLAN_PANEL,
     padding: 16,
-    marginTop: 12,
   },
   coachReviewHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   coachReviewBadge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: coachColors.coachGold, borderRadius: 9, paddingHorizontal: 9, paddingVertical: 5 },
-  coachReviewBadgeText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 10 },
+  coachReviewBadgeText: { color: coachColors.coachNavy, fontFamily: coachFonts.bodyExtraBold, fontSize: 10 },
   coachReviewSource: { color: PLAN_MUTED, fontFamily: coachFonts.bodySemiBold, fontSize: 11 },
   coachReviewTitle: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 16, marginTop: 13 },
   coachReviewText: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 13, lineHeight: 19, marginTop: 5 },
   coachReviewChange: { color: PLAN_TEXT, fontFamily: coachFonts.bodySemiBold, fontSize: 13, lineHeight: 19, marginTop: 10 },
   coachReviewLink: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 13 },
-  coachReviewLinkText: { color: coachColors.coachGold, fontFamily: coachFonts.bodyBold, fontSize: 13 },
+  coachReviewLinkText: { color: coachColors.coachGoldText, fontFamily: coachFonts.bodyBold, fontSize: 13 },
   detailSectionTitle: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 17, marginBottom: 8 },
   detailBody: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 13, lineHeight: 19 },
   stretchRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 7 },
   stretchText: { color: PLAN_TEXT, fontFamily: coachFonts.bodySemiBold, fontSize: 13 },
   detailExerciseCard: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
+    borderTopColor: coachColors.border,
     paddingTop: 13,
     marginTop: 13,
     gap: 9,
@@ -1690,7 +1745,7 @@ const styles = StyleSheet.create({
   detailExerciseHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   detailExerciseName: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 16 },
   detailExerciseDose: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 12, marginTop: 2 },
-  detailSmall: { color: "rgba(255,255,255,0.52)", fontFamily: coachFonts.body, fontSize: 12, lineHeight: 17 },
+  detailSmall: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 12, lineHeight: 17 },
   guideSafe: { flex: 1, backgroundColor: coachColors.bg },
   guideHeader: {
     flexDirection: "row",
@@ -1791,7 +1846,7 @@ const styles = StyleSheet.create({
   calcNote: { color: coachColors.textSecondary, fontSize: 12, fontFamily: coachFonts.body, lineHeight: 18, marginTop: 10 },
   swapArea: { gap: 8, marginTop: 4 },
   swapTitleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  swapTitle: { color: coachColors.coachGold, fontFamily: coachFonts.bodyExtraBold, fontSize: 11, textTransform: "uppercase" },
+  swapTitle: { color: coachColors.coachGoldText, fontFamily: coachFonts.bodyExtraBold, fontSize: 11, textTransform: "uppercase" },
   swapSubtitle: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 12, lineHeight: 16, marginTop: -4 },
   swapButton: {
     minHeight: 40,
@@ -1806,33 +1861,4 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   swapButtonText: { flex: 1, color: PLAN_TEXT, fontFamily: coachFonts.bodySemiBold, fontSize: 13 },
-  overviewProgressTrack: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: PLAN_PANEL_SOFT,
-    overflow: "hidden",
-    marginBottom: 18,
-  },
-  overviewProgressFill: { height: 8, borderRadius: 4, backgroundColor: coachColors.lime },
-  overviewRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
-  },
-  overviewRowUpcoming: { opacity: 0.72 },
-  overviewBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.08)",
-  },
-  overviewBadgeDone: { backgroundColor: coachColors.lime },
-  overviewBadgeText: { color: PLAN_TEXT, fontFamily: coachFonts.bodyExtraBold, fontSize: 12 },
-  overviewRowTitle: { color: PLAN_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 15 },
-  overviewRowMeta: { color: PLAN_MUTED, fontFamily: coachFonts.body, fontSize: 12, marginTop: 2 },
 });

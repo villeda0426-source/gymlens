@@ -30,6 +30,7 @@ import { coachColors, coachDark, coachFonts, radii, spacing } from "@/constants/
 import { useTabBarSpace } from "@/components/CoachTabBar";
 import { apiFetch } from "@/lib/api";
 import CoachIcon from "@/components/Coach/CoachIcon";
+import { buildPlanSequence, nextSequenceItem, nextWorkoutItem } from "@/lib/planSequence";
 
 function getTodaysTip(t: (key: string) => string): string {
   return t(`home.tips.${new Date().getDay()}`);
@@ -46,6 +47,7 @@ export default function HomeScreen() {
     hasLoaded,
     loadTrainer,
     completedExerciseIds,
+    sessionCompletedAt,
     pendingPlanChange,
     applyPendingPlanChange,
   } = useCoachTrainerStore();
@@ -99,8 +101,13 @@ export default function HomeScreen() {
     })
     .toUpperCase();
 
-  const todayBaseSession = plan?.sessions?.[0] ?? null;
-  const totalExercises = plan?.sessions.reduce((sum, session) => sum + session.exercises.length, 0) ?? 0;
+  // The next unfinished workout in order — never tied to today's weekday.
+  const sequence = plan ? buildPlanSequence({ plan, completedExerciseIds, sessionCompletedAt }) : [];
+  const nextWorkout = nextWorkoutItem(sequence);
+  const restIsNext = nextSequenceItem(sequence)?.type === "rest";
+  const todayBaseSession = nextWorkout?.session ?? null;
+  const totalWorkouts = plan?.sessions.length ?? 0;
+  const completedWorkouts = sequence.filter((item) => item.type === "workout" && item.complete).length;
   const todaySets = todayBaseSession?.exercises.reduce((sum, exercise) => sum + exercise.sets, 0) ?? 0;
 
   return (
@@ -175,7 +182,9 @@ export default function HomeScreen() {
         <View style={styles.todayCard}>
           {todayBaseSession ? (
             <>
-              <Text style={styles.todayEyebrow}>{t("home.today_eyebrow")}</Text>
+              <Text style={styles.todayEyebrow}>
+                {t("home.next_workout_eyebrow", { number: nextWorkout!.number }).toUpperCase()}
+              </Text>
               <Text style={styles.todayTitle}>{todayBaseSession.focus}</Text>
               <View style={styles.todayStatsRow}>
                 <View style={styles.todayStat}>
@@ -191,14 +200,34 @@ export default function HomeScreen() {
                   <Text style={styles.todayStatLabel}>{t("home.today_minutes")}</Text>
                 </View>
               </View>
-              {totalExercises > 0 ? (
+              {totalWorkouts > 0 ? (
                 <Text style={styles.todayProgress}>
-                  {t("home.today_progress", { done: completedExerciseIds.length, total: totalExercises })}
+                  {t("home.workouts_progress", { done: completedWorkouts, total: totalWorkouts })}
                 </Text>
               ) : null}
-              <TouchableOpacity style={styles.startWorkoutButton} onPress={() => router.push("/workout-session")}>
+              {restIsNext ? (
+                <View style={styles.restNote}>
+                  <Ionicons name="moon-outline" size={16} color={coachColors.limeText} />
+                  <Text style={styles.restNoteText}>{t("home.rest_day_note")}</Text>
+                </View>
+              ) : null}
+              <TouchableOpacity
+                style={styles.startWorkoutButton}
+                onPress={() =>
+                  router.push({ pathname: "/workout-session", params: { sessionIndex: String(nextWorkout!.sessionIndex) } })
+                }
+              >
                 <Ionicons name="play" size={16} color={coachColors.card} />
                 <Text style={styles.startWorkoutText}>{t("home.start_workout")}</Text>
+              </TouchableOpacity>
+            </>
+          ) : plan ? (
+            <>
+              <Text style={styles.todayEyebrow}>{t("home.plan_complete_eyebrow").toUpperCase()}</Text>
+              <Text style={styles.todayCardNoPlanTitle}>{t("home.plan_complete_title")}</Text>
+              <Text style={styles.todayCardNoPlanBody}>{t("home.plan_complete_body")}</Text>
+              <TouchableOpacity style={styles.startWorkoutButton} onPress={() => router.push("/(tabs)/plan")}>
+                <Text style={styles.startWorkoutText}>{t("home.plan_complete_cta")}</Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -390,6 +419,16 @@ const styles = StyleSheet.create({
   todayStat: { gap: 2 },
   todayStatValue: { color: coachColors.text, fontFamily: coachFonts.headingSemiBold, fontSize: 24 },
   todayStatLabel: { color: coachColors.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 13 },
+  restNote: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: coachColors.lime + "14",
+    borderRadius: 14,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+  },
+  restNoteText: { flex: 1, color: coachColors.text, fontFamily: coachFonts.bodySemiBold, fontSize: 13, lineHeight: 18 },
   todayProgress: { color: coachColors.limeText, fontFamily: coachFonts.bodyBold, fontSize: 12, letterSpacing: 1 },
   startWorkoutButton: {
     height: 56,

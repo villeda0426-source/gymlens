@@ -14,21 +14,18 @@ import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import CoachIcon from "@/components/Coach/CoachIcon";
-
-// Must match app/(tabs)/plan.tsx's DAY_NAMES/dayName exactly — the Plan tab
-// is the source of truth for which calendar day a session lands on, and this
-// preview has to agree with it once the person leaves this screen.
-const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-function dayName(index: number): string {
-  return DAY_NAMES[index % DAY_NAMES.length];
-}
+import PlanOptionCards from "@/components/Coach/PlanOptionCards";
+import { adjustPlanOption, type PlanOption } from "@/lib/planOptions";
+import { buildPlanSequence } from "@/lib/planSequence";
 
 export default function PlanSetupReadyScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { user } = useAuthStore();
   const { units } = useCoachTrainerStore();
-  const { buildStatus, buildError, submit } = usePlanSetupStore();
+  const { buildStatus, buildError, submit, options, chooseOption, replaceOption } = usePlanSetupStore();
+  const [adjustingId, setAdjustingId] = useState<string | null>(null);
+  const [adjustError, setAdjustError] = useState("");
   const plan = useCoachTrainerStore((state) => state.plan);
   const profile = useAuthStore((state) => state.profile);
   const language = i18n.language?.startsWith("es") ? "es" : "en";
@@ -60,6 +57,51 @@ export default function PlanSetupReadyScreen() {
     );
   }
 
+  const handleAdjust = async (option: PlanOption, instructions: string) => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    setAdjustingId(option.id);
+    setAdjustError("");
+    try {
+      replaceOption(await adjustPlanOption({ option, instructions, units, language, authToken: session.access_token }));
+    } catch {
+      setAdjustError(t("plan_options.adjust_failed"));
+    } finally {
+      setAdjustingId(null);
+    }
+  };
+
+  // Two options built: nothing is saved until one is picked.
+  if (buildStatus === "ready" && options && options.length > 0) {
+    return (
+      <SafeScreen edges={["top", "bottom"]} style={styles.screen}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.chooseContent}
+          automaticallyAdjustKeyboardInsets
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.heroRowDark}>
+            <CoachIcon size={22} badgeSize={30} />
+            <Text style={styles.chooseEyebrow}>{t("plan_setup.coach_label")}</Text>
+          </View>
+          <Text style={styles.chooseTitle}>{t("plan_options.choose_title")}</Text>
+          <Text style={styles.chooseHelper}>{t("plan_options.choose_helper")}</Text>
+          <PlanOptionCards
+            options={options}
+            kind="plan"
+            onChoose={chooseOption}
+            onAdjust={handleAdjust}
+            adjustingId={adjustingId}
+          />
+          {adjustError ? <Text style={styles.adjustError}>{adjustError}</Text> : null}
+        </ScrollView>
+      </SafeScreen>
+    );
+  }
+
   if (buildStatus === "error" || !plan) {
     return (
       <SafeScreen edges={["top", "bottom"]} style={styles.loadingScreen}>
@@ -72,7 +114,10 @@ export default function PlanSetupReadyScreen() {
     );
   }
 
-  const week1 = plan.sessions.slice(0, 7);
+  const week1 = plan.sessions.slice(0, Math.max(1, plan.days_per_week));
+  const week1Sequence = buildPlanSequence({ plan, completedExerciseIds: [], sessionCompletedAt: [] }).filter(
+    (item) => item.week === 1
+  );
 
   return (
     <View style={styles.screen}>
@@ -106,13 +151,20 @@ export default function PlanSetupReadyScreen() {
         <View style={styles.body}>
           <Text style={styles.weekLabel}>{t("plan_setup.ready.week_1")}</Text>
           <View style={styles.sessionList}>
-            {week1.map((session, index) => (
-              <View key={`${session.day_label}-${index}`} style={[styles.sessionRow, index > 0 && styles.sessionRowBorder]}>
-                <Text style={styles.sessionDay}>{dayName(index).toUpperCase()}</Text>
-                <Text style={styles.sessionFocus}>{session.focus}</Text>
-                <Text style={styles.sessionMoves}>{t("plan_setup.ready.moves_count", { count: session.exercises.length })}</Text>
-              </View>
-            ))}
+            {week1Sequence.map((item, index) =>
+              item.type === "workout" ? (
+                <View key={item.key} style={[styles.sessionRow, index > 0 && styles.sessionRowBorder]}>
+                  <Text style={styles.sessionDay}>{t("plan.workout_number", { number: item.number })}</Text>
+                  <Text style={styles.sessionFocus}>{item.session.focus}</Text>
+                  <Text style={styles.sessionMoves}>{t("plan_setup.ready.moves_count", { count: item.session.exercises.length })}</Text>
+                </View>
+              ) : (
+                <View key={item.key} style={[styles.sessionRow, index > 0 && styles.sessionRowBorder]}>
+                  <Ionicons name="moon-outline" size={16} color={coachColors.limeText} style={styles.restIcon} />
+                  <Text style={[styles.sessionFocus, styles.restLabel]}>{t("plan.rest_day")}</Text>
+                </View>
+              )
+            )}
           </View>
 
           {plan.weekly_notes ? (
@@ -180,7 +232,7 @@ const styles = StyleSheet.create({
   sessionList: { backgroundColor: coachColors.card, borderRadius: 20, paddingHorizontal: 16 },
   sessionRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16 },
   sessionRowBorder: { borderTopWidth: 1, borderTopColor: coachColors.border },
-  sessionDay: { width: 40, fontFamily: coachFonts.bodyExtraBold, fontSize: 12, color: coachColors.coralPressed },
+  sessionDay: { width: 84, fontFamily: coachFonts.bodyExtraBold, fontSize: 12, color: coachColors.coralPressed },
   sessionFocus: { flex: 1, fontFamily: coachFonts.headingSemiBold, fontSize: 17, color: coachColors.text },
   sessionMoves: { fontFamily: coachFonts.body, fontSize: 13, color: coachColors.textSecondary },
   tipRow: { flexDirection: "row", gap: 8 },
@@ -195,6 +247,14 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   safetyNoteText: { flex: 1, fontFamily: coachFonts.body, fontSize: 13, lineHeight: 19, color: coachColors.amberText },
+  chooseContent: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 32, gap: 12 },
+  heroRowDark: { flexDirection: "row", alignItems: "center", gap: 10 },
+  chooseEyebrow: { fontFamily: coachFonts.bodyBold, fontSize: 14, color: coachColors.textSecondary },
+  chooseTitle: { fontFamily: coachFonts.heading, fontSize: 30, lineHeight: 35, color: coachColors.text },
+  chooseHelper: { fontFamily: coachFonts.body, fontSize: 15, lineHeight: 21, color: coachColors.textSecondary, marginBottom: 4 },
+  adjustError: { fontFamily: coachFonts.bodyBold, fontSize: 13, color: coachColors.coralPressed },
+  restIcon: { width: 84 },
+  restLabel: { color: coachColors.limeText },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, gap: 10, backgroundColor: coachColors.bg },
   startButton: { height: 56, borderRadius: 999, backgroundColor: coachColors.coralPressed, alignItems: "center", justifyContent: "center" },
   startButtonText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 18 },

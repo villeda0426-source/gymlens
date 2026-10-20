@@ -19,6 +19,7 @@ import Stepper from "@/components/UI/Stepper";
 import SegmentedProgressBar from "@/components/UI/SegmentedProgressBar";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import CoachIcon from "@/components/Coach/CoachIcon";
+import { buildPlanSequence, nextWorkoutItem } from "@/lib/planSequence";
 
 interface SessionExercise {
   id: string;
@@ -41,10 +42,24 @@ export default function WorkoutSessionScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { exercise: adHocExercise } = useLocalSearchParams<{ exercise?: string; muscles?: string }>();
-  const { plan, units, markExerciseCompleted } = useCoachTrainerStore();
+  const { exercise: adHocExercise, sessionIndex: sessionIndexParam } = useLocalSearchParams<{
+    exercise?: string;
+    muscles?: string;
+    sessionIndex?: string;
+  }>();
+  const { plan, units, markExerciseCompleted, completedExerciseIds, sessionCompletedAt } = useCoachTrainerStore();
 
-  const todaySession = plan?.sessions?.[0] ?? null;
+  // A specific workout when the Plan tab says which; otherwise the next
+  // unfinished one in order. Fixed once the session starts, so finishing it
+  // doesn't swap the screen to the following workout mid-way.
+  const [sessionIndex] = useState<number | null>(() => {
+    if (!plan) return null;
+    const requested = sessionIndexParam !== undefined ? Number.parseInt(sessionIndexParam, 10) : NaN;
+    if (Number.isInteger(requested) && plan.sessions[requested]) return requested;
+    const next = nextWorkoutItem(buildPlanSequence({ plan, completedExerciseIds, sessionCompletedAt }));
+    return next ? next.sessionIndex : null;
+  });
+  const todaySession = sessionIndex !== null ? plan?.sessions?.[sessionIndex] ?? null : null;
 
   const exercises = useMemo<SessionExercise[]>(() => {
     if (adHocExercise) {
@@ -166,8 +181,11 @@ export default function WorkoutSessionScreen() {
           <Ionicons name="close" size={18} color={coachDark.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerEyebrow}>
-            {(todaySession?.focus ?? t("workout_session.quick_session")).toUpperCase()}
+          <Text style={styles.headerEyebrow} numberOfLines={1}>
+            {(todaySession && sessionIndex !== null
+              ? `${t("plan.workout_number", { number: sessionIndex + 1 })} · ${todaySession.focus}`
+              : t("workout_session.quick_session")
+            ).toUpperCase()}
             {exercises.length > 1 ? ` · ${exerciseIndex + 1}/${exercises.length}` : ""}
           </Text>
           <Text style={styles.headerClock}>{formatClock(seconds)}</Text>
@@ -252,7 +270,7 @@ const styles = StyleSheet.create({
 
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingBottom: spacing.md },
   iconButton: { width: 44, height: 44, borderRadius: radii.pill, backgroundColor: coachDark.surface, alignItems: "center", justifyContent: "center" },
-  headerCenter: { alignItems: "center" },
+  headerCenter: { flex: 1, alignItems: "center", paddingHorizontal: spacing.sm },
   headerEyebrow: { color: coachDark.textSecondary, fontFamily: coachFonts.bodyExtraBold, fontSize: 12, letterSpacing: 1.4 },
   headerClock: { color: coachDark.text, fontFamily: coachFonts.heading, fontSize: 22, fontVariant: ["tabular-nums"], marginTop: 2 },
 

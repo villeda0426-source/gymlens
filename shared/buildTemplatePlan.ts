@@ -86,6 +86,38 @@ export interface BuildTemplatePlanInput {
   lightModerate: boolean; // heart condition / other condition / pregnancy, no acute symptoms
   units: Units;
   language: "en" | "es";
+  // "alternate" is Coach's second option: a different split and a heavier,
+  // lower-rep emphasis, so the two choices genuinely differ.
+  style?: "standard" | "alternate";
+}
+
+// The second option's split: full-body layouts flip to upper/lower and vice
+// versa, keeping the same number of training days.
+function alternateLayout(standard: string[], daysPerWeek: number): string[] {
+  const isFullBody = standard.every((id) => id.startsWith("FULL_"));
+  if (isFullBody) {
+    const upperLower = ["UPPER_A", "LOWER_A", "UPPER_B", "LOWER_B"];
+    if (daysPerWeek <= 1) return ["FULL_B"];
+    if (daysPerWeek === 3) return ["UPPER_A", "LOWER_A", "FULL_B"];
+    return upperLower.slice(0, Math.min(4, daysPerWeek));
+  }
+  return Array.from({ length: Math.min(4, daysPerWeek) }, (_, index) => (index % 2 === 0 ? "FULL_A" : "FULL_B"));
+}
+
+// Heavier emphasis for the alternate option: fewer reps on the main lifts,
+// a touch more effort, longer rest. Stays conservative for the light-to-
+// moderate safety path and for brand-new lifters.
+function applyAlternateIntensity(exercise: CoachExercise, role: Slot["role"], cautious: boolean): CoachExercise {
+  if (role !== "main" || exercise.rep_range.max <= 0) return exercise;
+  const min = Math.max(5, exercise.rep_range.min - 2);
+  const max = Math.max(min + 2, exercise.rep_range.max - 3);
+  const rpeBump = cautious ? 0 : 0.5;
+  return {
+    ...exercise,
+    rep_range: { min, max },
+    target_rpe: exercise.target_rpe === null ? null : Math.min(9, exercise.target_rpe + rpeBump),
+    rest_seconds: Math.max(exercise.rest_seconds, 120),
+  };
 }
 
 function repsLeftToRpe(effort: string): number {
@@ -205,7 +237,13 @@ function buildSession(day: DayTemplate, input: BuildTemplatePlanInput, templateG
     if (picked.length >= 4 && minutesSoFar >= sessionMinutes) break;
   }
 
-  const exercises = picked.map((p) => buildExercise(p.exercise, p.slot, templateGoal, templateExperience, lightModerate));
+  const alternate = input.style === "alternate";
+  const exercises = picked.map((p) => {
+    const built = buildExercise(p.exercise, p.slot, templateGoal, templateExperience, lightModerate);
+    return alternate && !p.exercise.timed
+      ? applyAlternateIntensity(built, p.slot.role, lightModerate || templateExperience === "brand_new")
+      : built;
+  });
   const estimatedMinutes = estimateMinutes(
     picked.map((p) => ({ sets: PRESCRIPTION.weeks[templateExperience][0].sets, role: p.slot.role }))
   );
@@ -224,8 +262,9 @@ function buildSession(day: DayTemplate, input: BuildTemplatePlanInput, templateG
 export function buildTemplatePlan(input: BuildTemplatePlanInput): CoachPlan | null {
   const templateGoal = GOAL_MAP[input.goal];
   const templateExperience = EXPERIENCE_MAP[input.experience];
-  const dayIds = WEEK_LAYOUT[templateExperience]?.[input.daysPerWeek];
-  if (!dayIds || dayIds.length === 0) return null;
+  const standardIds = input.daysPerWeek === 1 ? ["FULL_A"] : WEEK_LAYOUT[templateExperience]?.[input.daysPerWeek];
+  if (!standardIds || standardIds.length === 0) return null;
+  const dayIds = input.style === "alternate" ? alternateLayout(standardIds, input.daysPerWeek) : standardIds;
 
   // Matches the existing contract (AI-generated plans do the same): sessions
   // holds only the first training week's unique templates, capped at 4.
@@ -243,7 +282,8 @@ export function buildTemplatePlan(input: BuildTemplatePlanInput): CoachPlan | nu
     .filter((session) => session.exercises.length > 0);
   if (sessions.length === 0) return null;
 
-  const splitName = SPLIT_NAMES[uniqueDayIds[0]] ?? "Full Body";
+  const splitKinds = [...new Set(uniqueDayIds.map((id) => SPLIT_NAMES[id] ?? "Full Body"))];
+  const splitName = splitKinds.length > 1 ? "Upper/Lower + Full Body" : splitKinds[0];
   const weeklyTargets = PRESCRIPTION.weeklySetTargets[templateExperience];
   const goalAdjust = PRESCRIPTION.goalAdjust[templateGoal];
   const optionalFinisher = "optionalFinisher" in goalAdjust ? ` ${goalAdjust.optionalFinisher}.` : "";

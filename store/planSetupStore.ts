@@ -13,7 +13,14 @@ import {
   type LimitationChip,
   type PlanSetupTriage,
 } from "@/shared/planSetupTriage";
-import { buildTemplatePlan, extractAreasFromText } from "@/shared/buildTemplatePlan";
+import { extractAreasFromText } from "@/shared/buildTemplatePlan";
+import { parseInstructionOverrides } from "@/lib/coachInstructions";
+import {
+  buildTemplatePlanOptions,
+  generateAiPlanOptions,
+  instructionsDirective,
+  type PlanOption,
+} from "@/lib/planOptions";
 
 export type PlanSetupGoal = "strength" | "hypertrophy" | "fat_loss" | "general_fitness";
 export type PlanSetupLocation = "full_gym" | "dumbbells_home" | "bodyweight";
@@ -38,6 +45,11 @@ interface PlanSetupState {
   // null = not asked yet this session. Only meaningful once at least one
   // non-"nothing" chip has been selected.
   consentGranted: boolean | null;
+  // Optional free-text instructions from step 5. They win over the tapped
+  // answers for this plan.
+  instructions: string;
+  // Coach's two options once built; nothing is saved until one is chosen.
+  options: PlanOption[] | null;
   buildStatus: BuildStatus;
   buildError: string | null;
 
@@ -50,6 +62,9 @@ interface PlanSetupState {
   setLimitationArea: (area: string) => void;
   setChestPainCleared: (cleared: boolean) => void;
   setConsentGranted: (granted: boolean | null) => void;
+  setInstructions: (instructions: string) => void;
+  replaceOption: (option: PlanOption) => void;
+  chooseOption: (option: PlanOption) => void;
   triage: () => PlanSetupTriage;
   reset: () => void;
   beginFromProfile: (profile: Record<string, unknown> | null) => void;
@@ -67,6 +82,8 @@ const initial = {
   limitationArea: "",
   chestPainCleared: false,
   consentGranted: null as boolean | null,
+  instructions: "",
+  options: null as PlanOption[] | null,
   buildStatus: "idle" as BuildStatus,
   buildError: null as string | null,
 };
@@ -173,6 +190,13 @@ export const usePlanSetupStore = create<PlanSetupState>((set, get) => ({
   setLimitationArea: (limitationArea) => set({ limitationArea }),
   setChestPainCleared: (chestPainCleared) => set({ chestPainCleared }),
   setConsentGranted: (consentGranted) => set({ consentGranted }),
+  setInstructions: (instructions) => set({ instructions }),
+  replaceOption: (option) =>
+    set((state) => ({ options: state.options?.map((item) => (item.id === option.id ? option : item)) ?? null })),
+  chooseOption: (option) => {
+    useCoachTrainerStore.getState().setPlan(option.plan);
+    set({ options: null, buildStatus: "ready" });
+  },
 
   triage: () => {
     const { limitations, chestPainCleared } = get();
@@ -208,7 +232,7 @@ export const usePlanSetupStore = create<PlanSetupState>((set, get) => ({
       throw new Error("Plan setup answers are incomplete.");
     }
 
-    set({ buildStatus: "building", buildError: null });
+    set({ buildStatus: "building", buildError: null, options: null });
 
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -276,26 +300,28 @@ export const usePlanSetupStore = create<PlanSetupState>((set, get) => ({
       // only if the template engine can't produce a plan for this input (it
       // shouldn't, given the UI's own option set, but this must never leave
       // someone with no plan over an edge case the templates don't cover).
-      const templatePlan = buildTemplatePlan({
-        goal: state.goal,
-        daysPerWeek: state.daysPerWeek,
-        sessionMinutes: state.sessionMinutes,
-        location: state.location,
-        experience: state.experience,
-        avoidAreas: extractAreasFromText(state.limitationArea),
-        lightModerate: triage.kind === "light_moderate",
-        units,
-        language,
-      });
+      const instructions = state.instructions.trim();
+      const overrides = instructions ? parseInstructionOverrides(instructions) : {};
+      const templateOptions = (applyInstructions: boolean) =>
+        buildTemplatePlanOptions({
+          goal: state.goal!,
+          daysPerWeek: state.daysPerWeek!,
+          sessionMinutes: (applyInstructions && overrides.sessionMinutes) || state.sessionMinutes!,
+          location: (applyInstructions && overrides.location) || state.location!,
+          experience: state.experience!,
+          avoidAreas: extractAreasFromText(state.limitationArea),
+          lightModerate: triage.kind === "light_moderate",
+          units,
+          language,
+        });
 
-      let response: CoachResponse;
-      if (templatePlan) {
-        response = {
-          status: "plan_ready",
-          summary: templatePlan.weekly_notes,
-          plan: templatePlan,
-        };
-      } else {
+      // Custom instructions are read by Coach (they can say anything); the
+      // template engine only builds the options when there are none — or,
+      // if Coach can't be reached, with the parts the app understands
+      // (equipment, session length) applied.
+      let options: PlanOption[] | null = instructions ? null : templateOptions(false);
+      let response: CoachResponse | null = null;
+      if (!options) {
         const userMessage = buildSyntheticIntakeMessage({
           goal: state.goal,
           daysPerWeek: state.daysPerWeek,
@@ -305,20 +331,29 @@ export const usePlanSetupStore = create<PlanSetupState>((set, get) => ({
           limitationText,
           language,
         });
-        response = await runCoachTrainerJob(
-          { mode: "intake", units, language, history: [], userMessage },
-          { authToken }
-        );
+        try {
+          const result = await generateAiPlanOptions({
+            units,
+            language,
+            history: [],
+            userMessage: instructions ? `${userMessage} ${instructionsDirective(instructions)}` : userMessage,
+            authToken,
+          });
+          if (result.kind === "options") options = result.options;
+          else response = result.response;
+        } catch (error) {
+          options = instructions ? templateOptions(true) : null;
+          if (!options) throw error;
+        }
       }
 
-      if (response.status === "plan_ready") {
-        useCoachTrainerStore.getState().setPlan(response.plan);
-        set({ buildStatus: "ready" });
-      } else {
-        const message = "message" in response ? response.message : "Coach could not build a plan from those answers.";
-        set({ buildStatus: "error", buildError: message });
+      if (options && options.length > 0) {
+        set({ options, buildStatus: "ready" });
+        return { status: "plan_ready", summary: options[0].summary, plan: options[0].plan };
       }
-      return response;
+      const message = response && "message" in response ? response.message : "Coach could not build a plan from those answers.";
+      set({ buildStatus: "error", buildError: message });
+      return response ?? { status: "reply", message };
     } catch (err: any) {
       set({ buildStatus: "error", buildError: err?.message || "Something went wrong. Please try again." });
       throw err;

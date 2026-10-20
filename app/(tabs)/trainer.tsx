@@ -29,18 +29,25 @@ import {
   callCoachTrainer,
   CoachMessage,
   CoachResponse,
-  getCoachTrainerJob,
   getLatestCoachWorkoutReview,
   makeFreeformWorkoutLog,
-  recordCoachJobClientTiming,
-  runCoachTrainerJob,
-  startCoachTrainerJob,
 } from "@/lib/coachTrainer";
+import {
+  adjustPlanOption,
+  generateAiPlanOptions,
+  generateSessionOptions,
+  instructionsDirective,
+  type PlanOption,
+} from "@/lib/planOptions";
+import { isPermanentChange, looksLikeWorkoutInstruction, parseInstructionOverrides, type InstructionOverrides } from "@/lib/coachInstructions";
+import { buildPlanSequence, nextWorkoutItem } from "@/lib/planSequence";
+import PlanOptionCards from "@/components/Coach/PlanOptionCards";
 import { getCoachChips, getCoachPlanState, type CoachChip } from "@/lib/coachSuggestions";
 import {
   answerLabel,
   buildFlowIntakeMessage,
-  buildFlowTemplatePlan,
+  buildFlowTemplateOptions,
+  flowInstructions,
   getQuestion,
   remainingQuestions,
   type QuestionAnswer,
@@ -65,13 +72,30 @@ type QuestionFlowState = {
 
 type FinishedQuestionFlow = Pick<QuestionFlowState, "answers" | "sessionMinutes" | "note">;
 
-const COACH_JOB_POLL_INTERVAL_MS = 2500;
-const COACH_JOB_MAX_WAIT_MS = 180000;
+// Coach's two options on screen, waiting for a pick. `source` is what made
+// them, so typing more instructions while choosing can rebuild both.
+type PlanChoiceSource =
+  | { type: "flow"; finished: FinishedQuestionFlow }
+  | { type: "intake"; history: CoachMessage[]; userMessage: string }
+  | { type: "workout"; sessionIndex: number; instructions: string };
 
-function makeAbortError() {
-  const error = new Error("Coach job polling aborted.");
-  error.name = "AbortError";
-  return error;
+type PlanChoice = {
+  kind: "plan" | "workout";
+  options: PlanOption[];
+  source: PlanChoiceSource;
+  // Set when the instructions behind these options sound permanent, so
+  // picking one also offers to save the change to the profile.
+  permanent: InstructionOverrides | null;
+};
+
+function joinInstructions(previous: string | null | undefined, next: string): string {
+  return previous?.trim() ? `${previous.trim()}; ${next.trim()}` : next.trim();
+}
+
+function permanentOverrides(instructions: string | null | undefined): InstructionOverrides | null {
+  if (!instructions || !isPermanentChange(instructions)) return null;
+  const overrides = parseInstructionOverrides(instructions);
+  return overrides.location || overrides.sessionMinutes ? overrides : null;
 }
 
 type SpeechRecognitionModule = {
@@ -124,6 +148,7 @@ export default function TrainerScreen() {
     units,
     plan,
     setPlan,
+    updatePlan,
     hasEnteredCoachChat,
     failedPrompt,
     enterCoachChat,
@@ -160,11 +185,16 @@ export default function TrainerScreen() {
   const [showArchived, setShowArchived] = useState(false);
   const [questionFlow, setQuestionFlow] = useState<QuestionFlowState | null>(null);
   const [failedFlow, setFailedFlow] = useState<FinishedQuestionFlow | null>(null);
+  const [planChoice, setPlanChoice] = useState<PlanChoice | null>(null);
+  const [adjustingOptionId, setAdjustingOptionId] = useState<string | null>(null);
+  const [profilePrompt, setProfilePrompt] = useState<InstructionOverrides | null>(null);
 
-  // Questions in progress belong to the thread they started in.
+  // Questions and options in progress belong to the thread they started in.
   useEffect(() => {
     setQuestionFlow(null);
     setFailedFlow(null);
+    setPlanChoice(null);
+    setProfilePrompt(null);
   }, [activeThreadId]);
 
   const chips = useMemo(
@@ -275,7 +305,7 @@ export default function TrainerScreen() {
 
   useEffect(() => {
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
-  }, [conversation.length, notice, questionFlow?.index]);
+  }, [conversation.length, notice, questionFlow?.index, planChoice, profilePrompt]);
 
   const visibleConversation = useMemo<CoachMessage[]>(() => {
     if (conversation.length > 0) return conversation;
@@ -323,38 +353,6 @@ export default function TrainerScreen() {
     addConversationMessage({ role: "assistant", content: t("trainer.coach_suggestion.kept_notice") });
   };
 
-  const waitForCoachJob = async (jobId: string, authToken: string, signal: AbortSignal) => {
-    const startedAt = Date.now();
-    let pollCount = 0;
-
-    while (Date.now() - startedAt < COACH_JOB_MAX_WAIT_MS) {
-      if (signal.aborted) throw makeAbortError();
-
-      const job = await getCoachTrainerJob(jobId, { authToken, signal });
-      pollCount += 1;
-      if (job.status === "completed" && job.result) {
-        return { result: job.result, timings: job.timings, pollingMs: Date.now() - startedAt, pollCount };
-      }
-      if (job.status === "failed") {
-        throw new Error(job.error || t("trainer.coach_connect_error"));
-      }
-
-      await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(resolve, COACH_JOB_POLL_INTERVAL_MS);
-        signal.addEventListener(
-          "abort",
-          () => {
-            clearTimeout(timeout);
-            reject(makeAbortError());
-          },
-          { once: true }
-        );
-      });
-    }
-
-    throw new Error(t("trainer.coach_connect_error"));
-  };
-
   const submitMessage = async (messageText?: string) => {
     const text = (messageText ?? draft).trim();
     if (!text || loading) return;
@@ -363,6 +361,23 @@ export default function TrainerScreen() {
     if (questionFlow) {
       setDraft("");
       handleQuestionAnswer({ values: [], text });
+      return;
+    }
+
+    // While two options are up, typing is more instructions: rebuild both.
+    if (planChoice) {
+      setDraft("");
+      addConversationMessage({ role: "user", content: text });
+      void regeneratePlanChoice(planChoice, text);
+      return;
+    }
+
+    // A plan is running and this changes how the next workout should look
+    // ("bodyweight only today", "make it 30 minutes"): two takes on it.
+    if (plan && looksLikeWorkoutInstruction(text)) {
+      setDraft("");
+      addConversationMessage({ role: "user", content: text });
+      void offerWorkoutOptions(text);
       return;
     }
 
@@ -400,38 +415,8 @@ export default function TrainerScreen() {
     try {
       const language = i18n.language?.startsWith("es") ? ("es" as const) : ("en" as const);
       if (!plan && intakeHistory.length > 0) {
-        const nextHistory =
-          intakeHistory.length === 0
-            ? [{ role: "user" as const, content: `CONTEXT: ${JSON.stringify({ mode: "intake", units })}\n\n${text}` }]
-            : [...intakeHistory, { role: "user" as const, content: text }];
-
         setNotice(t("trainer.coach_building_plan"));
-        const clientStartedAt = Date.now();
-        const jobStartAt = Date.now();
-        const job = await startCoachTrainerJob({
-          mode: "intake",
-          units,
-          language,
-          history: intakeHistory,
-          userMessage: text,
-        }, { authToken: session.access_token, signal: controller.signal });
-        const jobStartRequestMs = Date.now() - jobStartAt;
-        const completion = await waitForCoachJob(job.jobId, session.access_token, controller.signal);
-        const response = completion.result;
-        const responseReceivedAt = Date.now();
-        setIntakeHistory(nextHistory);
-        handleResponse(response, nextHistory);
-        requestAnimationFrame(() => {
-          const clientTiming = {
-            jobStartRequestMs,
-            clientPollingMs: completion.pollingMs,
-            responseToRenderMs: Date.now() - responseReceivedAt,
-            clientTotalMs: Date.now() - clientStartedAt,
-            pollCount: completion.pollCount,
-          };
-          console.info("[coach-timing]", { jobId: job.jobId, ...completion.timings, ...clientTiming });
-          void recordCoachJobClientTiming(job.jobId, clientTiming, { authToken: session.access_token }).catch(() => undefined);
-        });
+        await offerAiPlanOptions({ history: intakeHistory, userMessage: text, authToken: session.access_token, signal: controller.signal });
         setFailedPrompt(null);
       } else if (!plan) {
         const response = await callCoachTrainer({
@@ -541,56 +526,256 @@ export default function TrainerScreen() {
     setQuestionFlow({ ...questionFlow, index: questionFlow.index - 1 });
   };
 
-  const generatePlanFromFlow = async (finished: FinishedQuestionFlow) => {
+  const coachLanguage = () => (i18n.language?.startsWith("es") ? ("es" as const) : ("en" as const));
+
+  // Two AI options from an intake conversation. Shown as cards; nothing is
+  // saved until one is picked. A question back from Coach is just a reply.
+  const offerAiPlanOptions = async (args: {
+    history: CoachMessage[];
+    userMessage: string;
+    authToken: string;
+    signal: AbortSignal;
+    permanent?: InstructionOverrides | null;
+    source?: PlanChoiceSource;
+  }) => {
+    const result = await generateAiPlanOptions({
+      units,
+      language: coachLanguage(),
+      history: args.history,
+      userMessage: args.userMessage,
+      authToken: args.authToken,
+      signal: args.signal,
+    });
+    const nextHistory: CoachMessage[] =
+      args.history.length === 0
+        ? [{ role: "user", content: `CONTEXT: ${JSON.stringify({ mode: "intake", units })}\n\n${args.userMessage}` }]
+        : [...args.history, { role: "user", content: args.userMessage }];
+    if (result.kind === "message") {
+      handleResponse(result.response, nextHistory);
+      return;
+    }
+    setIntakeHistory(nextHistory);
+    showPlanChoice({
+      kind: "plan",
+      options: result.options,
+      source: args.source ?? { type: "intake", history: args.history, userMessage: args.userMessage },
+      permanent: args.permanent ?? null,
+    });
+  };
+
+  const showPlanChoice = (choice: PlanChoice) => {
+    setPlanChoice(choice);
+    setNotice(choice.options.length < 2 ? t("plan_options.only_one") : "");
+    addConversationMessage({
+      role: "assistant",
+      content: t(choice.kind === "plan" ? "plan_options.intro_plan" : "plan_options.intro_workout"),
+    });
+  };
+
+  // Session check + abort + loading/notice handling shared by every
+  // option-generating request.
+  const runCoachRequest = async (
+    work: (authToken: string, signal: AbortSignal) => Promise<void>,
+    onError?: (error: any) => boolean
+  ) => {
     const {
       data: { session },
     } = await supabase.auth.getSession();
     if (!session?.access_token || !user) {
-      setFailedFlow(finished);
       setNotice(t("trainer.session_expired_send"));
       resetChatSession();
       return;
     }
-
-    const language = i18n.language?.startsWith("es") ? ("es" as const) : ("en" as const);
-    const templatePlan = buildFlowTemplatePlan(finished.answers, {
-      sessionMinutes: finished.sessionMinutes,
-      units,
-      language,
-      hasNote: !!finished.note?.trim(),
-    });
-    if (templatePlan) {
-      setFailedFlow(null);
-      handleResponse({ status: "plan_ready", summary: templatePlan.weekly_notes, plan: templatePlan });
-      return;
-    }
-
     const controller = new AbortController();
     abortRef.current?.abort();
     abortRef.current = controller;
     setLoading(true);
-    setFailedFlow(null);
-    setFailedPrompt(null);
     setNotice(t("trainer.coach_building_plan"));
     try {
-      const userMessage = buildFlowIntakeMessage(t, finished.answers, {
-        sessionMinutes: finished.sessionMinutes,
-        note: finished.note,
-      });
-      const response = await runCoachTrainerJob(
-        { mode: "intake", units, language, history: [], userMessage },
-        { authToken: session.access_token, signal: controller.signal }
-      );
-      const nextHistory = [{ role: "user" as const, content: `CONTEXT: ${JSON.stringify({ mode: "intake", units })}\n\n${userMessage}` }];
-      setIntakeHistory(nextHistory);
-      handleResponse(response, nextHistory);
+      await work(session.access_token, controller.signal);
     } catch (error: any) {
-      setFailedFlow(finished);
+      if (onError?.(error)) return;
       setNotice(error?.name === "AbortError" ? t("trainer.chat_interrupted") : t("trainer.coach_connect_error"));
     } finally {
       setLoading(false);
       if (abortRef.current === controller) abortRef.current = null;
     }
+  };
+
+  const generatePlanFromFlow = async (finished: FinishedQuestionFlow) => {
+    const language = coachLanguage();
+    const instructions = flowInstructions(finished.answers);
+    const permanent = permanentOverrides(instructions);
+    const source: PlanChoiceSource = { type: "flow", finished };
+    const templateArgs = {
+      sessionMinutes: finished.sessionMinutes,
+      units,
+      language,
+      hasNote: !!finished.note?.trim(),
+    };
+    const templateOptions = buildFlowTemplateOptions(finished.answers, templateArgs);
+    if (templateOptions) {
+      setFailedFlow(null);
+      showPlanChoice({ kind: "plan", options: templateOptions, source, permanent });
+      return;
+    }
+
+    setFailedFlow(null);
+    setFailedPrompt(null);
+    await runCoachRequest(
+      async (authToken, signal) => {
+        const userMessage = buildFlowIntakeMessage(t, finished.answers, {
+          sessionMinutes: finished.sessionMinutes,
+          note: finished.note,
+        });
+        await offerAiPlanOptions({ history: [], userMessage, authToken, signal, permanent, source });
+      },
+      (error) => {
+        // Coach unreachable but the instructions are ones the app can apply
+        // itself (equipment, session length): still offer two plans.
+        if (error?.name !== "AbortError" && instructions) {
+          const fallback = buildFlowTemplateOptions(finished.answers, { ...templateArgs, applyInstructions: true });
+          if (fallback) {
+            showPlanChoice({ kind: "plan", options: fallback, source, permanent });
+            return true;
+          }
+        }
+        setFailedFlow(finished);
+        return false;
+      }
+    );
+  };
+
+  // Custom instructions with a plan running: two takes on the next workout.
+  const offerWorkoutOptions = async (instructions: string) => {
+    if (!plan) return;
+    const sequence = buildPlanSequence({ plan, completedExerciseIds, sessionCompletedAt });
+    const next = nextWorkoutItem(sequence);
+    if (!next) {
+      addConversationMessage({ role: "assistant", content: t("plan_options.no_next_workout") });
+      return;
+    }
+    await runCoachRequest(async (authToken, signal) => {
+      const options = await generateSessionOptions({
+        plan,
+        sessionIndex: next.sessionIndex,
+        instructions,
+        units,
+        language: coachLanguage(),
+        authToken,
+        signal,
+      });
+      showPlanChoice({
+        kind: "workout",
+        options,
+        source: { type: "workout", sessionIndex: next.sessionIndex, instructions },
+        permanent: permanentOverrides(instructions),
+      });
+    });
+  };
+
+  const regeneratePlanChoice = async (choice: PlanChoice, extra: string) => {
+    setPlanChoice(null);
+    const source = choice.source;
+    if (source.type === "flow") {
+      const answers = {
+        ...source.finished.answers,
+        instructions: { values: ["add"], text: joinInstructions(flowInstructions(source.finished.answers), extra) },
+      };
+      await generatePlanFromFlow({ ...source.finished, answers });
+      return;
+    }
+    if (source.type === "workout") {
+      await offerWorkoutOptions(joinInstructions(source.instructions, extra));
+      return;
+    }
+    await runCoachRequest((authToken, signal) =>
+      offerAiPlanOptions({
+        history: source.history,
+        userMessage: `${source.userMessage} ${instructionsDirective(extra)}`,
+        authToken,
+        signal,
+        permanent: permanentOverrides(extra) ?? choice.permanent,
+      })
+    );
+  };
+
+  const handleChooseOption = (option: PlanOption) => {
+    if (!planChoice) return;
+    const choice = planChoice;
+    setPlanChoice(null);
+    addConversationMessage({ role: "user", content: t("plan_options.chose", { id: option.id }) });
+    if (choice.kind === "plan") {
+      setPlan(option.plan);
+      addConversationMessage({ role: "assistant", content: option.summary });
+      setNotice(t("trainer.plan_ready_notice"));
+    } else if (plan && choice.source.type === "workout") {
+      const { sessionIndex } = choice.source;
+      const original = plan.sessions[sessionIndex];
+      const chosen = option.plan.sessions[0];
+      if (original && chosen) {
+        // Completion is tracked by exercise id, so an id another workout
+        // already uses gets a suffix rather than finishing both at once.
+        const otherIds = new Set(
+          plan.sessions.flatMap((session, index) => (index === sessionIndex ? [] : session.exercises.map((exercise) => exercise.exercise_id)))
+        );
+        const exercises = chosen.exercises.map((exercise) =>
+          otherIds.has(exercise.exercise_id) ? { ...exercise, exercise_id: `${exercise.exercise_id}-s${sessionIndex + 1}` } : exercise
+        );
+        // Keeps the original label so history and feedback still match it.
+        const sessions = plan.sessions.map((session, index) =>
+          index === sessionIndex ? { ...chosen, exercises, day_label: original.day_label } : session
+        );
+        updatePlan({ ...plan, sessions });
+      }
+      addConversationMessage({
+        role: "assistant",
+        content: t("plan_options.workout_updated", { number: sessionIndex + 1 }),
+      });
+      setNotice("");
+    }
+    if (choice.permanent) setProfilePrompt(choice.permanent);
+  };
+
+  const handleAdjustOption = async (option: PlanOption, instructions: string) => {
+    if (!planChoice) return;
+    const choice = planChoice;
+    addConversationMessage({ role: "user", content: t("plan_options.adjust_message", { id: option.id, instructions }) });
+    setAdjustingOptionId(option.id);
+    await runCoachRequest(async (authToken, signal) => {
+      const adjusted = await adjustPlanOption({ option, instructions, units, language: coachLanguage(), authToken, signal });
+      const updated: PlanOption =
+        choice.kind === "workout"
+          ? { ...adjusted, plan: { ...adjusted.plan, days_per_week: 1, sessions: adjusted.plan.sessions.slice(0, 1) } }
+          : adjusted;
+      setPlanChoice((current) =>
+        current ? { ...current, options: current.options.map((item) => (item.id === option.id ? updated : item)), permanent: current.permanent ?? permanentOverrides(instructions) } : current
+      );
+      setNotice("");
+    });
+    setAdjustingOptionId(null);
+  };
+
+  // A permanent-sounding change ("I don't have a gym anymore"): save it to
+  // the profile only if the person says so.
+  const handleProfilePrompt = async (save: boolean) => {
+    const overrides = profilePrompt;
+    setProfilePrompt(null);
+    if (!save || !overrides || !user) {
+      addConversationMessage({ role: "assistant", content: t("plan_options.profile_kept") });
+      return;
+    }
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        ...(overrides.location ? { equipment_type: overrides.location } : {}),
+        ...(overrides.sessionMinutes ? { session_minutes: overrides.sessionMinutes } : {}),
+      })
+      .eq("id", user.id);
+    addConversationMessage({
+      role: "assistant",
+      content: t(error ? "plan_options.profile_save_failed" : "plan_options.profile_saved"),
+    });
   };
 
   const handleChipPress = (chip: CoachChip) => {
@@ -936,6 +1121,38 @@ export default function TrainerScreen() {
             />
           ) : null}
 
+          {planChoice ? (
+            <PlanOptionCards
+              options={planChoice.options}
+              kind={planChoice.kind}
+              onChoose={handleChooseOption}
+              onAdjust={handleAdjustOption}
+              adjustingId={adjustingOptionId}
+              disabled={loading}
+            />
+          ) : null}
+
+          {profilePrompt ? (
+            <View style={styles.profilePrompt}>
+              <Text style={styles.profilePromptText}>
+                {t("plan_options.profile_question", {
+                  change: [
+                    profilePrompt.location ? t(`plan_options.location.${profilePrompt.location}`) : null,
+                    profilePrompt.sessionMinutes ? t("plan_options.minutes_value", { count: profilePrompt.sessionMinutes }) : null,
+                  ].filter(Boolean).join(", "),
+                })}
+              </Text>
+              <View style={styles.profilePromptButtons}>
+                <TouchableOpacity style={styles.profilePromptPrimary} onPress={() => handleProfilePrompt(true)} accessibilityRole="button">
+                  <Text style={styles.profilePromptPrimaryText}>{t("plan_options.profile_yes")}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.profilePromptSecondary} onPress={() => handleProfilePrompt(false)} accessibilityRole="button">
+                  <Text style={styles.profilePromptSecondaryText}>{t("plan_options.profile_no")}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
+
           {pendingPlanChange ? (
             <View style={styles.suggestionWrap}>
               <CoachSuggestionCard
@@ -977,7 +1194,7 @@ export default function TrainerScreen() {
           ) : null}
         </ScrollView>
 
-        {questionFlow ? null : (
+        {questionFlow || planChoice ? null : (
           <View style={styles.quickActions}>
             <SuggestedPrompts
               prompts={chips.map((chip) => ({ key: chip.key, label: t(chip.key) }))}
@@ -1000,7 +1217,9 @@ export default function TrainerScreen() {
             placeholder={
               questionFlow
                 ? t("trainer.question_flow.composer_placeholder")
-                : plan
+                : planChoice
+                  ? t("plan_options.composer_placeholder")
+                  : plan
                   ? t("trainer.placeholder_plan")
                   : t("trainer.placeholder_intake")
             }
@@ -1145,6 +1364,28 @@ const styles = StyleSheet.create({
   // clips the first message"), give it real breathing room.
   messagesContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 18, gap: 12 },
   suggestionWrap: { gap: spacing.sm },
+  profilePrompt: {
+    alignSelf: "flex-start",
+    maxWidth: "88%",
+    backgroundColor: coachColors.card,
+    borderWidth: 1.5,
+    borderColor: coachColors.coachGold,
+    borderRadius: radii.card,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  profilePromptText: { color: coachColors.text, fontFamily: coachFonts.bodySemiBold, fontSize: 15, lineHeight: 21 },
+  profilePromptButtons: { flexDirection: "row", gap: spacing.sm },
+  profilePromptPrimary: {
+    flex: 1, height: 44, borderRadius: radii.pill, backgroundColor: coachColors.coralPressed,
+    alignItems: "center", justifyContent: "center", paddingHorizontal: 10,
+  },
+  profilePromptPrimaryText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 14 },
+  profilePromptSecondary: {
+    flex: 1, height: 44, borderRadius: radii.pill, borderWidth: 1.5, borderColor: coachColors.border,
+    alignItems: "center", justifyContent: "center", paddingHorizontal: 10,
+  },
+  profilePromptSecondaryText: { color: coachColors.text, fontFamily: coachFonts.bodyBold, fontSize: 14 },
   noticeCard: {
     flexDirection: "row",
     gap: 8,

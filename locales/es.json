@@ -12,7 +12,6 @@
     "back": "Atrás",
     "next": "Siguiente",
     "done": "Listo",
-    "continue": "Continuar",
     "or": "o",
     "and": "y"
   },
@@ -43,7 +42,12 @@
     "permission_denied_message": "Para escanear equipos, permite el acceso a la cámara para SpotLift en Configuración. Puedes seguir usando el resto de la app sin activarlo.",
     "open_settings": "Abrir Configuración",
     "search_manually": "Buscar manualmente",
-    "no_camera": "Cámara no disponible"
+    "no_camera": "Cámara no disponible",
+    "take_photo": "Tomar foto",
+    "capture_failed_title": "No se pudo tomar la foto",
+    "capture_failed_message": "Algo salió mal con la cámara. Inténtalo de nuevo o sube una foto de tu galería.",
+    "upload_failed_message": "No se pudo abrir tu galería. Inténtalo de nuevo.",
+    "unavailable_message": "La cámara no pudo iniciar. Cierra y vuelve a abrir Escanear, o sube una foto de tu galería."
   },
   "scan_result": {
     "looks_like": "Parece ser",
@@ -110,7 +114,14 @@
       "4": "Sobrecarga progresiva: aumenta poco a poco el peso o las repeticiones cada semana.",
       "5": "El sueño es cuando tus músculos se recuperan. Apunta a 7–9 horas por noche.",
       "6": "Los movimientos compuestos como sentadillas y peso muerto dan mucho rendimiento."
-    }
+    },
+    "next_workout_eyebrow": "Sigue · Entrenamiento {{number}}",
+    "workouts_progress": "{{done}} DE {{total}} ENTRENAMIENTOS HECHOS",
+    "rest_day_note": "Coach sugiere un día de descanso primero. Entrena cuando te sientas listo.",
+    "plan_complete_eyebrow": "Plan completado",
+    "plan_complete_title": "Terminaste todos los entrenamientos",
+    "plan_complete_body": "Arma tu siguiente bloque con Coach para seguir progresando.",
+    "plan_complete_cta": "Armar mi siguiente bloque"
   },
   "equipment": {
     "tutorial": "Tutorial",
@@ -315,7 +326,8 @@
     "pr_label": "Récord personal de la serie {{set}}",
     "set_label": "Serie {{set}}",
     "could_not_load": "No se pudieron cargar tus series. Inténtalo de nuevo.",
-    "back": "Atrás"
+    "back": "Atrás",
+    "keyboard_done": "Listo"
   },
   "trainer": {
     "personal_trainer": "Coach",
@@ -498,6 +510,20 @@
         },
         "text_label": "¿Qué debo tomar en cuenta?",
         "text_placeholder": "p. ej. Dolor en la rodilla izquierda en sentadillas profundas"
+      },
+      "instructions": {
+        "title": "¿Algo más que deba saber antes de armarlo?",
+        "helper": "Opcional. Estas instrucciones tienen prioridad sobre tus respuestas.",
+        "options": {
+          "none": "No, arma mi plan",
+          "add": "Agregar instrucciones"
+        },
+        "descriptions": {
+          "none": "Usa mis respuestas tal como están",
+          "add": "p. ej. sin correr, solo mancuernas"
+        },
+        "text_label": "Tus instrucciones",
+        "text_placeholder": "p. ej. Sin correr esta semana, máximo 30 minutos"
       }
     },
     "coach_composer": {
@@ -570,11 +596,11 @@
     "done_button": "Listo"
   },
   "plan": {
-    "title": "Esta semana",
+    "title": "Tu plan",
     "eyebrow": "Plan",
     "coach": "Coach",
-    "empty_title": "Aún no hay plan semanal",
-    "empty_text": "Chatea con Coach en la pestaña Coach y pide un plan semanal. Aparecerá aquí automáticamente.",
+    "empty_title": "Aún no tienes plan",
+    "empty_text": "Pídele un plan a Coach. Aparecerá aquí, con tus entrenamientos en orden.",
     "create_with_coach": "Crear plan con Coach",
     "todays_workout": "Rutina de hoy",
     "min": "min",
@@ -656,6 +682,48 @@
       "worlds_greatest": "Estiramiento dinámico completo — 4/lado",
       "jumping_jacks": "Saltos de tijera — 45 seg",
       "inchworm": "Caminatas tipo gusano — 6 reps"
+    },
+    "workout_number": "Entrenamiento {{number}}",
+    "workout_short": "E{{number}}",
+    "workout_of": "Entrenamiento {{current}} de {{total}}",
+    "all_workouts_done": "Los {{total}} entrenamientos hechos",
+    "done_to_go": "{{done}} hechos · faltan {{left}}",
+    "per_week": "{{count}}×/semana",
+    "up_next": "Sigue · Entrenamiento {{number}}",
+    "up_next_rest": "Sigue · Recuperación",
+    "start_workout_number": "Empezar entrenamiento {{number}}",
+    "continue_workout": "Continuar entrenamiento",
+    "view_details": "Ver ejercicios",
+    "rest_day": "Día de descanso",
+    "rest_then": "Después, Entrenamiento {{number}}.",
+    "train_anyway": "¿Te sientes fresco? Empieza el Entrenamiento {{number}}",
+    "rest_tips": {
+      "lower": "Tus piernas hicieron el trabajo pesado. Una caminata de 20 minutos y algo de movilidad de cadera y pantorrillas las ayudará a recuperarse.",
+      "upper": "Dale un descanso a tu tren superior. Círculos suaves de hombros y un estiramiento de pecho te mantienen suelto.",
+      "full": "En la recuperación es donde te haces más fuerte. Duerme 7–9 horas, toma agua y muévete suavemente."
+    },
+    "your_workouts": "Tus entrenamientos",
+    "in_order_hint": "Hazlos en orden, los días que mejor te queden.",
+    "week_label": "Semana {{number}}",
+    "next": "SIGUE",
+    "row_meta": "{{minutes}} min · {{count}} ejercicio",
+    "row_meta_plural": "{{minutes}} min · {{count}} ejercicios",
+    "dose": "{{sets}} series · {{min}}-{{max}} reps",
+    "complete_eyebrow": "Plan completado",
+    "build_next_plan_cta": "Armar mi siguiente bloque",
+    "goal_names": {
+      "strength": "Ganar fuerza",
+      "hypertrophy": "Ganar músculo",
+      "fat_loss": "Perder grasa",
+      "general_fitness": "Estar en forma"
+    },
+    "goal_types": {
+      "strength": "Fuerza",
+      "hypertrophy": "Músculo",
+      "fat_loss": "Pérdida de grasa",
+      "endurance": "Resistencia",
+      "general_fitness": "Forma general",
+      "sport_specific": "Deporte"
     }
   },
   "avatar_progress": {
@@ -748,7 +816,15 @@
     "changes_title": "Cambios para la próxima semana",
     "approve": "Aprobar cambios",
     "edit": "Editar",
-    "approved_notice": "Aprobado. Coach usará estos cambios a partir de la próxima semana."
+    "approved_notice": "Aprobado. Coach usará estos cambios a partir de la próxima semana.",
+    "mock": {
+      "headline": "entrenamientos hechos. Buena semana.",
+      "leg_press_progress": "La prensa de piernas subió 10 kg desde la semana 1.",
+      "last_workout_skipped": "El último entrenamiento de la semana se sigue saltando.",
+      "shorter_last_workout": "Acortar 15 minutos el último entrenamiento de la semana.",
+      "add_leg_press_load": "Agregar 2.5 kg a la prensa de piernas.",
+      "keep_cable_fly": "Mantener aperturas en polea en lugar de press de pecho."
+    }
   },
   "plan_setup": {
     "close": "Cerrar",
@@ -846,7 +922,10 @@
       "area_label": "¿Qué área?",
       "area_placeholder": "p. ej. rodilla izquierda",
       "disclaimer": "SpotLift ofrece guía general de acondicionamiento físico, no consejo médico.",
-      "session_expired": "Inicia sesión de nuevo antes de armar tu plan."
+      "session_expired": "Inicia sesión de nuevo antes de armar tu plan.",
+      "instructions_label": "¿Algo más? (opcional)",
+      "instructions_placeholder": "p. ej. sin correr, solo mancuernas, entrenamientos de 30 minutos",
+      "instructions_hint": "Esto tiene prioridad sobre tus respuestas de arriba para este plan."
     },
     "consent": {
       "title": "¿Usar esto para ajustar tu plan?",
@@ -874,7 +953,7 @@
       "chip_minutes": "{{minutes}} min",
       "week_1": "Semana 1",
       "moves_count": "{{count}} ejercicios",
-      "start_day_1": "Empezar día 1",
+      "start_day_1": "Empezar Entrenamiento 1",
       "tweak_with_coach": "Ajustarlo con Coach",
       "plan_name_fallback": "Tu plan de entrenamiento"
     }
@@ -889,5 +968,71 @@
     "blocked_title": "Aún no tienes la edad suficiente",
     "blocked_body": "Debes tener al menos {{age}} años para usar SpotLift. Vuelve cuando cumplas la edad mínima.",
     "sign_out": "Cerrar sesión"
+  },
+  "account_settings": {
+    "title": "Configuración de la cuenta",
+    "account": "Cuenta",
+    "email": "Correo",
+    "member_since": "Miembro desde",
+    "data_note": "Tus planes, chats con Coach, registros de entrenamiento y escaneos se guardan con esta cuenta.",
+    "delete_hint": "Abre una pantalla de confirmación. Todavía no se elimina nada."
+  },
+  "delete_account": {
+    "title": "¿Eliminar tu cuenta?",
+    "intro": "Al eliminar tu cuenta se borra todo lo que SpotLift guardó para ti:",
+    "lost": {
+      "profile": "Tu perfil, tu nombre y tu cuenta de acceso",
+      "plans": "Tus planes de entrenamiento y todas tus conversaciones con Coach",
+      "workouts": "Registros de entrenamiento, récords personales, comentarios y progreso muscular",
+      "scans": "Escaneos de equipo y equipo guardado"
+    },
+    "permanent": "Esto es permanente y no se puede deshacer. Tendrías que empezar de nuevo con una cuenta nueva.",
+    "confirm_word": "ELIMINAR",
+    "type_to_confirm": "Escribe {{word}} para confirmar",
+    "keep": "Conservar mi cuenta"
+  },
+  "plan_options": {
+    "eyebrow_plan": "ELIGE TU PLAN",
+    "eyebrow_workout": "ELIGE TU ENTRENAMIENTO",
+    "hint": "Desliza para comparar. No se guarda nada hasta que elijas.",
+    "option": "Opción {{id}}",
+    "intensity": {
+      "light": "Ligera",
+      "moderate": "Moderada",
+      "high": "Alta intensidad"
+    },
+    "per_week": "por semana",
+    "exercises": "ejercicios",
+    "minutes": "minutos",
+    "choose": "Elegir esta",
+    "choose_label": "Elegir opción {{id}}",
+    "adjust": "Ajustar",
+    "adjust_label": "Ajustar opción {{id}}",
+    "adjust_placeholder": "p. ej. sin correr, solo mancuernas, que dure 30 minutos",
+    "adjust_submit": "Actualizar opción",
+    "adjusting": "Coach está ajustando esta opción…",
+    "adjust_failed": "Coach no pudo ajustar esa opción. Inténtalo de nuevo.",
+    "adjust_message": "Ajustar opción {{id}}: {{instructions}}",
+    "intro_plan": "Te armé dos planes diferentes. Compáralos y elige el que más te guste, o dime qué cambiar.",
+    "intro_workout": "Aquí tienes dos versiones de tu próximo entrenamiento con tus instrucciones. Elige una: solo reemplaza ese entrenamiento.",
+    "only_one": "Coach solo pudo armar una opción esta vez. Elígela o escribe qué quieres cambiar para intentarlo de nuevo.",
+    "chose": "Opción {{id}}",
+    "workout_updated": "Listo: el Entrenamiento {{number}} ahora sigue tus instrucciones. El resto de tu plan queda igual.",
+    "composer_placeholder": "Agrega instrucciones para rehacer ambas opciones…",
+    "no_next_workout": "Ya terminaste todos los entrenamientos de este plan. Toca \"Armar mi siguiente bloque\" y usaré tus instrucciones ahí.",
+    "profile_question": "Parece un cambio duradero. ¿Quieres que también actualice tu perfil guardado ({{change}})?",
+    "profile_yes": "Actualizar mi perfil",
+    "profile_no": "Solo esta vez",
+    "profile_saved": "Guardado. Lo usaré para tus próximos planes.",
+    "profile_save_failed": "No pude guardarlo en tu perfil. Tu plan sí se actualizó; inténtalo más tarde.",
+    "profile_kept": "De acuerdo, tu perfil guardado queda igual.",
+    "location": {
+      "full_gym": "gimnasio completo",
+      "dumbbells_home": "solo mancuernas",
+      "bodyweight": "solo peso corporal"
+    },
+    "minutes_value": "{{count}} minutos",
+    "choose_title": "Elige tu plan",
+    "choose_helper": "Coach armó dos planes diferentes con tus respuestas. Compáralos, ajusta cualquiera y luego elige."
   }
 }

@@ -174,6 +174,10 @@ function normalizePlanTimeline(plan: CoachPlan | null): CoachPlan | null {
   const weeklyTemplate = normalizedPlan.sessions.slice(0, Math.min(daysPerWeek, normalizedPlan.sessions.length));
   if (weeklyTemplate.length === 0) return normalizedPlan;
 
+  // Every session needs its own exercise ids — completion is tracked by id,
+  // so a template repeated in the same week (Full body A, B, A) would
+  // otherwise finish its twin the moment one is done.
+  const usedIds = new Set<string>();
   const sessions = Array.from({ length: expectedSessions }, (_, index) => {
     const template = weeklyTemplate[index % weeklyTemplate.length];
     const week = Math.floor(index / daysPerWeek) + 1;
@@ -183,12 +187,13 @@ function normalizePlanTimeline(plan: CoachPlan | null): CoachPlan | null {
     return {
       ...template,
       day_label: `Week ${week} Day ${dayInWeek} - ${baseLabel}`,
-      exercises: template.exercises.map((exercise) => ({
-        ...exercise,
-        exercise_id: week === 1
-          ? exercise.exercise_id
-          : `${exercise.exercise_id || slugify(exercise.name)}-w${week}`,
-      })),
+      exercises: template.exercises.map((exercise) => {
+        const baseId = exercise.exercise_id || slugify(exercise.name);
+        let id = week === 1 ? baseId : `${baseId}-w${week}`;
+        if (usedIds.has(id)) id = `${baseId}-w${week}d${dayInWeek}`;
+        usedIds.add(id);
+        return { ...exercise, exercise_id: id };
+      }),
     };
   });
 
