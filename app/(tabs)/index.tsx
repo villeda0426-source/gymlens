@@ -30,7 +30,8 @@ import { coachColors, coachDark, coachFonts, radii, spacing } from "@/constants/
 import { useTabBarSpace } from "@/components/CoachTabBar";
 import { apiFetch } from "@/lib/api";
 import CoachIcon from "@/components/Coach/CoachIcon";
-import { buildPlanSequence, nextSequenceItem, nextWorkoutItem } from "@/lib/planSequence";
+import { buildPlanSequence, nextSequenceItem, nextWorkoutItem, type PlanSequenceItem } from "@/lib/planSequence";
+import { isActiveFor, useActiveWorkoutStore } from "@/store/activeWorkoutStore";
 
 function getTodaysTip(t: (key: string) => string): string {
   return t(`home.tips.${new Date().getDay()}`);
@@ -48,6 +49,7 @@ export default function HomeScreen() {
     loadTrainer,
     completedExerciseIds,
     sessionCompletedAt,
+    activeThreadId,
     pendingPlanChange,
     applyPendingPlanChange,
   } = useCoachTrainerStore();
@@ -56,9 +58,13 @@ export default function HomeScreen() {
   const [workoutMessage, setWorkoutMessage] = useState("");
   const [justApplied, setJustApplied] = useState(false);
 
+  const activeWorkout = useActiveWorkoutStore((state) => state.active);
+  const loadActiveWorkout = useActiveWorkoutStore((state) => state.load);
+
   useEffect(() => {
     loadTrainer();
-  }, [loadTrainer]);
+    loadActiveWorkout();
+  }, [loadTrainer, loadActiveWorkout]);
 
   const handleWorkoutSearch = async () => {
     const query = workoutQuery.trim();
@@ -103,8 +109,13 @@ export default function HomeScreen() {
 
   // The next unfinished workout in order — never tied to today's weekday.
   const sequence = plan ? buildPlanSequence({ plan, completedExerciseIds, sessionCompletedAt }) : [];
-  const nextWorkout = nextWorkoutItem(sequence);
-  const restIsNext = nextSequenceItem(sequence)?.type === "rest";
+  // A workout already in progress comes first: resume it, don't restart.
+  const activeItem = sequence.find(
+    (item): item is Extract<PlanSequenceItem, { type: "workout" }> =>
+      item.type === "workout" && !item.complete && isActiveFor(activeWorkout, activeThreadId ?? null, item.sessionIndex, item.session.day_label)
+  );
+  const nextWorkout = activeItem ?? nextWorkoutItem(sequence);
+  const restIsNext = !activeItem && nextSequenceItem(sequence)?.type === "rest";
   const todayBaseSession = nextWorkout?.session ?? null;
   const totalWorkouts = plan?.sessions.length ?? 0;
   const completedWorkouts = sequence.filter((item) => item.type === "workout" && item.complete).length;
@@ -183,7 +194,7 @@ export default function HomeScreen() {
           {todayBaseSession ? (
             <>
               <Text style={styles.todayEyebrow}>
-                {t("home.next_workout_eyebrow", { number: nextWorkout!.number }).toUpperCase()}
+                {t(activeItem ? "plan.in_progress_number" : "home.next_workout_eyebrow", { number: nextWorkout!.number }).toUpperCase()}
               </Text>
               <Text style={styles.todayTitle}>{todayBaseSession.focus}</Text>
               <View style={styles.todayStatsRow}>
@@ -218,7 +229,7 @@ export default function HomeScreen() {
                 }
               >
                 <Ionicons name="play" size={16} color={coachColors.card} />
-                <Text style={styles.startWorkoutText}>{t("home.start_workout")}</Text>
+                <Text style={styles.startWorkoutText}>{t(activeItem ? "plan.resume_workout" : "home.start_workout")}</Text>
               </TouchableOpacity>
             </>
           ) : plan ? (

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useActiveWorkoutStore } from "@/store/activeWorkoutStore";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { apiFetch } from "@/lib/api";
 
@@ -105,6 +106,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signOut: async () => {
     useCoachTrainerStore.getState().resetChatSession();
+    useActiveWorkoutStore.getState().clear();
     await supabase.auth.signOut();
     set({ user: null, profile: null, isGuest: true });
   },
@@ -120,6 +122,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         headers: { Authorization: `Bearer ${token}` },
       }, 30_000);
       await useCoachTrainerStore.getState().purgeTrainer();
+      useActiveWorkoutStore.getState().clear();
       await AsyncStorage.removeItem(GUEST_USES_KEY);
       await supabase.auth.signOut({ scope: "local" });
       set({ user: null, profile: null, isGuest: true, guestUses: 0 });

@@ -52,6 +52,9 @@ export function useEquipmentIdentify() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            // Lets the server return the identification even if saving it
+            // fails, so only the save is retried (retrySave below).
+            "x-spotlift-save-retry": "1",
             ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
           },
           body: JSON.stringify({ image: base64 }),
@@ -60,7 +63,8 @@ export function useEquipmentIdentify() {
       );
       console.log("[identify] success:", result?.name);
       setCurrentResult(result);
-      addToRecentlyViewed(result);
+      // Nothing to come back to until it's saved (no id yet).
+      if (!result?.save_failed) addToRecentlyViewed(result);
 
       if (isGuest) {
         await incrementGuestUses();
@@ -78,5 +82,32 @@ export function useEquipmentIdentify() {
     }
   };
 
-  return { identify, isLoading, error };
+  // The equipment was identified but not saved: retry only the save, with
+  // the result the server kept — no new photo, no second identification.
+  const retrySave = async (result: any): Promise<{ id?: string; error?: string }> => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      const saved = await apiFetch<{ id: string; identification_id: string | null }>(
+        "/api/identify/save",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          body: JSON.stringify({ save_token: result.save_token }),
+        },
+        30000
+      );
+      const savedResult = { ...result, id: saved.id, identification_id: saved.identification_id, save_failed: false, save_token: undefined };
+      setCurrentResult(savedResult);
+      addToRecentlyViewed(savedResult);
+      return { id: saved.id };
+    } catch (err: any) {
+      return { error: err?.message || getApiUnavailableMessage() };
+    }
+  };
+
+  return { identify, retrySave, isLoading, error };
 }

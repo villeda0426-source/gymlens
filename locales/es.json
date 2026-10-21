@@ -55,7 +55,9 @@
     "possible_match": "Posible coincidencia",
     "not_this_one": "No es este",
     "show_me": "Mostrar",
-    "show_me_unavailable": "No pudimos guardar ese resultado. Intenta escanear de nuevo."
+    "show_me_unavailable": "No pudimos guardar ese resultado. Intenta escanear de nuevo.",
+    "save_failed_title": "Aún no se pudo guardar",
+    "save_failed_message": "Tu escaneo sigue aquí. Toca Muéstrame para intentar guardarlo de nuevo, sin repetir la foto."
   },
   "home": {
     "good_morning": "Buenos días",
@@ -327,7 +329,38 @@
     "set_label": "Serie {{set}}",
     "could_not_load": "No se pudieron cargar tus series. Inténtalo de nuevo.",
     "back": "Atrás",
-    "keyboard_done": "Listo"
+    "keyboard_done": "Listo",
+    "load_hint": {
+      "external": "Registra el peso que levantas; con dos mancuernas, el peso de una.",
+      "bodyweight": "Usa tu peso corporal. Deja el peso vacío o registra la carga extra (chaleco, disco, mancuerna).",
+      "assisted": "Registra la asistencia (contrapeso). Menos asistencia significa que te estás haciendo más fuerte.",
+      "band": "Opcional: registra la resistencia de la banda.",
+      "none": "No hay peso que registrar: lleva tus repeticiones o tiempo."
+    },
+    "weight_column": {
+      "external": "Peso",
+      "bodyweight": "Extra",
+      "assisted": "Asist.",
+      "band": "Banda",
+      "none": "Peso"
+    },
+    "weight_placeholder": {
+      "external": "0",
+      "bodyweight": "Corporal",
+      "assisted": "0",
+      "band": "—",
+      "none": "—"
+    },
+    "least_assist": "Menor asistencia: {{value}}",
+    "edit_sets": "Editar",
+    "edit_done": "Listo",
+    "remove": "Quitar",
+    "delete_set_label": "Quitar serie {{set}}",
+    "delete_set_title": "¿Quitar la serie {{set}}?",
+    "delete_set_message": "Las series siguientes suben un número.",
+    "delete_set_message_done": "Esta serie ya está registrada. Quitarla también la quita de tu historial y tus récords.",
+    "delete_set_confirm": "Quitar serie",
+    "delete_set_failed": "No se pudo quitar esa serie. Inténtalo de nuevo."
   },
   "trainer": {
     "personal_trainer": "Coach",
@@ -593,7 +626,21 @@
     "complete_title": "Rutina completa",
     "complete_body_plan": "Buen trabajo. Tu progreso está guardado.",
     "complete_body_adhoc": "Buen trabajo.",
-    "done_button": "Listo"
+    "done_button": "Listo",
+    "in_progress_title": "Entrenamiento en curso",
+    "in_progress_message": "Vas a la mitad del Entrenamiento {{number}}. ¿Lo continúas o empiezas este? Las series que ya registraste se conservan en ambos casos.",
+    "resume_number": "Continuar Entrenamiento {{number}}",
+    "start_number": "Empezar Entrenamiento {{number}}",
+    "edit_sets": "Editar series",
+    "edit_sets_hint": "Abre el registro de este ejercicio. Tu entrenamiento se queda donde lo dejaste.",
+    "leave_saved": "Salir del entrenamiento: tu progreso se guarda",
+    "weight_label": {
+      "external": "{{unit}}",
+      "bodyweight": "+{{unit}} EXTRA",
+      "assisted": "ASISTENCIA {{unit}}",
+      "band": "BANDA {{unit}}",
+      "none": "{{unit}}"
+    }
   },
   "plan": {
     "title": "Tu plan",
@@ -724,7 +771,13 @@
       "endurance": "Resistencia",
       "general_fitness": "Forma general",
       "sport_specific": "Deporte"
-    }
+    },
+    "in_progress_number": "En curso · Entrenamiento {{number}}",
+    "resume_workout": "Continuar entrenamiento",
+    "resume_workout_number": "Continuar entrenamiento {{number}}",
+    "show_completed": "Mostrar {{count}} entrenamiento completado",
+    "show_completed_plural": "Mostrar {{count}} entrenamientos completados",
+    "hide_completed": "Ocultar entrenamientos completados"
   },
   "avatar_progress": {
     "title": "Avatar de progreso",

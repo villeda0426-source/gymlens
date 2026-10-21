@@ -28,13 +28,16 @@ import { coachColors, coachFonts, radii, spacing } from "@/constants/theme";
 import { apiFetch } from "@/lib/api";
 import type { Units } from "@/lib/coachTrainer";
 import {
+  deleteSet,
   findTodayInstance,
   fetchPersonalRecordKg,
   fromKg,
+  updateSetNumber,
   upsertSet,
   type WorkoutLogContext,
   type WorkoutSetRow,
 } from "@/lib/workoutSetLogs";
+import { exerciseLoad, parseExerciseLoad } from "@/lib/exerciseLoad";
 import { useAuthStore } from "@/store/authStore";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { useWorkoutGuideStore } from "@/store/workoutGuideStore";
@@ -87,6 +90,8 @@ export default function WorkoutLogScreen() {
     sessionIndex?: string;
     threadId?: string;
     planWeek?: string;
+    load?: string;
+    category?: string;
   }>();
   const { user } = useAuthStore();
   const { plan, markExerciseCompleted, unmarkExerciseCompleted } = useCoachTrainerStore();
@@ -98,6 +103,10 @@ export default function WorkoutLogScreen() {
   const repMin = Number.parseInt(params.repMin ?? "8", 10) || 8;
   const repMax = Number.parseInt(params.repMax ?? "12", 10) || repMin;
   const unit: Units = plan?.units === "kg" ? "kg" : "lbs";
+  // What the weight column means for this exercise (lib/exerciseLoad.ts).
+  const load =
+    parseExerciseLoad(params.load) ?? exerciseLoad({ id: exerciseId, name: exerciseName, category: params.category });
+  const lowerIsBetter = load === "assisted";
 
   const ctx: WorkoutLogContext = useMemo(
     () => ({
@@ -119,6 +128,7 @@ export default function WorkoutLogScreen() {
   const [prKg, setPrKg] = useState<number | null>(null);
   const [guide, setGuide] = useState<ExerciseLearningGuide | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [editing, setEditing] = useState(false);
   const wasFullyCompleted = useRef(false);
 
   useEffect(() => {
@@ -131,7 +141,7 @@ export default function WorkoutLogScreen() {
       try {
         const [instance, pr] = await Promise.all([
           findTodayInstance(ctx),
-          fetchPersonalRecordKg(user.id, exerciseId),
+          fetchPersonalRecordKg(user.id, exerciseId, lowerIsBetter),
         ]);
         if (cancelled) return;
 
@@ -258,7 +268,7 @@ export default function WorkoutLogScreen() {
         return next;
       });
       if (weightValue !== null) {
-        fetchPersonalRecordKg(user.id, exerciseId).then(setPrKg).catch(() => undefined);
+        fetchPersonalRecordKg(user.id, exerciseId, lowerIsBetter).then(setPrKg).catch(() => undefined);
       }
     } catch {
       setSets((prev) => prev.map((s) => (s.setNumber === target.setNumber ? { ...target, saving: false, error: true } : s)));
@@ -285,6 +295,40 @@ export default function WorkoutLogScreen() {
     // "Add set" is a deliberate action, unlike the initial prescribed rows —
     // it persists immediately rather than waiting for a further edit.
     persistSet(draft);
+  };
+
+  // Remove one set (completed or not), then close the gap in numbering so
+  // the log stays Set 1, 2, 3... Confirmed first, so a stray tap can't do it.
+  const handleDeleteSet = (target: LocalSet) => {
+    Alert.alert(
+      t("workout_log.delete_set_title", { set: target.setNumber }),
+      t(target.completed ? "workout_log.delete_set_message_done" : "workout_log.delete_set_message"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("workout_log.delete_set_confirm"),
+          style: "destructive",
+          onPress: async () => {
+            const remaining = sets.filter((s) => s.setNumber !== target.setNumber);
+            const renumbered = remaining.map((s, index) => ({ ...s, setNumber: index + 1 }));
+            setSets(renumbered);
+            try {
+              if (target.id) await deleteSet(target.id);
+              // Ascending, so each number is already free when it's reused.
+              for (const row of renumbered) {
+                const before = remaining.find((s) => s.id === row.id && s.id !== null);
+                if (row.id && before && before.setNumber !== row.setNumber) await updateSetNumber(row.id, row.setNumber);
+              }
+              syncPlanCompletion(renumbered);
+              if (user?.id) fetchPersonalRecordKg(user.id, exerciseId, lowerIsBetter).then(setPrKg).catch(() => undefined);
+            } catch {
+              Alert.alert(t("workout_log.delete_set_failed"));
+              setReloadKey((key) => key + 1);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (!user) {
@@ -328,21 +372,35 @@ export default function WorkoutLogScreen() {
         >
           <Text style={styles.exerciseName}>{exerciseName}</Text>
           <Text style={styles.prescription}>{t("workout_log.planned_sets_reps", { count: plannedSetCount, min: repMin, max: repMax })}</Text>
+          <Text style={styles.loadHint}>{t(`workout_log.load_hint.${load}`)}</Text>
 
           <View style={styles.tableCard}>
             <View style={styles.tableHeaderRow}>
               <Text style={styles.yourSets}>{t("workout_log.your_sets")}</Text>
-              <Text style={styles.personalBest}>
-                {t("workout_log.personal_best", { value: formatWeight(prKg, unit, t) })}
-              </Text>
+              <View style={styles.tableHeaderRight}>
+                {load !== "none" ? (
+                  <Text style={styles.personalBest}>
+                    {t(lowerIsBetter ? "workout_log.least_assist" : "workout_log.personal_best", { value: formatWeight(prKg, unit, t) })}
+                  </Text>
+                ) : null}
+                <TouchableOpacity
+                  onPress={() => setEditing((value) => !value)}
+                  style={styles.editToggle}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: editing }}
+                  hitSlop={8}
+                >
+                  <Text style={styles.editToggleText}>{t(editing ? "workout_log.edit_done" : "workout_log.edit_sets")}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.columnHeaderRow}>
               <Text style={[styles.columnHeader, styles.colPr]}>{t("workout_log.pr")}</Text>
               <Text style={[styles.columnHeader, styles.colSet]}>{t("workout_log.set")}</Text>
               <Text style={[styles.columnHeader, styles.colReps]}>{t("workout_log.reps")}</Text>
-              <Text style={[styles.columnHeader, styles.colWeight]}>{t("workout_log.weight")}</Text>
-              <Text style={[styles.columnHeader, styles.colDone]}>{t("workout_log.done")}</Text>
+              <Text style={[styles.columnHeader, styles.colWeight]}>{t(`workout_log.weight_column.${load}`)}</Text>
+              <Text style={[styles.columnHeader, styles.colDone]}>{t(editing ? "workout_log.remove" : "workout_log.done")}</Text>
             </View>
 
             {sets.map((set, index) => (
@@ -379,7 +437,7 @@ export default function WorkoutLogScreen() {
                     onSubmitEditing={() => Keyboard.dismiss()}
                     keyboardType="decimal-pad"
                     inputAccessoryViewID={Platform.OS === "ios" ? SET_KEYBOARD_BAR : undefined}
-                    placeholder={t("workout_log.bodyweight")}
+                    placeholder={t(`workout_log.weight_placeholder.${load}`)}
                     placeholderTextColor={coachColors.textSecondary}
                     maxLength={6}
                     accessibilityLabel={t("workout_log.weight_label", { set: set.setNumber })}
@@ -387,7 +445,17 @@ export default function WorkoutLogScreen() {
                   <Text style={styles.unitSuffix}>{unit}</Text>
                 </View>
                 <View style={styles.colDone}>
-                  {set.saving ? (
+                  {editing ? (
+                    <TouchableOpacity
+                      onPress={() => handleDeleteSet(set)}
+                      style={styles.removeButton}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("workout_log.delete_set_label", { set: set.setNumber })}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="remove" size={18} color={DARK_TEXT} />
+                    </TouchableOpacity>
+                  ) : set.saving ? (
                     <ActivityIndicator size="small" color={coachColors.textSecondary} />
                   ) : (
                     <TouchableOpacity
@@ -501,6 +569,18 @@ const styles = StyleSheet.create({
   },
   tableHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.sm },
   yourSets: { color: DARK_TEXT, fontFamily: coachFonts.headingSemiBold, fontSize: 19 },
+  tableHeaderRight: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  editToggle: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radii.pill, borderWidth: 1, borderColor: DARK_BORDER },
+  editToggleText: { color: DARK_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 12 },
+  removeButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: coachColors.coralPressed,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadHint: { color: DARK_MUTED, fontFamily: coachFonts.body, fontSize: 13, lineHeight: 19, marginTop: -spacing.sm },
   personalBest: { color: DARK_MUTED, fontFamily: coachFonts.body, fontSize: 13 },
   columnHeaderRow: { flexDirection: "row", alignItems: "center", paddingBottom: spacing.sm, borderBottomWidth: 1, borderBottomColor: DARK_BORDER },
   columnHeader: { color: DARK_MUTED, fontFamily: coachFonts.bodyExtraBold, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 },

@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { extractEquipmentName, identifyEquipment } from "../services/equipmentAiService";
 import { getEquipmentVideos } from "../services/youtubeService";
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "crypto";
 
 const router = Router();
 
@@ -163,6 +164,86 @@ async function upsertIdentificationRecord(
   return identificationId;
 }
 
+// ─── Saving a new identification ─────────────────────────────────────────────
+//
+// Production's equipment table has no unique constraint on name, and
+// equipment_videos none on youtube_id (supabase/schema.sql declares them, but
+// they never reached production). The old `.upsert(..., { onConflict })`
+// therefore failed on every new machine with "there is no unique or
+// exclusion constraint matching the ON CONFLICT specification" — the
+// "I identified the equipment but couldn't save it" bug. Look up first, then
+// update or insert, so saving works whatever constraints exist.
+
+type Identification = Awaited<ReturnType<typeof identifyEquipment>>;
+type EquipmentVideo = Awaited<ReturnType<typeof getEquipmentVideos>>[number];
+
+async function saveIdentifiedEquipment(
+  identification: NonNullable<Identification>,
+  allEquipment: { id: string; name: string }[]
+): Promise<{ id: string } | null> {
+  const fields = {
+    name: identification.name,
+    name_es: identification.name_es,
+    category: identification.category,
+    description: identification.description,
+    description_es: identification.description_es,
+    muscle_groups: identification.muscle_groups,
+    difficulty: identification.difficulty,
+    tutorial_steps: identification.tutorial_steps,
+    safety_tips: identification.safety_tips,
+    safety_tips_es: identification.safety_tips_es,
+  };
+  const existing = allEquipment.find((eq) => normalizeStr(eq.name) === normalizeStr(identification.name));
+  const query = existing
+    ? supabase.from("equipment").update(fields).eq("id", existing.id)
+    : supabase.from("equipment").insert(fields);
+  const { data, error } = await query.select("id").single();
+  if (error || !data) {
+    console.error("[identify] equipment save error:", error?.message);
+    return null;
+  }
+  return data;
+}
+
+async function saveEquipmentVideos(equipmentId: string, videos: EquipmentVideo[]) {
+  if (videos.length === 0) return;
+  const { data: existing } = await supabase
+    .from("equipment_videos")
+    .select("youtube_id")
+    .in("youtube_id", videos.map((v) => v.youtube_id));
+  const known = new Set((existing ?? []).map((row) => row.youtube_id));
+  const fresh = videos.filter((v) => !known.has(v.youtube_id));
+  if (fresh.length === 0) return;
+  const { error } = await supabase.from("equipment_videos").insert(
+    fresh.map((v) => ({
+      equipment_id: equipmentId,
+      youtube_id: v.youtube_id,
+      title: v.title,
+      thumbnail_url: v.thumbnail_url,
+      duration: v.duration,
+    }))
+  );
+  if (error) console.error("[identify] video insert error:", error.message);
+}
+
+// An identification whose save failed, kept briefly so the app can retry
+// just the save (POST /save) instead of making the person retake the photo.
+// In memory on purpose: it's a short retry window, and it means the client
+// never sends equipment data that would be written to the shared catalog.
+const PENDING_SAVE_TTL_MS = 30 * 60 * 1000;
+const pendingSaves = new Map<
+  string,
+  { identification: NonNullable<Identification>; videos: EquipmentVideo[]; userId: string | null; expiresAt: number }
+>();
+
+function rememberPendingSave(identification: NonNullable<Identification>, videos: EquipmentVideo[], userId: string | null) {
+  const now = Date.now();
+  for (const [key, entry] of pendingSaves) if (entry.expiresAt < now) pendingSaves.delete(key);
+  const token = randomUUID();
+  pendingSaves.set(token, { identification, videos, userId, expiresAt: now + PENDING_SAVE_TTL_MS });
+  return token;
+}
+
 // ─── Route ────────────────────────────────────────────────────────────────────
 
 router.post("/", async (req: Request, res: Response) => {
@@ -240,75 +321,46 @@ router.post("/", async (req: Request, res: Response) => {
 
     const videos = await getEquipmentVideos(identification.search_query);
 
-    // Upsert equipment record
-    const { data: equipment, error: upsertError } = await supabase
-      .from("equipment")
-      .upsert(
-        {
-          name: identification.name,
-          name_es: identification.name_es,
-          category: identification.category,
-          description: identification.description,
-          description_es: identification.description_es,
-          muscle_groups: identification.muscle_groups,
-          difficulty: identification.difficulty,
-          tutorial_steps: identification.tutorial_steps,
-          safety_tips: identification.safety_tips,
-          safety_tips_es: identification.safety_tips_es,
-        },
-        { onConflict: "name", ignoreDuplicates: false }
-      )
-      .select()
-      .single();
+    const equipment = await saveIdentifiedEquipment(identification, allEquipment ?? []);
 
-    if (upsertError) {
-      // Returning 200 with id: undefined here used to look like success: the
-      // client's ScanResultSheet still showed a confident match, but "Show
-      // me" then navigated to a nonexistent equipment id and rendered
-      // nothing. Fail loudly instead so the existing response.error handling
-      // (useEquipmentIdentify -> scan.tsx) shows a real message.
-      console.error("[identify] equipment upsert error:", upsertError.message);
-      return res.status(502).json({
-        error: "I identified the equipment but couldn't save it. Please try again.",
+    if (!equipment) {
+      // Newer apps (x-spotlift-save-retry) keep the identified result on
+      // screen and retry only the save. Older builds still get the error.
+      if (req.header("x-spotlift-save-retry") !== "1") {
+        return res.status(502).json({
+          error: "I identified the equipment but couldn't save it. Please try again.",
+        });
+      }
+      return res.json({
+        ...identification,
+        id: null,
+        videos,
+        identification_id: null,
+        fromCache: false,
+        alternates: [],
+        save_failed: true,
+        save_token: rememberPendingSave(identification, videos, userId),
       });
     }
 
-    let identificationId: string | null = null;
-    if (equipment) {
-      // Save videos
-      if (videos.length > 0) {
-        const { error: videoError } = await supabase.from("equipment_videos").upsert(
-          videos.map((v) => ({
-            equipment_id: equipment.id,
-            youtube_id: v.youtube_id,
-            title: v.title,
-            thumbnail_url: v.thumbnail_url,
-            duration: v.duration,
-          })),
-          { onConflict: "youtube_id", ignoreDuplicates: true }
-        );
-        if (videoError) console.error("[identify] video upsert error:", videoError.message);
-      }
-
-      // Save identification record with raw AI response
-      identificationId = await upsertIdentificationRecord(
-        equipment.id,
-        identification.name,
-        identification as unknown as object,
-        userId
-      );
-    }
+    await saveEquipmentVideos(equipment.id, videos);
+    const identificationId = await upsertIdentificationRecord(
+      equipment.id,
+      identification.name,
+      identification as unknown as object,
+      userId
+    );
 
     const alternates =
       identification.confidence < 0.75
-        ? findAlternates(identification.name, equipment?.id, allEquipment ?? [], 2)
+        ? findAlternates(identification.name, equipment.id, allEquipment ?? [], 2)
         : [];
 
     console.log(`SAVED TO DB: ${identification?.name}`);
     console.log("[identify] returning new result for:", identification?.name, "| alternates:", alternates.length);
     return res.json({
       ...identification,
-      id: equipment?.id,
+      id: equipment.id,
       videos,
       identification_id: identificationId,
       fromCache: false,
@@ -317,6 +369,35 @@ router.post("/", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("[identify] error:", error.message ?? error);
     return res.status(500).json({ error: error.message || "Identification failed" });
+  }
+});
+
+// Retry just the save for an identification that was already made.
+router.post("/save", async (req: Request, res: Response) => {
+  try {
+    const token = typeof req.body?.save_token === "string" ? req.body.save_token : "";
+    const pending = pendingSaves.get(token);
+    if (!pending || pending.expiresAt < Date.now()) {
+      pendingSaves.delete(token);
+      return res.status(410).json({ error: "That scan expired. Please scan the equipment again." });
+    }
+    const { data: allEquipment } = await supabase.from("equipment").select("id, name");
+    const equipment = await saveIdentifiedEquipment(pending.identification, allEquipment ?? []);
+    if (!equipment) {
+      return res.status(502).json({ error: "Still couldn't save it. Please try again in a moment." });
+    }
+    pendingSaves.delete(token);
+    await saveEquipmentVideos(equipment.id, pending.videos);
+    const identificationId = await upsertIdentificationRecord(
+      equipment.id,
+      pending.identification.name,
+      pending.identification as unknown as object,
+      pending.userId
+    );
+    return res.json({ id: equipment.id, identification_id: identificationId });
+  } catch (error: any) {
+    console.error("[identify] save retry error:", error.message ?? error);
+    return res.status(500).json({ error: "Still couldn't save it. Please try again in a moment." });
   }
 });
 

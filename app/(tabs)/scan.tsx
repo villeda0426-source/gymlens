@@ -21,7 +21,9 @@ export default function ScanScreen() {
   // confidence threshold, server/routes/identify.ts's findAlternates) — an
   // empty array means no sheet is shown, same as the old null-pendingResult.
   const [candidates, setCandidates] = useState<ScanCandidate[]>([]);
-  const { identify, isLoading, error } = useEquipmentIdentify();
+  const { identify, retrySave, isLoading } = useEquipmentIdentify();
+  const [lastResult, setLastResult] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
 
   const handleIdentify = async () => {
     if (!capturedUri) return;
@@ -29,12 +31,14 @@ export default function ScanScreen() {
     if (response?.requiresAuth) { setShowGuestPrompt(true); return; }
     if (response?.error) { Alert.alert(t("errors.identification_title"), response.error, [{ text: "OK" }]); return; }
     if (response?.result) {
+      setLastResult(response.result);
       // Coach Forward Phase 6: confirm the match with ScanResultSheet instead
       // of navigating straight through.
       const primary: ScanCandidate = {
         id: response.result.id,
         name: response.result.name,
         confidence: response.result.confidence ?? 0,
+        saveToken: response.result.save_failed ? response.result.save_token : undefined,
       };
       const alternates: ScanCandidate[] = Array.isArray(response.result.alternates)
         ? response.result.alternates.map((alt: any) => ({ id: alt.id, name: alt.name, confidence: alt.confidence ?? 0 }))
@@ -49,17 +53,28 @@ export default function ScanScreen() {
   };
 
   const handleShowMe = async (candidate: ScanCandidate) => {
-    if (!candidate.id) {
-      // The server now fails loudly when it can't save a new equipment
-      // record, but this stays as a second line of defense: don't silently
-      // navigate to a nonexistent /equipment/result route, which renders
-      // nothing and looks like a dead button.
+    let id = candidate.id;
+    if (!id && candidate.saveToken && lastResult) {
+      // Identified but the save failed: retry just the save, keeping the
+      // result (and the sheet) on screen — no retake needed.
+      setSaving(true);
+      const saved = await retrySave(lastResult);
+      setSaving(false);
+      if (!saved.id) {
+        Alert.alert(t("scan_result.save_failed_title"), t("scan_result.save_failed_message"));
+        return;
+      }
+      id = saved.id;
+    }
+    if (!id) {
+      // Second line of defense: don't navigate to a nonexistent
+      // /equipment/result route, which renders nothing and looks dead.
       Alert.alert(t("errors.identification_title"), t("scan_result.show_me_unavailable"));
       setCandidates([]);
       return;
     }
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.push(`/equipment/${candidate.id}`);
+    router.push(`/equipment/${id}`);
     setCandidates([]);
   };
 
@@ -77,7 +92,6 @@ export default function ScanScreen() {
             onIdentify={handleIdentify}
             onRetake={() => setCapturedUri(null)}
             isLoading={isLoading}
-            error={error}
           />
         )}
         <ScanResultSheet
@@ -85,6 +99,7 @@ export default function ScanScreen() {
           candidates={candidates}
           onNotThisOne={handleRetake}
           onShowMe={handleShowMe}
+          saving={saving}
         />
         <GuestPromptModal
           visible={showGuestPrompt}

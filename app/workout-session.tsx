@@ -6,9 +6,10 @@
 // workout" (a single ad-hoc exercise — no real exercise_id exists for that
 // path, so markExerciseCompleted is skipped there; it's not a lie, it's a
 // scanned machine, not a plan entry).
-import React, { useEffect, useMemo, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import * as Crypto from "expo-crypto";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -20,6 +21,10 @@ import SegmentedProgressBar from "@/components/UI/SegmentedProgressBar";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import CoachIcon from "@/components/Coach/CoachIcon";
 import { buildPlanSequence, nextWorkoutItem } from "@/lib/planSequence";
+import { exerciseLoad, type ExerciseLoad } from "@/lib/exerciseLoad";
+import { findTodayInstance, upsertSet, type WorkoutLogContext } from "@/lib/workoutSetLogs";
+import { useAuthStore } from "@/store/authStore";
+import { isActiveFor, useActiveWorkoutStore } from "@/store/activeWorkoutStore";
 
 interface SessionExercise {
   id: string;
@@ -30,6 +35,7 @@ interface SessionExercise {
   restSeconds: number;
   coachNotes?: string;
   isPlanExercise: boolean;
+  load: ExerciseLoad;
 }
 
 function formatClock(totalSeconds: number): string {
@@ -47,18 +53,78 @@ export default function WorkoutSessionScreen() {
     muscles?: string;
     sessionIndex?: string;
   }>();
-  const { plan, units, markExerciseCompleted, completedExerciseIds, sessionCompletedAt } = useCoachTrainerStore();
+  const {
+    plan,
+    units,
+    markExerciseCompleted,
+    completedExerciseIds,
+    sessionCompletedAt,
+    activeThreadId,
+  } = useCoachTrainerStore();
+  const { user } = useAuthStore();
+  const { active, hasLoaded: activeLoaded, load: loadActive, save: saveActive, clear: clearActive } = useActiveWorkoutStore();
 
-  // A specific workout when the Plan tab says which; otherwise the next
-  // unfinished one in order. Fixed once the session starts, so finishing it
-  // doesn't swap the screen to the following workout mid-way.
-  const [sessionIndex] = useState<number | null>(() => {
-    if (!plan) return null;
+  useEffect(() => {
+    loadActive();
+  }, [loadActive]);
+
+  // A specific workout when the Plan tab says which; otherwise the workout
+  // already in progress, then the next unfinished one in order. Fixed once
+  // the session starts, so finishing it doesn't swap the screen mid-way.
+  const [sessionIndex, setSessionIndex] = useState<number | null>(null);
+  const [resolved, setResolved] = useState(false);
+  useEffect(() => {
+    if (resolved || !activeLoaded) return;
+    if (!plan || adHocExercise) {
+      setResolved(true);
+      return;
+    }
     const requested = sessionIndexParam !== undefined ? Number.parseInt(sessionIndexParam, 10) : NaN;
-    if (Number.isInteger(requested) && plan.sessions[requested]) return requested;
+    const activeSession = active ? plan.sessions[active.sessionIndex] : undefined;
+    // Only a workout that's still unfinished can be resumed.
+    const resumable =
+      active &&
+      activeSession?.day_label === active.sessionLabel &&
+      active.threadId === activeThreadId &&
+      !activeSession.exercises.every((exercise) => completedExerciseIds.includes(exercise.exercise_id))
+        ? active
+        : null;
+    if (active && !resumable) clearActive();
     const next = nextWorkoutItem(buildPlanSequence({ plan, completedExerciseIds, sessionCompletedAt }));
-    return next ? next.sessionIndex : null;
-  });
+    const target = Number.isInteger(requested) && plan.sessions[requested] ? requested : resumable?.sessionIndex ?? next?.sessionIndex ?? null;
+
+    // Another workout is already in progress: resuming and starting fresh
+    // are different things, so ask instead of silently replacing it.
+    if (resumable && target !== null && target !== resumable.sessionIndex) {
+      Alert.alert(
+        t("workout_session.in_progress_title"),
+        t("workout_session.in_progress_message", { number: resumable.sessionIndex + 1 }),
+        [
+          {
+            text: t("workout_session.resume_number", { number: resumable.sessionIndex + 1 }),
+            onPress: () => {
+              setSessionIndex(resumable.sessionIndex);
+              setResolved(true);
+            },
+          },
+          {
+            text: t("workout_session.start_number", { number: target + 1 }),
+            style: "destructive",
+            onPress: () => {
+              clearActive();
+              setSessionIndex(target);
+              setResolved(true);
+            },
+          },
+        ],
+        { cancelable: false }
+      );
+      return;
+    }
+    setSessionIndex(target);
+    setResolved(true);
+  }, [resolved, activeLoaded]);
+
   const todaySession = sessionIndex !== null ? plan?.sessions?.[sessionIndex] ?? null : null;
 
   const exercises = useMemo<SessionExercise[]>(() => {
@@ -72,6 +138,7 @@ export default function WorkoutSessionScreen() {
           defaultReps: 10,
           restSeconds: 60,
           isPlanExercise: false,
+          load: "external",
         },
       ];
     }
@@ -85,34 +152,149 @@ export default function WorkoutSessionScreen() {
       restSeconds: exercise.rest_seconds,
       coachNotes: exercise.coach_notes || undefined,
       isPlanExercise: true,
+      load: exerciseLoad({ id: exercise.exercise_id, name: exercise.name, category: exercise.category }),
     }));
   }, [adHocExercise, todaySession]);
 
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [setIndex, setSetIndex] = useState(0);
   const [weight, setWeight] = useState(0);
-  const [reps, setReps] = useState(exercises[0]?.defaultReps ?? 10);
+  const [reps, setReps] = useState(10);
   const [seconds, setSeconds] = useState(0);
   const [paused, setPaused] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [restored, setRestored] = useState(false);
+  const instanceIds = useRef<Record<string, string>>({});
 
   const currentExercise = exercises[exerciseIndex] ?? null;
   const nextExercise = exercises[exerciseIndex + 1] ?? null;
   const weightStep = units === "kg" ? 2.5 : 5;
+  const isPlanWorkout = !adHocExercise && sessionIndex !== null && !!todaySession;
+
+  const logContext = (exercise: SessionExercise): WorkoutLogContext | null =>
+    user?.id && exercise.isPlanExercise && sessionIndex !== null && todaySession
+      ? {
+          userId: user.id,
+          exerciseId: exercise.id,
+          exerciseName: exercise.name,
+          planThreadId: activeThreadId ?? null,
+          sessionIndex,
+          sessionLabel: todaySession.day_label,
+          planWeek: plan ? Math.floor(sessionIndex / Math.max(1, plan.days_per_week)) + 1 : null,
+        }
+      : null;
+
+  // Where to pick up: the saved position when resuming, otherwise the first
+  // exercise not yet finished (some may already be checked off on Plan).
+  useEffect(() => {
+    if (!resolved || restored || exercises.length === 0) return;
+    const saved = isPlanWorkout && sessionIndex !== null && isActiveFor(active, activeThreadId ?? null, sessionIndex, todaySession?.day_label) ? active : null;
+    if (saved) {
+      setExerciseIndex(Math.min(saved.exerciseIndex, exercises.length - 1));
+      setSetIndex(saved.setIndex);
+      setSeconds(saved.elapsedSeconds);
+      setWeight(saved.weight);
+      setReps(saved.reps);
+    } else {
+      const firstOpen = exercises.findIndex((exercise) => !completedExerciseIds.includes(exercise.id));
+      const startAt = firstOpen >= 0 ? firstOpen : 0;
+      setExerciseIndex(startAt);
+      setReps(exercises[startAt]?.defaultReps ?? 10);
+    }
+    setRestored(true);
+  }, [resolved, restored, exercises.length]);
+
+  // Keep the saved position current so leaving never loses it.
+  useEffect(() => {
+    if (!restored || !isPlanWorkout || finished || sessionIndex === null || !todaySession) return;
+    saveActive({
+      threadId: activeThreadId ?? null,
+      sessionIndex,
+      sessionLabel: todaySession.day_label,
+      startedAt: active?.startedAt ?? new Date().toISOString(),
+      elapsedSeconds: seconds,
+      exerciseIndex,
+      setIndex,
+      weight,
+      reps,
+      updatedAt: new Date().toISOString(),
+    });
+    // Clock ticks are saved every 10s rather than every second.
+  }, [restored, exerciseIndex, setIndex, weight, reps, finished, Math.floor(seconds / 10)]);
 
   useEffect(() => {
-    if (paused || finished) return;
+    if (paused || finished || !restored) return;
     const interval = setInterval(() => setSeconds((value) => value + 1), 1000);
     return () => clearInterval(interval);
-  }, [paused, finished]);
+  }, [paused, finished, restored]);
 
-  useEffect(() => {
-    setReps(currentExercise?.defaultReps ?? 10);
-  }, [exerciseIndex]);
+  const advanceExercise = () => {
+    if (exerciseIndex + 1 < exercises.length) {
+      setExerciseIndex(exerciseIndex + 1);
+      setSetIndex(0);
+      setReps(exercises[exerciseIndex + 1]?.defaultReps ?? 10);
+    } else {
+      setFinished(true);
+      if (isPlanWorkout) clearActive();
+    }
+  };
+
+  // Coming back from this exercise's Workout Log: sets may have been added,
+  // edited, or completed there, so pick up from what's actually saved.
+  const syncFromLog = async () => {
+    const exercise = currentExercise;
+    const ctx = exercise ? logContext(exercise) : null;
+    if (!exercise || !ctx) return;
+    try {
+      const instance = await findTodayInstance(ctx);
+      if (!instance) return;
+      instanceIds.current[exercise.id] = instance.instanceId;
+      const done = instance.sets.filter((row) => row.completed).length;
+      if (done >= exercise.sets) {
+        markExerciseCompleted(exercise.id);
+        advanceExercise();
+      } else {
+        setSetIndex(done);
+      }
+    } catch {
+      // Keep the local position if the log can't be read right now.
+    }
+  };
+
+  const returningFromLog = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!returningFromLog.current) return;
+      returningFromLog.current = false;
+      syncFromLog();
+    }, [currentExercise?.id, sessionIndex])
+  );
+
+  const saveLoggedSet = async (exercise: SessionExercise, setNumber: number) => {
+    const ctx = logContext(exercise);
+    if (!ctx) return;
+    try {
+      if (!instanceIds.current[exercise.id]) {
+        const existing = await findTodayInstance(ctx);
+        instanceIds.current[exercise.id] = existing?.instanceId ?? Crypto.randomUUID();
+      }
+      await upsertSet(ctx, instanceIds.current[exercise.id], {
+        setNumber,
+        reps,
+        // 0 on the stepper means no added load.
+        weightValue: weight > 0 ? weight : null,
+        weightUnit: units,
+        completed: true,
+      });
+    } catch {
+      // The set still counts in the session; it can be fixed in the log.
+    }
+  };
 
   const handleLogSet = async () => {
     if (!currentExercise) return;
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+    void saveLoggedSet(currentExercise, setIndex + 1);
 
     if (setIndex + 1 < currentExercise.sets) {
       setSetIndex(setIndex + 1);
@@ -122,13 +304,29 @@ export default function WorkoutSessionScreen() {
     if (currentExercise.isPlanExercise) {
       markExerciseCompleted(currentExercise.id);
     }
+    advanceExercise();
+  };
 
-    if (exerciseIndex + 1 < exercises.length) {
-      setExerciseIndex(exerciseIndex + 1);
-      setSetIndex(0);
-    } else {
-      setFinished(true);
-    }
+  const openExerciseLog = () => {
+    if (!currentExercise || sessionIndex === null || !todaySession || !plan) return;
+    const planExercise = todaySession.exercises.find((exercise) => exercise.exercise_id === currentExercise.id);
+    if (!planExercise) return;
+    returningFromLog.current = true;
+    router.push({
+      pathname: "/workout-log",
+      params: {
+        exerciseId: planExercise.exercise_id,
+        exerciseName: planExercise.name,
+        plannedSetCount: String(planExercise.sets),
+        repMin: String(planExercise.rep_range.min),
+        repMax: String(planExercise.rep_range.max),
+        load: currentExercise.load,
+        sessionLabel: todaySession.day_label,
+        sessionIndex: String(sessionIndex),
+        planWeek: String(Math.floor(sessionIndex / Math.max(1, plan.days_per_week)) + 1),
+        threadId: activeThreadId ?? undefined,
+      },
+    });
   };
 
   const askCoachAboutExercise = () => {
@@ -138,6 +336,10 @@ export default function WorkoutSessionScreen() {
       params: { ask: t("workout_session.ask_coach_prefill", { exercise: currentExercise.name }) },
     });
   };
+
+  if (!resolved || (exercises.length > 0 && !restored)) {
+    return <View style={[styles.screen, { paddingTop: insets.top }]}><StatusBar style="light" /></View>;
+  }
 
   if (exercises.length === 0) {
     return (
@@ -176,7 +378,7 @@ export default function WorkoutSessionScreen() {
           onPress={() => router.back()}
           style={styles.iconButton}
           accessibilityRole="button"
-          accessibilityLabel={t("workout_session.end_workout")}
+          accessibilityLabel={t(isPlanWorkout ? "workout_session.leave_saved" : "workout_session.end_workout")}
         >
           <Ionicons name="close" size={18} color={coachDark.text} />
         </TouchableOpacity>
@@ -203,13 +405,26 @@ export default function WorkoutSessionScreen() {
       <View style={styles.body}>
         <Text style={styles.exerciseName}>{currentExercise!.name}</Text>
         <SegmentedProgressBar count={currentExercise!.sets} currentIndex={setIndex} />
-        <Text style={styles.setLabel}>
-          {t("workout_session.set_label", { current: setIndex + 1, total: currentExercise!.sets })}
-        </Text>
+        <View style={styles.setRow}>
+          <Text style={styles.setLabel}>
+            {t("workout_session.set_label", { current: setIndex + 1, total: currentExercise!.sets })}
+          </Text>
+          {isPlanWorkout && user ? (
+            <TouchableOpacity
+              onPress={openExerciseLog}
+              style={styles.logLink}
+              accessibilityRole="button"
+              accessibilityHint={t("workout_session.edit_sets_hint")}
+            >
+              <Ionicons name="list" size={15} color={coachDark.text} />
+              <Text style={styles.logLinkText}>{t("workout_session.edit_sets")}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
 
         <View style={styles.stepperRow}>
           <Stepper
-            label={units === "kg" ? t("workout_session.kg") : t("workout_session.lbs")}
+            label={t(`workout_session.weight_label.${currentExercise!.load}`, { unit: units === "kg" ? t("workout_session.kg") : t("workout_session.lbs") })}
             value={weight}
             onDecrement={() => setWeight((value) => Math.max(0, value - weightStep))}
             onIncrement={() => setWeight((value) => value + weightStep)}
@@ -276,6 +491,17 @@ const styles = StyleSheet.create({
 
   body: { gap: spacing.md, flexGrow: 1 },
   exerciseName: { color: coachDark.text, fontFamily: coachFonts.headingExtraBold, fontSize: 36, letterSpacing: -0.5 },
+  setRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+  logLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    height: 34,
+    paddingHorizontal: 12,
+    borderRadius: radii.pill,
+    backgroundColor: coachDark.surface,
+  },
+  logLinkText: { color: coachDark.text, fontFamily: coachFonts.bodyBold, fontSize: 13 },
   setLabel: { color: coachDark.coralOnDark, fontFamily: coachFonts.bodyExtraBold, fontSize: 13, letterSpacing: 1.4 },
   stepperRow: { flexDirection: "row", gap: spacing.md },
   coachTipCard: {

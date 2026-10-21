@@ -91,14 +91,20 @@ export async function findTodayInstance(
 // Max weight_kg across ALL of this user's saved sets for this exercise,
 // regardless of Done state or which instance/day — the PR is derived, never
 // editable, and independent of today's instance.
-export async function fetchPersonalRecordKg(userId: string, exerciseId: string): Promise<number | null> {
+// For assisted exercises the logged weight is the counterweight, so the
+// record is the least assistance (lowerIsBetter).
+export async function fetchPersonalRecordKg(
+  userId: string,
+  exerciseId: string,
+  lowerIsBetter = false
+): Promise<number | null> {
   const { data, error } = await supabase
     .from("workout_set_logs")
     .select("weight_kg")
     .eq("user_id", userId)
     .eq("exercise_id", exerciseId)
     .not("weight_kg", "is", null)
-    .order("weight_kg", { ascending: false })
+    .order("weight_kg", { ascending: lowerIsBetter })
     .limit(1)
     .maybeSingle();
   if (error) throw error;
@@ -150,6 +156,13 @@ export async function upsertSet(
 
   if (error) throw error;
   return mapRow(data);
+}
+
+// Renumbering after a delete updates the row by id — an upsert keyed on
+// (workout_instance_id, set_number) would insert a new row instead.
+export async function updateSetNumber(setId: string, setNumber: number): Promise<void> {
+  const { error } = await supabase.from("workout_set_logs").update({ set_number: setNumber }).eq("id", setId);
+  if (error) throw error;
 }
 
 export async function deleteSet(setId: string): Promise<void> {

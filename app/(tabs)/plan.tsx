@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Circle } from "react-native-svg";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import SafeScreen from "@/components/Layout/SafeScreen";
 import GuestPromptModal from "@/components/UI/GuestPromptModal";
@@ -56,6 +56,8 @@ import {
 } from "@/lib/muscleProgress";
 import { useAuthStore } from "@/store/authStore";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
+import { isActiveFor, useActiveWorkoutStore } from "@/store/activeWorkoutStore";
+import { exerciseLoad } from "@/lib/exerciseLoad";
 import { useWorkoutGuideStore } from "@/store/workoutGuideStore";
 import { MuscleDelta, useMuscleProgressStore } from "@/store/muscleProgressStore";
 
@@ -660,10 +662,13 @@ function PlanHeader({
 
 function NextWorkoutHero({
   item,
+  resuming,
   onStart,
   onDetails,
 }: {
   item: Extract<PlanSequenceItem, { type: "workout" }>;
+  // A workout session is already open for this one (store/activeWorkoutStore).
+  resuming: boolean;
   onStart: () => void;
   onDetails: () => void;
 }) {
@@ -671,12 +676,12 @@ function NextWorkoutHero({
   const { session } = item;
   const sets = session.exercises.reduce((sum, exercise) => sum + exercise.sets, 0);
   const name = sessionDisplayName(session);
-  const inProgress = item.completedCount > 0;
+  const inProgress = resuming || item.completedCount > 0;
   return (
     <View style={styles.hero}>
       <View style={styles.heroTopRow}>
         <Text style={styles.heroEyebrow}>
-          {t("plan.up_next", { number: item.number }).toUpperCase()}
+          {t(resuming ? "plan.in_progress_number" : "plan.up_next", { number: item.number }).toUpperCase()}
         </Text>
         {inProgress ? (
           <View style={styles.inProgressPill}>
@@ -713,10 +718,12 @@ function NextWorkoutHero({
         style={({ pressed }) => [styles.heroStartButton, pressed && styles.pressed]}
         onPress={onStart}
         accessibilityRole="button"
-        accessibilityLabel={t("plan.start_workout_number", { number: item.number })}
+        accessibilityLabel={t(resuming ? "plan.resume_workout_number" : "plan.start_workout_number", { number: item.number })}
       >
         <Ionicons name="play" size={16} color={coachColors.card} />
-        <Text style={styles.heroStartText}>{t(inProgress ? "plan.continue_workout" : "home.start_workout")}</Text>
+        <Text style={styles.heroStartText}>
+          {t(resuming ? "plan.resume_workout" : inProgress ? "plan.continue_workout" : "home.start_workout")}
+        </Text>
       </Pressable>
       <TouchableOpacity style={styles.heroLink} onPress={onDetails} accessibilityRole="button">
         <Text style={styles.heroLinkText}>{t("plan.view_details")}</Text>
@@ -836,6 +843,8 @@ export default function PlanScreen() {
     loadTrainer,
   } = useCoachTrainerStore();
   const completeExercise = useMuscleProgressStore((state) => state.completeExercise);
+  const activeWorkout = useActiveWorkoutStore((state) => state.active);
+  const loadActiveWorkout = useActiveWorkoutStore((state) => state.load);
   const setCurrentWorkoutGuide = useWorkoutGuideStore((state) => state.setCurrentGuide);
 
   const [completingId, setCompletingId] = useState<string | null>(null);
@@ -858,7 +867,24 @@ export default function PlanScreen() {
 
   useEffect(() => {
     loadTrainer();
-  }, [loadTrainer]);
+    loadActiveWorkout();
+  }, [loadTrainer, loadActiveWorkout]);
+
+  // Back from an exercise's Workout Log opened from a workout's details:
+  // return to that workout, not the top of the Plan tab.
+  const reopenWorkoutLabel = useRef<string | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      const label = reopenWorkoutLabel.current;
+      if (!label) return;
+      reopenWorkoutLabel.current = null;
+      const session = useCoachTrainerStore.getState().plan?.sessions.find((item) => item.day_label === label);
+      if (session) {
+        setSelectedSession(session);
+        setWorkoutDetailVisible(true);
+      }
+    }, [])
+  );
 
   const totalExercises = plan?.sessions.reduce((sum, session) => sum + session.exercises.length, 0) ?? 0;
   const completedThisPlan = completedExerciseIds.length;
@@ -873,6 +899,18 @@ export default function PlanScreen() {
   );
   const nextItem = nextSequenceItem(sequence);
   const nextWorkout = nextWorkoutItem(sequence);
+  // A workout already in progress outranks "up next" — it's what to finish.
+  const activeItem = sequence.find(
+    (item): item is Extract<PlanSequenceItem, { type: "workout" }> =>
+      item.type === "workout" && !item.complete && isActiveFor(activeWorkout, activeThreadId ?? null, item.sessionIndex, item.session.day_label)
+  );
+  const heroWorkout = activeItem ?? nextWorkout;
+  // Finished workouts (and rests already taken) before the current point
+  // fold away so the list opens where you are.
+  const firstOpenIndex = sequence.findIndex((item) => !item.complete);
+  const hiddenDoneCount = firstOpenIndex > 0 ? sequence.slice(0, firstOpenIndex).filter((item) => item.type === "workout").length : 0;
+  const [showCompleted, setShowCompleted] = useState(false);
+  const visibleSequence = showCompleted || firstOpenIndex <= 0 ? sequence : sequence.slice(firstOpenIndex);
   const completedWorkouts = sequence.filter((item) => item.type === "workout" && item.complete).length;
 
   const selectedSessionIndex =
@@ -983,8 +1021,9 @@ export default function PlanScreen() {
     // has real content immediately instead of a thinner one it builds itself.
     const fallback = fallbackExerciseGuide(exercise, i18n.language?.startsWith("es") === true);
     setCurrentWorkoutGuide(fallback);
+    reopenWorkoutLabel.current = session.day_label;
     setWorkoutDetailVisible(false);
-    const sessionIndex = plan?.sessions.indexOf(session) ?? -1;
+    const sessionIndex = plan?.sessions.findIndex((item) => item.day_label === session.day_label) ?? -1;
     const planWeek = sessionIndex >= 0 ? Math.floor(sessionIndex / weekSize) + 1 : undefined;
     requestAnimationFrame(() =>
       router.push({
@@ -995,6 +1034,7 @@ export default function PlanScreen() {
           plannedSetCount: String(exercise.sets),
           repMin: String(exercise.rep_range.min),
           repMax: String(exercise.rep_range.max),
+          load: exerciseLoad({ id: exercise.exercise_id, name: exercise.name, category: exercise.category }),
           sessionLabel: session.day_label,
           sessionIndex: sessionIndex >= 0 ? String(sessionIndex) : undefined,
           planWeek: planWeek !== undefined ? String(planWeek) : undefined,
@@ -1208,21 +1248,22 @@ export default function PlanScreen() {
               subtitle={[t(`plan.goal_types.${plan.goal_type}`), plan.split, t("plan.per_week", { count: plan.days_per_week })].filter(Boolean).join(" · ")}
               completed={completedWorkouts}
               total={plan.sessions.length}
-              current={nextWorkout ? nextWorkout.number : plan.sessions.length}
+              current={heroWorkout ? heroWorkout.number : plan.sessions.length}
               onCoach={handleContinueWithCoach}
             />
 
-            {nextItem?.type === "rest" && nextWorkout ? (
+            {nextItem?.type === "rest" && nextWorkout && !activeItem ? (
               <RestHero
                 tip={nextItem.tip}
                 nextNumber={nextWorkout.number}
                 onStartAnyway={() => handleStartWorkout(nextWorkout.sessionIndex)}
               />
-            ) : nextWorkout ? (
+            ) : heroWorkout ? (
               <NextWorkoutHero
-                item={nextWorkout}
-                onStart={() => handleStartWorkout(nextWorkout.sessionIndex)}
-                onDetails={() => handleOpenWorkout(nextWorkout.session)}
+                item={heroWorkout}
+                resuming={heroWorkout === activeItem}
+                onStart={() => handleStartWorkout(heroWorkout.sessionIndex)}
+                onDetails={() => handleOpenWorkout(heroWorkout.session)}
               />
             ) : (
               <TouchableOpacity style={styles.completeHero} onPress={handleRetryCompletedPlan} activeOpacity={0.88}>
@@ -1252,15 +1293,29 @@ export default function PlanScreen() {
             </View>
 
             <View style={styles.sequenceList}>
-              {sequence.map((item, index) => {
-                const showWeek = item.week !== sequence[index - 1]?.week && plan.timeline_weeks > 1;
+              {hiddenDoneCount > 0 ? (
+                <TouchableOpacity
+                  style={styles.completedToggle}
+                  onPress={() => setShowCompleted((value) => !value)}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: showCompleted }}
+                >
+                  <Ionicons name="checkmark-circle" size={18} color={coachColors.limeText} />
+                  <Text style={styles.completedToggleText}>
+                    {t(showCompleted ? "plan.hide_completed" : "plan.show_completed", { count: hiddenDoneCount })}
+                  </Text>
+                  <Ionicons name={showCompleted ? "chevron-up" : "chevron-down"} size={16} color={coachColors.textSecondary} />
+                </TouchableOpacity>
+              ) : null}
+              {visibleSequence.map((item, index) => {
+                const showWeek = item.week !== visibleSequence[index - 1]?.week && plan.timeline_weeks > 1;
                 return (
                   <React.Fragment key={item.key}>
                     {showWeek ? <Text style={styles.weekDivider}>{t("plan.week_label", { number: item.week })}</Text> : null}
                     {item.type === "workout" ? (
                       <WorkoutRow
                         item={item}
-                        isNext={nextWorkout?.key === item.key && nextItem?.type !== "rest"}
+                        isNext={heroWorkout?.key === item.key && (!!activeItem || nextItem?.type !== "rest")}
                         onPress={() => handleOpenWorkout(item.session)}
                       />
                     ) : (
@@ -1523,6 +1578,18 @@ const styles = StyleSheet.create({
   nextPillText: { color: coachColors.coralPressed, fontFamily: coachFonts.bodyExtraBold, fontSize: 11, letterSpacing: 0.6 },
   rowFocus: { color: coachColors.text, fontFamily: coachFonts.body, fontSize: 14, marginTop: 1 },
   rowMeta: { color: coachColors.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 12, marginTop: 2 },
+  completedToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.card,
+    backgroundColor: coachColors.card,
+    borderWidth: 1,
+    borderColor: coachColors.border,
+  },
+  completedToggleText: { flex: 1, color: coachColors.text, fontFamily: coachFonts.bodySemiBold, fontSize: 14 },
   restRow: {
     flexDirection: "row",
     alignItems: "center",

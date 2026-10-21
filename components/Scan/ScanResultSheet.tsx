@@ -16,7 +16,7 @@
 // per page, with dot indicators when there's more than one candidate. "Show
 // me" and "Not this one" always act on whichever page is currently active.
 import React, { useState } from "react";
-import { NativeScrollEvent, NativeSyntheticEvent, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, NativeScrollEvent, NativeSyntheticEvent, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { coachColors, coachFonts, radii, spacing } from "@/constants/theme";
@@ -26,6 +26,8 @@ export interface ScanCandidate {
   id?: string;
   name: string;
   confidence: number;
+  // Identified but not saved yet; "Show me" saves it first.
+  saveToken?: string;
 }
 
 interface ScanResultSheetProps {
@@ -33,11 +35,12 @@ interface ScanResultSheetProps {
   candidates: ScanCandidate[];
   onNotThisOne: () => void;
   onShowMe: (candidate: ScanCandidate) => void;
+  saving?: boolean;
 }
 
 const SHEET_PADDING = 20;
 
-export default function ScanResultSheet({ visible, candidates, onNotThisOne, onShowMe }: ScanResultSheetProps) {
+export default function ScanResultSheet({ visible, candidates, onNotThisOne, onShowMe, saving }: ScanResultSheetProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -92,8 +95,18 @@ export default function ScanResultSheet({ visible, candidates, onNotThisOne, onS
         <TouchableOpacity style={styles.notThisOneButton} onPress={onNotThisOne} accessibilityRole="button">
           <Text style={styles.notThisOneText}>{t("scan_result.not_this_one")}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.showMeButton} onPress={() => onShowMe(active)} accessibilityRole="button">
-          <Text style={styles.showMeText}>{t("scan_result.show_me")}</Text>
+        <TouchableOpacity
+          style={[styles.showMeButton, saving && styles.showMeSaving]}
+          onPress={() => onShowMe(active)}
+          disabled={saving}
+          accessibilityRole="button"
+          accessibilityState={{ busy: !!saving }}
+        >
+          {saving ? (
+            <ActivityIndicator color={coachColors.card} />
+          ) : (
+            <Text style={styles.showMeText}>{t("scan_result.show_me")}</Text>
+          )}
         </TouchableOpacity>
       </View>
     </BottomSheet>
@@ -163,5 +176,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  showMeSaving: { opacity: 0.8 },
   showMeText: { color: coachColors.card, fontFamily: coachFonts.bodyExtraBold, fontSize: 16 },
 });

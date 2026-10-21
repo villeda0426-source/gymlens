@@ -55,7 +55,9 @@
     "possible_match": "Possible match",
     "not_this_one": "Not this one",
     "show_me": "Show me",
-    "show_me_unavailable": "We couldn't save that result. Please try scanning again."
+    "show_me_unavailable": "We couldn't save that result. Please try scanning again.",
+    "save_failed_title": "Couldn't save yet",
+    "save_failed_message": "Your scan is still here. Tap Show me to try saving again — no need to retake the photo."
   },
   "home": {
     "good_morning": "Good morning",
@@ -327,7 +329,38 @@
     "set_label": "Set {{set}}",
     "could_not_load": "Couldn't load your sets. Try again.",
     "back": "Back",
-    "keyboard_done": "Done"
+    "keyboard_done": "Done",
+    "load_hint": {
+      "external": "Log the weight you lift — for two dumbbells, the weight of one.",
+      "bodyweight": "Uses your body weight. Leave weight blank, or log any extra load (vest, plate, dumbbell).",
+      "assisted": "Log the assistance (counterweight). Less assistance means you're getting stronger.",
+      "band": "Optional: log the band's rated resistance.",
+      "none": "No weight to log — track reps or time."
+    },
+    "weight_column": {
+      "external": "Weight",
+      "bodyweight": "Added",
+      "assisted": "Assist",
+      "band": "Band",
+      "none": "Weight"
+    },
+    "weight_placeholder": {
+      "external": "0",
+      "bodyweight": "Body",
+      "assisted": "0",
+      "band": "—",
+      "none": "—"
+    },
+    "least_assist": "Least assist: {{value}}",
+    "edit_sets": "Edit",
+    "edit_done": "Done",
+    "remove": "Remove",
+    "delete_set_label": "Remove set {{set}}",
+    "delete_set_title": "Remove set {{set}}?",
+    "delete_set_message": "The sets after it move up a number.",
+    "delete_set_message_done": "This set is already logged. Removing it also removes it from your history and records.",
+    "delete_set_confirm": "Remove set",
+    "delete_set_failed": "Couldn't remove that set. Please try again."
   },
   "trainer": {
     "personal_trainer": "Coach",
@@ -593,7 +626,21 @@
     "complete_title": "Workout complete",
     "complete_body_plan": "Nice work. Your progress is saved.",
     "complete_body_adhoc": "Nice work.",
-    "done_button": "Done"
+    "done_button": "Done",
+    "in_progress_title": "Workout in progress",
+    "in_progress_message": "You're partway through Workout {{number}}. Resume it, or start this one instead? Sets you've already logged are kept either way.",
+    "resume_number": "Resume Workout {{number}}",
+    "start_number": "Start Workout {{number}}",
+    "edit_sets": "Edit sets",
+    "edit_sets_hint": "Opens this exercise's log. Your workout stays where you left it.",
+    "leave_saved": "Leave workout — your progress is saved",
+    "weight_label": {
+      "external": "{{unit}}",
+      "bodyweight": "+{{unit}} ADDED",
+      "assisted": "ASSIST {{unit}}",
+      "band": "BAND {{unit}}",
+      "none": "{{unit}}"
+    }
   },
   "plan": {
     "title": "Your plan",
@@ -724,7 +771,13 @@
       "endurance": "Endurance",
       "general_fitness": "General fitness",
       "sport_specific": "Sport"
-    }
+    },
+    "in_progress_number": "In progress · Workout {{number}}",
+    "resume_workout": "Resume workout",
+    "resume_workout_number": "Resume workout {{number}}",
+    "show_completed": "Show {{count}} completed workout",
+    "show_completed_plural": "Show {{count}} completed workouts",
+    "hide_completed": "Hide completed workouts"
   },
   "avatar_progress": {
     "title": "Progress Avatar",
