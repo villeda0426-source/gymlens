@@ -21,6 +21,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Crypto from "expo-crypto";
@@ -116,6 +117,10 @@ export default function WorkoutLogScreen() {
   const { user } = useAuthStore();
   const { plan, markExerciseCompleted, unmarkExerciseCompleted, completedExerciseIds } = useCoachTrainerStore();
   const fromSession = params.from === "session";
+  // Narrow phones: the back button keeps its spoken label but drops the
+  // visible one, so the title and workout context still fit.
+  const { width: windowWidth } = useWindowDimensions();
+  const labelledBack = fromSession && windowWidth >= 360;
   const sessionIndexNumber = params.sessionIndex ? Number.parseInt(params.sessionIndex, 10) : null;
   const { currentGuide } = useWorkoutGuideStore();
 
@@ -493,12 +498,12 @@ export default function WorkoutLogScreen() {
         {/* From the guided session, Back returns to it — say so. */}
         <TouchableOpacity
           onPress={() => router.back()}
-          style={[styles.backButton, fromSession && styles.backButtonLabelled]}
+          style={[styles.backButton, labelledBack && styles.backButtonLabelled]}
           accessibilityRole="button"
           accessibilityLabel={t(fromSession ? "workout_log.back_to_workout" : "workout_log.back")}
         >
           <Ionicons name="chevron-back" size={20} color={coachColors.card} />
-          {fromSession ? <Text style={styles.backLabel}>{t("workout_log.workout")}</Text> : null}
+          {labelledBack ? <Text style={styles.backLabel}>{t("workout_log.workout")}</Text> : null}
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>{t("workout_log.title")}</Text>
@@ -508,7 +513,7 @@ export default function WorkoutLogScreen() {
               : exerciseName}
           </Text>
         </View>
-        <View style={{ width: fromSession ? 96 : 40 }} />
+        <View style={{ width: labelledBack ? 96 : 40 }} />
       </View>
 
       {loading ? (
@@ -591,7 +596,7 @@ export default function WorkoutLogScreen() {
                 </View>
                 <View style={[styles.colWeight, styles.weightCell]}>
                   <TextInput
-                    style={styles.cellInput}
+                    style={[styles.cellInput, styles.weightInput]}
                     value={set.weightValue}
                     onChangeText={(value) =>
                       setSets((prev) => prev.map((s, i) => (i === index ? { ...s, weightValue: value.replace(/[^0-9.]/g, "") } : s)))
@@ -838,6 +843,7 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   weightCell: { flexDirection: "row", alignItems: "center", gap: 6 },
+  weightInput: { flex: 1, minWidth: 0 },
   unitSuffix: { color: DARK_MUTED, fontFamily: coachFonts.bodySemiBold, fontSize: 12 },
   doneCheck: {
     width: 28,

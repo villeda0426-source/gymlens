@@ -327,6 +327,7 @@ export default function WorkoutSessionScreen() {
 
   // Where to pick up: the saved position when resuming, otherwise the first
   // exercise not yet finished (some may already be checked off on Plan).
+  const alignWithSaved = useRef(false);
   useEffect(() => {
     if (!resolved || restored || exercises.length === 0) return;
     const saved = isPlanWorkout && sessionIndex !== null && isActiveFor(active, activeThreadId ?? null, sessionIndex, todaySession?.day_label) ? active : null;
@@ -346,6 +347,7 @@ export default function WorkoutSessionScreen() {
       const startAt = firstOpen >= 0 ? firstOpen : 0;
       setExerciseIndex(startAt);
       setReps(exercises[startAt]?.defaultReps ?? 10);
+      alignWithSaved.current = isPlanWorkout;
     }
     setRestored(true);
   }, [resolved, restored, exercises.length]);
@@ -412,26 +414,46 @@ export default function WorkoutSessionScreen() {
 
   // Coming back from this exercise's Workout Log: sets may have been added,
   // edited, or completed there, so pick up from what's actually saved.
-  const syncFromLog = async () => {
+  // Resolves true when it moved on to the next exercise.
+  const syncFromLog = async (): Promise<boolean> => {
     const exercise = currentExercise;
     const ctx = exercise ? logContext(exercise) : null;
-    if (!exercise || !ctx) return;
+    if (!exercise || !ctx) return false;
+    // "Mark done without details" in the log completes the exercise even
+    // with no (or only some) saved sets.
+    const markedDone =
+      exercise.isPlanExercise && useCoachTrainerStore.getState().completedExerciseIds.includes(exercise.id);
     try {
       const instance = await findTodayInstance(ctx);
-      if (!instance) return;
+      if (!instance) {
+        if (markedDone) advanceExercise();
+        return markedDone;
+      }
       instanceIds.current[exercise.id] = instance.instanceId;
       const completedNumbers = instance.sets.filter((row) => row.completed).map((row) => row.setNumber);
       const next = nextOpenSetNumber(completedNumbers, exercise.sets);
-      if (next === null) {
+      if (next === null || markedDone) {
         if (exercise.isPlanExercise) markExerciseCompleted(exercise.id);
         advanceExercise();
-      } else {
-        setSetIndex(next - 1);
+        return true;
       }
+      setSetIndex(next - 1);
     } catch {
       // Keep the local position if the log can't be read right now.
     }
+    return false;
   };
+
+  // Starting without a device copy (signed out and back in, another phone,
+  // cleared storage) while today's sets are already saved: continue after
+  // them rather than at set 1, which would overwrite a completed set.
+  useEffect(() => {
+    if (!restored || !alignWithSaved.current || finished) return;
+    void syncFromLog().then((advanced) => {
+      if (!advanced) alignWithSaved.current = false;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restored, currentExercise?.id]);
 
   const returningFromLog = useRef(false);
   useFocusEffect(
