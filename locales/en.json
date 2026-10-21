@@ -335,7 +335,7 @@
     "weight_label": "Set {{set}} weight",
     "done_label": "Set {{set}} done",
     "done_label_unchecked": "Set {{set}}, not done",
-    "pr_label": "Personal record for set {{set}}",
+    "pr_label": "Set {{set}} previous best: {{value}}",
     "set_label": "Set {{set}}",
     "could_not_load": "Couldn't load your sets. Try again.",
     "back": "Back",
@@ -370,7 +370,18 @@
     "delete_set_message": "The sets after it move up a number.",
     "delete_set_message_done": "This set is already logged. Removing it also removes it from your history and records.",
     "delete_set_confirm": "Remove set",
-    "delete_set_failed": "Couldn't remove that set. Please try again."
+    "delete_set_failed": "Couldn't remove that set. Please try again.",
+    "no_pr_spoken": "none yet",
+    "back_to_workout": "Back to your workout",
+    "workout": "Workout",
+    "context": "Workout {{number}} · {{exercise}}",
+    "saving": "Saving",
+    "retry_set_label": "Set {{set}} wasn't saved. Tap to try again",
+    "pr_footnote": "PR = your previous best for that set number.",
+    "use_previous": "Use previous sets",
+    "use_previous_hint": "Fills in your last workout's sets. Tick Done on each one you actually do.",
+    "quick_done": "Mark done without details",
+    "quick_done_note": "Marked done. You can still add your sets."
   },
   "trainer": {
     "personal_trainer": "Coach",
@@ -650,7 +661,13 @@
       "assisted": "ASSIST {{unit}}",
       "band": "BAND {{unit}}",
       "none": "{{unit}}"
-    }
+    },
+    "sets_not_saved": "{{count}} set not saved",
+    "sets_not_saved_plural": "{{count}} sets not saved",
+    "retry": "Retry",
+    "saving_sets": "Saving…",
+    "quick_done": "Done — skip details",
+    "quick_done_hint": "Marks this exercise done without logging weights or reps."
   },
   "plan": {
     "title": "Your plan",
@@ -753,7 +770,7 @@
     "view_details": "View exercises",
     "rest_day": "Rest day",
     "rest_then": "Then Workout {{number}}.",
-    "train_anyway": "Feeling fresh? Start Workout {{number}}",
+    "train_anyway": "Train early: Start Workout {{number}}",
     "rest_tips": {
       "lower": "Your legs did the heavy lifting. A 20-minute walk and some hip and calf mobility will help them bounce back.",
       "upper": "Give your upper body a break. Gentle shoulder circles and a chest stretch keep things loose.",
@@ -1097,5 +1114,39 @@
     "minutes_value": "{{count}} minutes",
     "choose_title": "Pick your plan",
     "choose_helper": "Coach built two different plans from your answers. Compare them, adjust either one, then choose."
+  },
+  "workout_extras": {
+    "title": "Workout extras",
+    "optional": "Optional",
+    "subtitle": "For this workout, across all exercises.",
+    "cardio": "Cardio",
+    "add": "Add",
+    "add_cardio": "Add cardio",
+    "edit_cardio_label": "Edit cardio: {{entry}}",
+    "cardio_with_minutes": "{{activity}} · {{minutes}} min",
+    "activity_label": "Activity",
+    "minutes_label": "Minutes (optional)",
+    "minutes_placeholder": "e.g. 15",
+    "save_cardio": "Save cardio",
+    "remove_cardio": "Remove this cardio",
+    "activity": {
+      "walking": "Walking",
+      "cycling": "Cycling",
+      "running": "Running",
+      "elliptical": "Elliptical",
+      "rowing": "Rowing",
+      "stairs": "Stairs",
+      "other": "Other"
+    },
+    "water": "Water",
+    "water_total": "{{amount}} {{unit}} this workout",
+    "water_total_label": "{{amount}} {{unit}} of water logged for this workout",
+    "add_water": "+ {{amount}} {{unit}}",
+    "add_water_label": "Add {{amount}} {{unit}} of water",
+    "remove_water_label": "Remove the last {{amount}} {{unit}} added",
+    "unit_fl_oz": "fl oz",
+    "unit_ml": "ml",
+    "save_failed": "Couldn't save that. Your entry is still here — try again.",
+    "load_failed": "Couldn't load this workout's extras."
   }
 }

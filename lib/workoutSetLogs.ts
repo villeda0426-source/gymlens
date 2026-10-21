@@ -5,6 +5,13 @@
 // user_consents/user_limitations, not a server route.
 import { supabase } from "./supabase";
 import type { Units } from "./coachTrainer";
+import { journalAvailable } from "./workoutJournal";
+import {
+  canonicalExerciseKey,
+  computeExerciseBest,
+  computeSetRecords,
+  type SetHistoryRow,
+} from "./workoutJournalRules";
 
 // 1 lb = 0.45359237 kg exactly (international pound).
 const KG_PER_LB = 0.45359237;
@@ -34,6 +41,11 @@ export interface WorkoutLogContext {
   sessionIndex: number | null;
   sessionLabel: string | null;
   planWeek: number | null;
+  // Journal fields (workout_journal migration). Written only once that
+  // migration is applied, so older databases keep accepting saves.
+  workoutSessionId?: string | null;
+  entrySource?: "guided" | "table" | "copied_previous";
+  equipmentId?: string | null;
 }
 
 function mapRow(row: {
@@ -88,27 +100,65 @@ export async function findTodayInstance(
   };
 }
 
-// Max weight_kg across ALL of this user's saved sets for this exercise,
-// regardless of Done state or which instance/day — the PR is derived, never
-// editable, and independent of today's instance.
-// For assisted exercises the logged weight is the counterweight, so the
-// record is the least assistance (lowerIsBetter).
-export async function fetchPersonalRecordKg(
-  userId: string,
-  exerciseId: string,
-  lowerIsBetter = false
-): Promise<number | null> {
+// Completed history for one movement (all plan weeks/occurrences of it —
+// lib/workoutJournalRules.ts canonicalExerciseKey), newest first. Records
+// are derived from these rows on every read, so edits and deletions are
+// reflected immediately. select("*") so it works before and after the
+// journal migration adds set_kind/workout_session_id.
+export async function fetchExerciseHistory(userId: string, exerciseId: string): Promise<Array<SetHistoryRow & { performed_at: string; reps: number | null }>> {
+  const key = canonicalExerciseKey(exerciseId);
   const { data, error } = await supabase
     .from("workout_set_logs")
-    .select("weight_kg")
+    .select("*")
     .eq("user_id", userId)
-    .eq("exercise_id", exerciseId)
-    .not("weight_kg", "is", null)
-    .order("weight_kg", { ascending: lowerIsBetter })
-    .limit(1)
-    .maybeSingle();
+    .eq("completed", true)
+    .or(`exercise_id.eq."${key}",exercise_id.like."${key}-w*",exercise_id.like."${key}-s*"`)
+    .order("performed_at", { ascending: false })
+    .limit(1000);
   if (error) throw error;
-  return data?.weight_kg ?? null;
+  return (data ?? []) as Array<SetHistoryRow & { performed_at: string; reps: number | null }>;
+}
+
+export interface ExerciseRecords {
+  // set number -> previous best (kg), excluding the visit being logged.
+  bySetNumber: Map<number, number>;
+  // Exercise-wide best (kg), including today's confirmed sets.
+  best: number | null;
+  // The most recent earlier visit's completed sets, for "Use previous sets".
+  previousSets: Array<{ setNumber: number; reps: number | null; weightKg: number | null }>;
+}
+
+export async function fetchExerciseRecords(args: {
+  userId: string;
+  exerciseId: string;
+  currentInstanceId: string | null;
+  currentSessionId?: string | null;
+  lowerIsBetter?: boolean;
+}): Promise<ExerciseRecords> {
+  const history = await fetchExerciseHistory(args.userId, args.exerciseId);
+  const bySetNumber = computeSetRecords(history, {
+    exerciseId: args.exerciseId,
+    excludeInstanceId: args.currentInstanceId,
+    excludeSessionId: args.currentSessionId ?? null,
+    lowerIsBetter: args.lowerIsBetter,
+  });
+  const best = computeExerciseBest(history, { exerciseId: args.exerciseId, lowerIsBetter: args.lowerIsBetter });
+  const earlier = history.filter(
+    (row) =>
+      row.workout_instance_id !== args.currentInstanceId &&
+      (!args.currentSessionId || row.workout_session_id !== args.currentSessionId) &&
+      (row.set_kind ?? "working") === "working"
+  );
+  const lastInstance = earlier[0]?.workout_instance_id;
+  const previousSets = earlier
+    .filter((row) => row.workout_instance_id === lastInstance)
+    .map((row) => ({
+      setNumber: row.set_number,
+      reps: row.reps ?? null,
+      weightKg: row.weight_kg === null || row.weight_kg === undefined ? null : Number(row.weight_kg),
+    }))
+    .sort((a, b) => a.setNumber - b.setNumber);
+  return { bySetNumber, best, previousSets };
 }
 
 export interface SetInput {
@@ -129,6 +179,7 @@ export async function upsertSet(
   set: SetInput
 ): Promise<WorkoutSetRow> {
   const weightKg = set.weightValue !== null ? toKg(set.weightValue, set.weightUnit) : null;
+  const journal = await journalAvailable();
 
   const { data, error } = await supabase
     .from("workout_set_logs")
@@ -148,6 +199,11 @@ export async function upsertSet(
         weight_unit: set.weightUnit,
         weight_kg: weightKg,
         completed: set.completed,
+        // Only what's known: an edit without a workout link must not unlink
+        // a set that already has one.
+        ...(journal && ctx.workoutSessionId ? { workout_session_id: ctx.workoutSessionId } : {}),
+        ...(journal && ctx.entrySource ? { entry_source: ctx.entrySource } : {}),
+        ...(journal && ctx.equipmentId ? { equipment_id: ctx.equipmentId } : {}),
       },
       { onConflict: "workout_instance_id,set_number" }
     )

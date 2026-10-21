@@ -335,7 +335,7 @@
     "weight_label": "Peso de la serie {{set}}",
     "done_label": "Serie {{set}} hecha",
     "done_label_unchecked": "Serie {{set}}, no hecha",
-    "pr_label": "Récord personal de la serie {{set}}",
+    "pr_label": "Mejor marca anterior de la serie {{set}}: {{value}}",
     "set_label": "Serie {{set}}",
     "could_not_load": "No se pudieron cargar tus series. Inténtalo de nuevo.",
     "back": "Atrás",
@@ -370,7 +370,18 @@
     "delete_set_message": "Las series siguientes suben un número.",
     "delete_set_message_done": "Esta serie ya está registrada. Quitarla también la quita de tu historial y tus récords.",
     "delete_set_confirm": "Quitar serie",
-    "delete_set_failed": "No se pudo quitar esa serie. Inténtalo de nuevo."
+    "delete_set_failed": "No se pudo quitar esa serie. Inténtalo de nuevo.",
+    "no_pr_spoken": "ninguna todavía",
+    "back_to_workout": "Volver a tu entrenamiento",
+    "workout": "Entreno",
+    "context": "Entrenamiento {{number}} · {{exercise}}",
+    "saving": "Guardando",
+    "retry_set_label": "La serie {{set}} no se guardó. Toca para intentarlo de nuevo",
+    "pr_footnote": "PR = tu mejor marca anterior en ese número de serie.",
+    "use_previous": "Usar series anteriores",
+    "use_previous_hint": "Rellena las series de tu último entrenamiento. Marca Hecho en cada una que realmente hagas.",
+    "quick_done": "Marcar como hecho sin detalles",
+    "quick_done_note": "Marcado como hecho. Aún puedes agregar tus series."
   },
   "trainer": {
     "personal_trainer": "Coach",
@@ -650,7 +661,13 @@
       "assisted": "ASISTENCIA {{unit}}",
       "band": "BANDA {{unit}}",
       "none": "{{unit}}"
-    }
+    },
+    "sets_not_saved": "{{count}} serie sin guardar",
+    "sets_not_saved_plural": "{{count}} series sin guardar",
+    "retry": "Reintentar",
+    "saving_sets": "Guardando…",
+    "quick_done": "Hecho: omitir detalles",
+    "quick_done_hint": "Marca este ejercicio como hecho sin registrar pesos ni repeticiones."
   },
   "plan": {
     "title": "Tu plan",
@@ -753,7 +770,7 @@
     "view_details": "Ver ejercicios",
     "rest_day": "Día de descanso",
     "rest_then": "Después, Entrenamiento {{number}}.",
-    "train_anyway": "¿Te sientes fresco? Empieza el Entrenamiento {{number}}",
+    "train_anyway": "Entrena antes: empieza el Entrenamiento {{number}}",
     "rest_tips": {
       "lower": "Tus piernas hicieron el trabajo pesado. Una caminata de 20 minutos y algo de movilidad de cadera y pantorrillas las ayudará a recuperarse.",
       "upper": "Dale un descanso a tu tren superior. Círculos suaves de hombros y un estiramiento de pecho te mantienen suelto.",
@@ -1097,5 +1114,39 @@
     "minutes_value": "{{count}} minutos",
     "choose_title": "Elige tu plan",
     "choose_helper": "Coach armó dos planes diferentes con tus respuestas. Compáralos, ajusta cualquiera y luego elige."
+  },
+  "workout_extras": {
+    "title": "Extras del entrenamiento",
+    "optional": "Opcional",
+    "subtitle": "Para este entrenamiento, en todos los ejercicios.",
+    "cardio": "Cardio",
+    "add": "Agregar",
+    "add_cardio": "Agregar cardio",
+    "edit_cardio_label": "Editar cardio: {{entry}}",
+    "cardio_with_minutes": "{{activity}} · {{minutes}} min",
+    "activity_label": "Actividad",
+    "minutes_label": "Minutos (opcional)",
+    "minutes_placeholder": "p. ej. 15",
+    "save_cardio": "Guardar cardio",
+    "remove_cardio": "Quitar este cardio",
+    "activity": {
+      "walking": "Caminar",
+      "cycling": "Bicicleta",
+      "running": "Correr",
+      "elliptical": "Elíptica",
+      "rowing": "Remo",
+      "stairs": "Escaleras",
+      "other": "Otro"
+    },
+    "water": "Agua",
+    "water_total": "{{amount}} {{unit}} en este entrenamiento",
+    "water_total_label": "{{amount}} {{unit}} de agua registrados en este entrenamiento",
+    "add_water": "+ {{amount}} {{unit}}",
+    "add_water_label": "Agregar {{amount}} {{unit}} de agua",
+    "remove_water_label": "Quitar los últimos {{amount}} {{unit}} agregados",
+    "unit_fl_oz": "oz líq.",
+    "unit_ml": "ml",
+    "save_failed": "No se pudo guardar. Tu entrada sigue aquí; inténtalo de nuevo.",
+    "load_failed": "No se pudieron cargar los extras de este entrenamiento."
   }
 }

@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "typecheck:server": "tsc -p server/tsconfig.json --noEmit",
     "test:server": "TS_NODE_PROJECT=server/tsconfig.json node --require ts-node/register --test server/__tests__/*.test.ts",
+    "test:app": "TS_NODE_PROJECT=server/tsconfig.json node --require ts-node/register --test tests/*.test.ts",
     "smoke:api": "ts-node --project server/tsconfig.json scripts/release-smoke-test.ts",
     "smoke:api:local": "RELEASE_SMOKE_ALLOW_LOCAL=1 ts-node --project server/tsconfig.json scripts/release-smoke-test.ts",
     "check:release": "npm run typecheck && npm run typecheck:server && npm run smoke:api",
@@ -85,6 +86,7 @@
     "zustand": "^4.5.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.11",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/multer": "^1.4.11",

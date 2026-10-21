@@ -205,7 +205,8 @@ export default function EquipmentDetailScreen() {
   const handleAddToTodaysWorkout = () => {
     router.push({
       pathname: "/workout-session",
-      params: { exercise: name, muscles: (equipment.muscle_groups || []).join(",") },
+      // equipmentId links logged sets to this page's public.equipment row.
+      params: { exercise: name, muscles: (equipment.muscle_groups || []).join(","), equipmentId: equipment.id },
     });
   };
 

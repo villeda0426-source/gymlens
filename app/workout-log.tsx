@@ -1,7 +1,12 @@
 // Workout Log — docs/design/workout-log-implementation-handoff.md.
-// Entered from a Plan-tab exercise row (app/(tabs)/plan.tsx's
-// handleOpenExercise); returns there when dismissed. Not the active-workout
-// timer (app/workout-session.tsx) — that screen is untouched.
+// The table view of one exercise in a workout. Two ways in, one record:
+// - a Plan-tab exercise row (app/(tabs)/plan.tsx handleOpenExercise), and
+// - "Edit sets" in the guided session (app/workout-session.tsx), which
+//   passes its workout id and returns there on Back.
+// Both read and write the same workout_set_logs rows, linked to the same
+// workout occurrence (lib/workoutJournal.ts), so changes show in both.
+// PR per row = the previous best for that set number
+// (lib/workoutJournalRules.ts computeSetRecords).
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -29,14 +34,23 @@ import { apiFetch } from "@/lib/api";
 import type { Units } from "@/lib/coachTrainer";
 import {
   deleteSet,
+  fetchExerciseRecords,
   findTodayInstance,
-  fetchPersonalRecordKg,
   fromKg,
   updateSetNumber,
   upsertSet,
   type WorkoutLogContext,
   type WorkoutSetRow,
 } from "@/lib/workoutSetLogs";
+import {
+  createAdHocSession,
+  findOrCreatePlanSession,
+  findPlanSession,
+  hasQuickCompletion,
+  journalAvailable,
+  recordQuickCompletion,
+} from "@/lib/workoutJournal";
+import WorkoutExtras from "@/components/Workout/WorkoutExtras";
 import { exerciseLoad, parseExerciseLoad } from "@/lib/exerciseLoad";
 import { useAuthStore } from "@/store/authStore";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
@@ -55,6 +69,8 @@ interface LocalSet {
   completed: boolean;
   saving: boolean;
   error: boolean;
+  // Filled from "Use previous sets": a suggestion until the person confirms it.
+  copied?: boolean;
 }
 
 function toLocalSet(row: WorkoutSetRow): LocalSet {
@@ -92,9 +108,15 @@ export default function WorkoutLogScreen() {
     planWeek?: string;
     load?: string;
     category?: string;
+    // Set by the guided session's "Edit sets".
+    workoutSessionId?: string;
+    from?: string;
+    equipmentId?: string;
   }>();
   const { user } = useAuthStore();
-  const { plan, markExerciseCompleted, unmarkExerciseCompleted } = useCoachTrainerStore();
+  const { plan, markExerciseCompleted, unmarkExerciseCompleted, completedExerciseIds } = useCoachTrainerStore();
+  const fromSession = params.from === "session";
+  const sessionIndexNumber = params.sessionIndex ? Number.parseInt(params.sessionIndex, 10) : null;
   const { currentGuide } = useWorkoutGuideStore();
 
   const exerciseId = params.exerciseId ?? "";
@@ -117,8 +139,9 @@ export default function WorkoutLogScreen() {
       sessionIndex: params.sessionIndex ? Number.parseInt(params.sessionIndex, 10) : null,
       sessionLabel: params.sessionLabel ?? null,
       planWeek: params.planWeek ? Number.parseInt(params.planWeek, 10) : null,
+      equipmentId: params.equipmentId ?? null,
     }),
-    [user?.id, exerciseId, exerciseName, params.threadId, params.sessionIndex, params.sessionLabel, params.planWeek]
+    [user?.id, exerciseId, exerciseName, params.threadId, params.sessionIndex, params.sessionLabel, params.planWeek, params.equipmentId]
   );
 
   const [loading, setLoading] = useState(true);
@@ -126,6 +149,16 @@ export default function WorkoutLogScreen() {
   const [instanceId, setInstanceId] = useState<string | null>(null);
   const [sets, setSets] = useState<LocalSet[]>([]);
   const [prKg, setPrKg] = useState<number | null>(null);
+  // Previous best per set number (kg), excluding this visit.
+  const [setRecords, setSetRecords] = useState<Map<number, number>>(new Map());
+  const [previousSets, setPreviousSets] = useState<Array<{ setNumber: number; reps: number | null; weightKg: number | null }>>([]);
+  // The workout this exercise belongs to (shared with the guided session and
+  // the extras). Null until it exists; created on the first write.
+  const [workoutSessionId, setWorkoutSessionId] = useState<string | null>(params.workoutSessionId ?? null);
+  const [journalOn, setJournalOn] = useState(false);
+  const [quickDone, setQuickDone] = useState(false);
+  const inFlight = useRef<Set<number>>(new Set());
+  const resave = useRef<Map<number, LocalSet>>(new Map());
   const [guide, setGuide] = useState<ExerciseLearningGuide | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [editing, setEditing] = useState(false);
@@ -139,11 +172,32 @@ export default function WorkoutLogScreen() {
       setLoading(true);
       setLoadError(false);
       try {
-        const [instance, pr] = await Promise.all([
-          findTodayInstance(ctx),
-          fetchPersonalRecordKg(user.id, exerciseId, lowerIsBetter),
+        const [instance, journal] = await Promise.all([findTodayInstance(ctx), journalAvailable()]);
+        if (cancelled) return;
+        setJournalOn(journal);
+
+        let sessionId = params.workoutSessionId ?? null;
+        if (!sessionId && journal && sessionIndexNumber !== null) {
+          sessionId = await findPlanSession({
+            userId: user.id,
+            threadId: ctx.planThreadId,
+            sessionIndex: sessionIndexNumber,
+            sessionLabel: ctx.sessionLabel,
+            planWeek: ctx.planWeek,
+          }).catch(() => null);
+        }
+        if (cancelled) return;
+        setWorkoutSessionId(sessionId);
+        const currentInstanceId = instance?.instanceId ?? Crypto.randomUUID();
+        const [records, quick] = await Promise.all([
+          fetchExerciseRecords({ userId: user.id, exerciseId, currentInstanceId, currentSessionId: sessionId, lowerIsBetter }),
+          sessionId && journal ? hasQuickCompletion(sessionId, exerciseId).catch(() => false) : Promise.resolve(false),
         ]);
         if (cancelled) return;
+        setSetRecords(records.bySetNumber);
+        setPreviousSets(records.previousSets);
+        setPrKg(records.best);
+        setQuickDone(quick);
 
         if (instance) {
           setInstanceId(instance.instanceId);
@@ -152,7 +206,7 @@ export default function WorkoutLogScreen() {
             .slice(0, plannedSetCount)
             .every((row) => row.completed) && instance.sets.length >= plannedSetCount;
         } else {
-          setInstanceId(Crypto.randomUUID());
+          setInstanceId(currentInstanceId);
           setSets(
             Array.from({ length: plannedSetCount }, (_, index) => ({
               id: null,
@@ -167,7 +221,6 @@ export default function WorkoutLogScreen() {
           );
           wasFullyCompleted.current = false;
         }
-        setPrKg(pr);
       } catch {
         if (!cancelled) setLoadError(true);
       } finally {
@@ -236,10 +289,45 @@ export default function WorkoutLogScreen() {
     if (allDone && !wasFullyCompleted.current) {
       wasFullyCompleted.current = true;
       markExerciseCompleted(exerciseId);
-    } else if (!allDone && wasFullyCompleted.current) {
+    } else if (!allDone && wasFullyCompleted.current && !quickDone) {
+      // A quick-completed exercise stays done while details are added.
       wasFullyCompleted.current = false;
       unmarkExerciseCompleted(exerciseId);
     }
+  };
+
+  // The workout occurrence, created on the first write when it doesn't
+  // exist yet. Never blocks a set save: without it the set still saves,
+  // just unlinked (as before the journal existed).
+  const ensureSession = async (): Promise<string | null> => {
+    if (workoutSessionId) return workoutSessionId;
+    if (!user?.id || !journalOn) return null;
+    try {
+      const id =
+        sessionIndexNumber !== null
+          ? await findOrCreatePlanSession({
+              userId: user.id,
+              threadId: ctx.planThreadId,
+              sessionIndex: sessionIndexNumber,
+              sessionLabel: ctx.sessionLabel,
+              planWeek: ctx.planWeek,
+            })
+          : await createAdHocSession(user.id);
+      setWorkoutSessionId(id);
+      return id;
+    } catch {
+      return null;
+    }
+  };
+
+  const refreshRecords = () => {
+    if (!user?.id) return;
+    fetchExerciseRecords({ userId: user.id, exerciseId, currentInstanceId: instanceId, currentSessionId: workoutSessionId, lowerIsBetter })
+      .then((records) => {
+        setSetRecords(records.bySetNumber);
+        setPrKg(records.best);
+      })
+      .catch(() => undefined);
   };
 
   // Takes the row to save explicitly (by setNumber, not array index) rather
@@ -247,31 +335,89 @@ export default function WorkoutLogScreen() {
   // in the same tick it appends it, before a re-render could make a fresh
   // `sets` closure available, so looking it up here would silently read a
   // stale (pre-append) array and crash on undefined.
+  //
+  // One save per set at a time: a tap while it's saving is remembered and
+  // sent after, so repeated taps update the same row (keyed by instance +
+  // set number in the database) instead of racing. A failed save keeps the
+  // typed values on screen with a retry.
   const persistSet = async (target: LocalSet) => {
     if (!instanceId || !user?.id) return;
+    if (inFlight.current.has(target.setNumber)) {
+      resave.current.set(target.setNumber, target);
+      setSets((prev) => prev.map((s) => (s.setNumber === target.setNumber ? { ...target, saving: true, error: false } : s)));
+      return;
+    }
+    inFlight.current.add(target.setNumber);
     setSets((prev) => prev.map((s) => (s.setNumber === target.setNumber ? { ...target, saving: true, error: false } : s)));
 
     const reps = target.reps.trim() === "" ? null : Math.max(0, Math.min(500, Math.round(Number(target.reps))));
     const weightValue = target.weightValue.trim() === "" ? null : Math.max(0, Number(target.weightValue));
 
     try {
-      const saved = await upsertSet(ctx, instanceId, {
-        setNumber: target.setNumber,
-        reps,
-        weightValue,
-        weightUnit: target.weightUnit,
-        completed: target.completed,
-      });
+      const sessionId = await ensureSession();
+      const saved = await upsertSet(
+        { ...ctx, workoutSessionId: sessionId, entrySource: target.copied && !target.completed ? "copied_previous" : "table" },
+        instanceId,
+        {
+          setNumber: target.setNumber,
+          reps,
+          weightValue,
+          weightUnit: target.weightUnit,
+          completed: target.completed,
+        }
+      );
       setSets((prev) => {
-        const next = prev.map((s) => (s.setNumber === target.setNumber ? { ...toLocalSet(saved), saving: false } : s));
+        const next = prev.map((s) =>
+          s.setNumber === target.setNumber ? { ...toLocalSet(saved), copied: target.copied && !saved.completed, saving: false } : s
+        );
         syncPlanCompletion(next);
         return next;
       });
-      if (weightValue !== null) {
-        fetchPersonalRecordKg(user.id, exerciseId, lowerIsBetter).then(setPrKg).catch(() => undefined);
-      }
+      refreshRecords();
     } catch {
       setSets((prev) => prev.map((s) => (s.setNumber === target.setNumber ? { ...target, saving: false, error: true } : s)));
+    } finally {
+      inFlight.current.delete(target.setNumber);
+      const queued = resave.current.get(target.setNumber);
+      if (queued) {
+        resave.current.delete(target.setNumber);
+        void persistSet(queued);
+      }
+    }
+  };
+
+  // Copies the last workout's sets into today's rows as unconfirmed drafts.
+  // They only count once each set is ticked Done.
+  const handleUsePrevious = () => {
+    const copied: LocalSet[] = previousSets.map((previous) => ({
+      id: sets.find((s) => s.setNumber === previous.setNumber)?.id ?? null,
+      setNumber: previous.setNumber,
+      reps: previous.reps !== null ? String(previous.reps) : "",
+      weightValue: previous.weightKg !== null ? String(Math.round(fromKg(previous.weightKg, unit) * 10) / 10) : "",
+      weightUnit: unit,
+      completed: false,
+      saving: false,
+      error: false,
+      copied: true,
+    }));
+    const merged = [...sets.filter((s) => !copied.some((c) => c.setNumber === s.setNumber)), ...copied].sort(
+      (a, b) => a.setNumber - b.setNumber
+    );
+    setSets(merged);
+    copied.forEach((row) => void persistSet(row));
+  };
+
+  // Done without details: completion only — no sets, reps or weights are
+  // invented, and nothing here can become a PR.
+  const handleQuickComplete = async () => {
+    if (!user?.id) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+    setQuickDone(true);
+    wasFullyCompleted.current = true;
+    markExerciseCompleted(exerciseId);
+    const sessionId = await ensureSession();
+    if (sessionId) {
+      recordQuickCompletion({ userId: user.id, sessionId, exerciseId, exerciseName }).catch(() => undefined);
     }
   };
 
@@ -320,7 +466,7 @@ export default function WorkoutLogScreen() {
                 if (row.id && before && before.setNumber !== row.setNumber) await updateSetNumber(row.id, row.setNumber);
               }
               syncPlanCompletion(renumbered);
-              if (user?.id) fetchPersonalRecordKg(user.id, exerciseId, lowerIsBetter).then(setPrKg).catch(() => undefined);
+              refreshRecords();
             } catch {
               Alert.alert(t("workout_log.delete_set_failed"));
               setReloadKey((key) => key + 1);
@@ -344,11 +490,25 @@ export default function WorkoutLogScreen() {
   return (
     <SafeScreen edges={["top", "bottom"]} style={styles.screen}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel={t("workout_log.back")}>
+        {/* From the guided session, Back returns to it — say so. */}
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={[styles.backButton, fromSession && styles.backButtonLabelled]}
+          accessibilityRole="button"
+          accessibilityLabel={t(fromSession ? "workout_log.back_to_workout" : "workout_log.back")}
+        >
           <Ionicons name="chevron-back" size={20} color={coachColors.card} />
+          {fromSession ? <Text style={styles.backLabel}>{t("workout_log.workout")}</Text> : null}
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t("workout_log.title")}</Text>
-        <View style={{ width: 40 }} />
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>{t("workout_log.title")}</Text>
+          <Text style={styles.headerContext} numberOfLines={1}>
+            {sessionIndexNumber !== null
+              ? t("workout_log.context", { number: sessionIndexNumber + 1, exercise: exerciseName })
+              : exerciseName}
+          </Text>
+        </View>
+        <View style={{ width: fromSession ? 96 : 40 }} />
       </View>
 
       {loading ? (
@@ -407,9 +567,12 @@ export default function WorkoutLogScreen() {
               <View key={set.setNumber} style={styles.setRow}>
                 <Text
                   style={[styles.colPr, styles.prText]}
-                  accessibilityLabel={t("workout_log.pr_label", { set: set.setNumber })}
+                  accessibilityLabel={t("workout_log.pr_label", {
+                    set: set.setNumber,
+                    value: setRecords.has(set.setNumber) ? formatWeight(setRecords.get(set.setNumber)!, unit, t) : t("workout_log.no_pr_spoken"),
+                  })}
                 >
-                  {formatWeight(prKg, unit, t)}
+                  {setRecords.has(set.setNumber) ? formatWeight(setRecords.get(set.setNumber)!, unit, t) : t("workout_log.no_pr")}
                 </Text>
                 <Text style={[styles.colSet, styles.setNumberText]} accessibilityLabel={t("workout_log.set_label", { set: set.setNumber })}>
                   {set.setNumber}
@@ -456,7 +619,18 @@ export default function WorkoutLogScreen() {
                       <Ionicons name="remove" size={18} color={DARK_TEXT} />
                     </TouchableOpacity>
                   ) : set.saving ? (
-                    <ActivityIndicator size="small" color={coachColors.textSecondary} />
+                    <ActivityIndicator size="small" color={coachColors.textSecondary} accessibilityLabel={t("workout_log.saving")} />
+                  ) : set.error ? (
+                    // Not saved: the values stay as typed; tap to try again.
+                    <TouchableOpacity
+                      onPress={() => persistSet(set)}
+                      style={styles.retryCheck}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("workout_log.retry_set_label", { set: set.setNumber })}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="refresh" size={16} color={coachColors.coral} />
+                    </TouchableOpacity>
                   ) : (
                     <TouchableOpacity
                       onPress={() => handleToggleDone(set)}
@@ -480,6 +654,8 @@ export default function WorkoutLogScreen() {
               <Text style={styles.addSetText}>{t("workout_log.add_set")}</Text>
             </TouchableOpacity>
 
+            <Text style={styles.prFootnote}>{t("workout_log.pr_footnote")}</Text>
+
             {sets.some((s) => s.error) ? (
               <View style={styles.errorRow}>
                 <Ionicons name="alert-circle-outline" size={16} color={coachColors.coral} />
@@ -495,6 +671,31 @@ export default function WorkoutLogScreen() {
               </View>
             ) : null}
           </View>
+
+          {/* Previous values are suggestions: copied rows stay unconfirmed
+              until each is ticked Done. */}
+          {previousSets.length > 0 && !sets.some((s) => s.completed) ? (
+            <TouchableOpacity style={styles.quietButton} onPress={handleUsePrevious} accessibilityRole="button" accessibilityHint={t("workout_log.use_previous_hint")}>
+              <Ionicons name="copy-outline" size={16} color={DARK_TEXT} />
+              <Text style={styles.quietButtonText}>{t("workout_log.use_previous")}</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          {/* Low-emphasis: done without logging weights/reps. */}
+          {quickDone || (completedExerciseIds.includes(exerciseId) && !sets.some((s) => s.completed)) ? (
+            <View style={styles.quickDoneNote}>
+              <Ionicons name="checkmark-circle" size={16} color={coachColors.lime} />
+              <Text style={styles.quickDoneText}>{t("workout_log.quick_done_note")}</Text>
+            </View>
+          ) : !sets.some((s) => s.completed) ? (
+            <TouchableOpacity onPress={handleQuickComplete} accessibilityRole="button" style={styles.quickDoneLink} hitSlop={8}>
+              <Text style={styles.quickDoneLinkText}>{t("workout_log.quick_done")}</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          {journalOn && user ? (
+            <WorkoutExtras userId={user.id} units={unit} sessionId={workoutSessionId} ensureSession={ensureSession} />
+          ) : null}
 
           {guide ? <ExerciseLearningCard guide={guide} embedded /> : null}
         </ScrollView>
@@ -545,7 +746,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  headerTitle: { color: DARK_TEXT, fontFamily: coachFonts.headingSemiBold, fontSize: 17 },
+  headerTitle: { color: DARK_TEXT, fontFamily: coachFonts.headingSemiBold, fontSize: 17, textAlign: "center" },
+  headerCenter: { flex: 1, alignItems: "center", paddingHorizontal: spacing.sm },
+  headerContext: { color: DARK_MUTED, fontFamily: coachFonts.bodySemiBold, fontSize: 12, marginTop: 1 },
+  backButtonLabelled: { width: 96, flexDirection: "row", gap: 2, paddingRight: 8 },
+  backLabel: { color: DARK_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 14 },
+  retryCheck: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: coachColors.coral,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  prFootnote: { color: DARK_MUTED, fontFamily: coachFonts.body, fontSize: 12, marginTop: spacing.xs },
+  quietButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: DARK_BORDER,
+    marginTop: -spacing.sm,
+  },
+  quietButtonText: { color: DARK_TEXT, fontFamily: coachFonts.bodyBold, fontSize: 14 },
+  quickDoneLink: { alignSelf: "center", minHeight: 44, justifyContent: "center", marginTop: -spacing.sm },
+  quickDoneLinkText: { color: DARK_MUTED, fontFamily: coachFonts.bodySemiBold, fontSize: 13, textDecorationLine: "underline" },
+  quickDoneNote: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "center", marginTop: -spacing.sm },
+  quickDoneText: { color: DARK_MUTED, fontFamily: coachFonts.bodySemiBold, fontSize: 13 },
   content: { paddingHorizontal: spacing.xl, paddingBottom: 40, gap: spacing.lg },
   exerciseName: { color: DARK_TEXT, fontFamily: coachFonts.headingExtraBold, fontSize: 28, marginTop: spacing.xs },
   prescription: {

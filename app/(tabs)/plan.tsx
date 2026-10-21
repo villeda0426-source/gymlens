@@ -58,6 +58,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { isActiveFor, useActiveWorkoutStore } from "@/store/activeWorkoutStore";
 import { exerciseLoad } from "@/lib/exerciseLoad";
+import { findOrCreatePlanSession, findPlanSession, recordQuickCompletion, removeQuickCompletion } from "@/lib/workoutJournal";
 import { useWorkoutGuideStore } from "@/store/workoutGuideStore";
 import { MuscleDelta, useMuscleProgressStore } from "@/store/muscleProgressStore";
 
@@ -971,6 +972,11 @@ export default function PlanScreen() {
       });
 
       markExerciseCompleted(exercise.exercise_id);
+      // This check-off is the quick completion: record "done" (no sets,
+      // weights or records) on the workout, best effort.
+      if (completingSession && completingSessionIndex >= 0) {
+        recordPlanQuickCompletion(exercise, completingSessionIndex, completingSession.day_label, true);
+      }
 
       if (completingSession && completesWorkout) {
         setWorkoutDetailVisible(false);
@@ -1001,8 +1007,34 @@ export default function PlanScreen() {
     }
   };
 
+  const recordPlanQuickCompletion = (exercise: PlanExercise, sessionIndex: number, sessionLabel: string, done: boolean) => {
+    if (!user?.id) return;
+    const ref = {
+      userId: user.id,
+      threadId: activeThreadId ?? null,
+      sessionIndex,
+      sessionLabel,
+      planWeek: Math.floor(sessionIndex / weekSize) + 1,
+    };
+    void (async () => {
+      try {
+        if (done) {
+          const sessionId = await findOrCreatePlanSession(ref);
+          if (sessionId) await recordQuickCompletion({ userId: ref.userId, sessionId, exerciseId: exercise.exercise_id, exerciseName: exercise.name });
+        } else {
+          const sessionId = await findPlanSession(ref);
+          if (sessionId) await removeQuickCompletion(sessionId, exercise.exercise_id);
+        }
+      } catch {
+        // Plan progress is already updated on the device; the journal entry is extra.
+      }
+    })();
+  };
+
   const handleUncompleteExercise = (exercise: PlanExercise) => {
     unmarkExerciseCompleted(exercise.exercise_id);
+    const sessionIndex = plan?.sessions.findIndex((session) => session.exercises.some((item) => item.exercise_id === exercise.exercise_id)) ?? -1;
+    if (plan && sessionIndex >= 0) recordPlanQuickCompletion(exercise, sessionIndex, plan.sessions[sessionIndex].day_label, false);
     setSessionDeltas([]);
   };
 

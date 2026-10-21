@@ -1,9 +1,12 @@
 // The workout someone is in the middle of (app/workout-session.tsx), kept on
 // the device so leaving the screen — to log an exercise, check the plan, or
 // close the app — never loses their place. Logged sets themselves live in
-// workout_set_logs (lib/workoutSetLogs.ts); this only remembers position.
+// workout_set_logs (lib/workoutSetLogs.ts); this remembers position, and —
+// separately from what the server has confirmed — any logged set whose save
+// hasn't succeeded yet, so it can be retried after a restart.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
+import type { QueuedSet } from "@/lib/workoutJournalRules";
 
 const STORAGE_KEY = "spotlift_active_workout_v1";
 
@@ -20,6 +23,11 @@ export type ActiveWorkout = {
   weight: number;
   reps: number;
   updatedAt: string;
+  // The workout occurrence (workout_sessions) shared with the Workout Log
+  // and extras; absent before the journal migration or when signed out.
+  workoutSessionId?: string | null;
+  // Logged sets not yet confirmed by the server (pending or failed).
+  unsavedSets?: QueuedSet[];
 };
 
 interface ActiveWorkoutState {

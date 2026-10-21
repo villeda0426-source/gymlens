@@ -1,11 +1,16 @@
-// Coach Forward active workout — Phase 6.
+// Coach Forward active workout — the guided view of a workout.
 //
-// Local/ephemeral state only — no persistence, no new API (per-plan
-// confirmation in the Coach Forward plan). Reached from Home's "Start
-// workout" (today's real plan session) or Equipment's "Add to today's
-// workout" (a single ad-hoc exercise — no real exercise_id exists for that
-// path, so markExerciseCompleted is skipped there; it's not a lie, it's a
-// scanned machine, not a plan entry).
+// Reached from Home, Plan (including "Train early" on a rest day) and a
+// workout's details for a plan session, or from Equipment's "Add to today's
+// workout" for an ad-hoc exercise (logged under a custom: id — never a
+// made-up plan exercise id — and not marked against the plan).
+//
+// Persistence: every logged set goes through one save path
+// (lib/workoutSetLogs.ts upsertSet) into the same rows the Workout Log
+// edits, linked to one workout occurrence (lib/workoutJournal.ts). Saving
+// is tracked, not assumed: unsaved sets are shown with a retry and kept on
+// the device (store/activeWorkoutStore.ts) until the server confirms them.
+// Position and timer resume from the same store.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import * as Crypto from "expo-crypto";
@@ -23,6 +28,20 @@ import CoachIcon from "@/components/Coach/CoachIcon";
 import { buildPlanSequence, nextWorkoutItem } from "@/lib/planSequence";
 import { exerciseLoad, type ExerciseLoad } from "@/lib/exerciseLoad";
 import { findTodayInstance, upsertSet, type WorkoutLogContext } from "@/lib/workoutSetLogs";
+import {
+  createAdHocSession,
+  findOrCreatePlanSession,
+  recordQuickCompletion,
+  updateSessionTiming,
+} from "@/lib/workoutJournal";
+import {
+  adHocExerciseId,
+  enqueueSet,
+  flushQueue,
+  nextOpenSetNumber,
+  unsavedSets,
+  type QueuedSet,
+} from "@/lib/workoutJournalRules";
 import { useAuthStore } from "@/store/authStore";
 import { isActiveFor, useActiveWorkoutStore } from "@/store/activeWorkoutStore";
 
@@ -48,10 +67,11 @@ export default function WorkoutSessionScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { exercise: adHocExercise, sessionIndex: sessionIndexParam } = useLocalSearchParams<{
+  const { exercise: adHocExercise, sessionIndex: sessionIndexParam, equipmentId } = useLocalSearchParams<{
     exercise?: string;
     muscles?: string;
     sessionIndex?: string;
+    equipmentId?: string;
   }>();
   const {
     plan,
@@ -89,7 +109,36 @@ export default function WorkoutSessionScreen() {
       !activeSession.exercises.every((exercise) => completedExerciseIds.includes(exercise.exercise_id))
         ? active
         : null;
-    if (active && !resumable) clearActive();
+    if (active && !resumable) {
+      // A finished workout can still have sets the server never confirmed:
+      // send them before forgetting the device copy.
+      const leftover = active.unsavedSets ?? [];
+      if (leftover.length > 0 && user?.id) {
+        const userId = user.id;
+        void flushQueue(leftover, (item) =>
+          upsertSet(
+            {
+              userId,
+              exerciseId: item.exerciseId,
+              exerciseName: item.exerciseName,
+              planThreadId: active.threadId,
+              sessionIndex: active.sessionIndex,
+              sessionLabel: active.sessionLabel,
+              planWeek: plan.days_per_week ? Math.floor(active.sessionIndex / Math.max(1, plan.days_per_week)) + 1 : null,
+              workoutSessionId: active.workoutSessionId ?? null,
+              entrySource: "guided",
+            },
+            item.instanceId,
+            { setNumber: item.setNumber, reps: item.reps, weightValue: item.weightValue, weightUnit: item.weightUnit, completed: true }
+          ).then(() => undefined)
+        ).then((result) => {
+          // Only forget them once they're all confirmed.
+          if (unsavedSets(result).length === 0) clearActive();
+        });
+      } else {
+        clearActive();
+      }
+    }
     const next = nextWorkoutItem(buildPlanSequence({ plan, completedExerciseIds, sessionCompletedAt }));
     const target = Number.isInteger(requested) && plan.sessions[requested] ? requested : resumable?.sessionIndex ?? next?.sessionIndex ?? null;
 
@@ -131,14 +180,14 @@ export default function WorkoutSessionScreen() {
     if (adHocExercise) {
       return [
         {
-          id: "adhoc",
+          id: adHocExerciseId(adHocExercise),
           name: adHocExercise,
           sets: 3,
           repsLabel: "8-12",
           defaultReps: 10,
           restSeconds: 60,
           isPlanExercise: false,
-          load: "external",
+          load: exerciseLoad({ name: adHocExercise }),
         },
       ];
     }
@@ -165,24 +214,116 @@ export default function WorkoutSessionScreen() {
   const [finished, setFinished] = useState(false);
   const [restored, setRestored] = useState(false);
   const instanceIds = useRef<Record<string, string>>({});
+  // Logged sets and whether the server has them (pending/saved/failed).
+  const [queue, setQueue] = useState<QueuedSet[]>([]);
+  const queueRef = useRef<QueuedSet[]>([]);
+  const inFlight = useRef<Set<string>>(new Set());
+  const [workoutSessionId, setWorkoutSessionId] = useState<string | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
 
   const currentExercise = exercises[exerciseIndex] ?? null;
   const nextExercise = exercises[exerciseIndex + 1] ?? null;
   const weightStep = units === "kg" ? 2.5 : 5;
   const isPlanWorkout = !adHocExercise && sessionIndex !== null && !!todaySession;
 
-  const logContext = (exercise: SessionExercise): WorkoutLogContext | null =>
-    user?.id && exercise.isPlanExercise && sessionIndex !== null && todaySession
-      ? {
-          userId: user.id,
-          exerciseId: exercise.id,
-          exerciseName: exercise.name,
-          planThreadId: activeThreadId ?? null,
-          sessionIndex,
-          sessionLabel: todaySession.day_label,
-          planWeek: plan ? Math.floor(sessionIndex / Math.max(1, plan.days_per_week)) + 1 : null,
-        }
-      : null;
+  const logContext = (exercise: SessionExercise): WorkoutLogContext | null => {
+    if (!user?.id) return null;
+    if (exercise.isPlanExercise && sessionIndex !== null && todaySession) {
+      return {
+        userId: user.id,
+        exerciseId: exercise.id,
+        exerciseName: exercise.name,
+        planThreadId: activeThreadId ?? null,
+        sessionIndex,
+        sessionLabel: todaySession.day_label,
+        planWeek: plan ? Math.floor(sessionIndex / Math.max(1, plan.days_per_week)) + 1 : null,
+        workoutSessionId: sessionIdRef.current,
+        entrySource: "guided",
+      };
+    }
+    // Ad hoc: real persistence, but no plan context.
+    return {
+      userId: user.id,
+      exerciseId: exercise.id,
+      exerciseName: exercise.name,
+      planThreadId: null,
+      sessionIndex: null,
+      sessionLabel: null,
+      planWeek: null,
+      workoutSessionId: sessionIdRef.current,
+      entrySource: "guided",
+      equipmentId: equipmentId ?? null,
+    };
+  };
+
+  // The workout occurrence shared with the Workout Log and extras. Created
+  // once; never blocks logging (sets still save without it).
+  const ensureWorkoutSession = async (): Promise<string | null> => {
+    if (sessionIdRef.current) return sessionIdRef.current;
+    if (!user?.id) return null;
+    try {
+      const id =
+        isPlanWorkout && sessionIndex !== null && todaySession
+          ? await findOrCreatePlanSession({
+              userId: user.id,
+              threadId: activeThreadId ?? null,
+              sessionIndex,
+              sessionLabel: todaySession.day_label,
+              planWeek: plan ? Math.floor(sessionIndex / Math.max(1, plan.days_per_week)) + 1 : null,
+            })
+          : await createAdHocSession(user.id);
+      sessionIdRef.current = id;
+      setWorkoutSessionId(id);
+      return id;
+    } catch {
+      return null;
+    }
+  };
+
+  const updateQueue = (next: QueuedSet[]) => {
+    queueRef.current = next;
+    setQueue(next);
+  };
+
+  const exerciseFor = (exerciseId: string) => exercises.find((exercise) => exercise.id === exerciseId) ?? null;
+
+  // Sends every set the server hasn't confirmed. Each set is upserted by
+  // (instance, set number), so a retry or repeated tap updates one row.
+  const flushSets = async () => {
+    const before = queueRef.current;
+    if (unsavedSets(before).length === 0) return;
+    await ensureWorkoutSession();
+    const result = await flushQueue(
+      before,
+      async (item) => {
+        const exercise = exerciseFor(item.exerciseId);
+        const ctx = exercise ? logContext(exercise) : null;
+        if (!ctx) throw new Error("Not signed in");
+        await upsertSet(ctx, item.instanceId, {
+          setNumber: item.setNumber,
+          reps: item.reps,
+          weightValue: item.weightValue,
+          weightUnit: item.weightUnit,
+          completed: true,
+        });
+      },
+      inFlight.current
+    );
+    // Merge into the current queue: a set re-logged with new values while
+    // this flush ran stays pending with its newer values; everything else
+    // takes the result. Confirmed sets leave the unsaved list.
+    const merged = queueRef.current.map((item) => {
+      const flushed = before.find((entry) => entry.key === item.key);
+      const outcome = result.find((entry) => entry.key === item.key);
+      const unchanged = flushed && flushed.reps === item.reps && flushed.weightValue === item.weightValue;
+      return outcome && unchanged ? outcome : item;
+    });
+    updateQueue(unsavedSets(merged));
+  };
+
+  const unsaved = unsavedSets(queue);
+  const failedCount = unsaved.filter((item) => item.status === "failed").length;
+  const pendingCount = unsaved.length - failedCount;
 
   // Where to pick up: the saved position when resuming, otherwise the first
   // exercise not yet finished (some may already be checked off on Plan).
@@ -190,6 +331,11 @@ export default function WorkoutSessionScreen() {
     if (!resolved || restored || exercises.length === 0) return;
     const saved = isPlanWorkout && sessionIndex !== null && isActiveFor(active, activeThreadId ?? null, sessionIndex, todaySession?.day_label) ? active : null;
     if (saved) {
+      if (saved.workoutSessionId) {
+        sessionIdRef.current = saved.workoutSessionId;
+        setWorkoutSessionId(saved.workoutSessionId);
+      }
+      if (saved.unsavedSets?.length) updateQueue(saved.unsavedSets.map((item) => ({ ...item, status: "failed" as const })));
       setExerciseIndex(Math.min(saved.exerciseIndex, exercises.length - 1));
       setSetIndex(saved.setIndex);
       setSeconds(saved.elapsedSeconds);
@@ -206,7 +352,9 @@ export default function WorkoutSessionScreen() {
 
   // Keep the saved position current so leaving never loses it.
   useEffect(() => {
-    if (!restored || !isPlanWorkout || finished || sessionIndex === null || !todaySession) return;
+    if (!restored || !isPlanWorkout || sessionIndex === null || !todaySession) return;
+    // After finishing, only keep the device copy while sets are unsaved.
+    if (finished && unsavedSets(queue).length === 0) return;
     saveActive({
       threadId: activeThreadId ?? null,
       sessionIndex,
@@ -218,9 +366,28 @@ export default function WorkoutSessionScreen() {
       weight,
       reps,
       updatedAt: new Date().toISOString(),
+      workoutSessionId,
+      unsavedSets: unsavedSets(queue),
     });
     // Clock ticks are saved every 10s rather than every second.
-  }, [restored, exerciseIndex, setIndex, weight, reps, finished, Math.floor(seconds / 10)]);
+  }, [restored, exerciseIndex, setIndex, weight, reps, finished, Math.floor(seconds / 10), workoutSessionId, queue]);
+
+  // Finished with sets still unsaved: the device copy stays until a retry
+  // gets them all to the server.
+  useEffect(() => {
+    if (finished && isPlanWorkout && unsavedSets(queue).length === 0) clearActive();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished, queue]);
+
+  // Create (or find) the workout occurrence as soon as the session starts,
+  // and retry anything a previous visit couldn't save.
+  useEffect(() => {
+    if (!restored || !user?.id || exercises.length === 0) return;
+    ensureWorkoutSession().then(() => {
+      if (unsavedSets(queueRef.current).length > 0) void flushSets();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restored, user?.id]);
 
   useEffect(() => {
     if (paused || finished || !restored) return;
@@ -235,7 +402,11 @@ export default function WorkoutSessionScreen() {
       setReps(exercises[exerciseIndex + 1]?.defaultReps ?? 10);
     } else {
       setFinished(true);
-      if (isPlanWorkout) clearActive();
+      const id = sessionIdRef.current;
+      if (id) updateSessionTiming(id, seconds, true).catch(() => undefined);
+      // Keep the device copy while any set is still unsaved, so it can be
+      // retried; clear it once everything is confirmed.
+      if (isPlanWorkout && unsavedSets(queueRef.current).length === 0) clearActive();
     }
   };
 
@@ -249,12 +420,13 @@ export default function WorkoutSessionScreen() {
       const instance = await findTodayInstance(ctx);
       if (!instance) return;
       instanceIds.current[exercise.id] = instance.instanceId;
-      const done = instance.sets.filter((row) => row.completed).length;
-      if (done >= exercise.sets) {
-        markExerciseCompleted(exercise.id);
+      const completedNumbers = instance.sets.filter((row) => row.completed).map((row) => row.setNumber);
+      const next = nextOpenSetNumber(completedNumbers, exercise.sets);
+      if (next === null) {
+        if (exercise.isPlanExercise) markExerciseCompleted(exercise.id);
         advanceExercise();
       } else {
-        setSetIndex(done);
+        setSetIndex(next - 1);
       }
     } catch {
       // Keep the local position if the log can't be read right now.
@@ -270,47 +442,70 @@ export default function WorkoutSessionScreen() {
     }, [currentExercise?.id, sessionIndex])
   );
 
-  const saveLoggedSet = async (exercise: SessionExercise, setNumber: number) => {
-    const ctx = logContext(exercise);
-    if (!ctx) return;
-    try {
-      if (!instanceIds.current[exercise.id]) {
-        const existing = await findTodayInstance(ctx);
-        instanceIds.current[exercise.id] = existing?.instanceId ?? Crypto.randomUUID();
-      }
-      await upsertSet(ctx, instanceIds.current[exercise.id], {
-        setNumber,
-        reps,
-        // 0 on the stepper means no added load.
-        weightValue: weight > 0 ? weight : null,
-        weightUnit: units,
-        completed: true,
-      });
-    } catch {
-      // The set still counts in the session; it can be fixed in the log.
-    }
-  };
-
   const handleLogSet = async () => {
     if (!currentExercise) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-    void saveLoggedSet(currentExercise, setIndex + 1);
+    const exercise = currentExercise;
+    const ctx = logContext(exercise);
+    if (ctx) {
+      if (!instanceIds.current[exercise.id]) {
+        const existing = await findTodayInstance(ctx).catch(() => null);
+        instanceIds.current[exercise.id] = existing?.instanceId ?? Crypto.randomUUID();
+      }
+      // Performed values (not the plan's targets). 0 on the stepper means no
+      // added load.
+      updateQueue(
+        enqueueSet(queueRef.current, {
+          instanceId: instanceIds.current[exercise.id],
+          exerciseId: exercise.id,
+          exerciseName: exercise.name,
+          setNumber: setIndex + 1,
+          reps,
+          weightValue: weight > 0 ? weight : null,
+          weightUnit: units,
+        })
+      );
+      void flushSets();
+    }
 
-    if (setIndex + 1 < currentExercise.sets) {
+    if (setIndex + 1 < exercise.sets) {
       setSetIndex(setIndex + 1);
       return;
     }
 
-    if (currentExercise.isPlanExercise) {
-      markExerciseCompleted(currentExercise.id);
+    if (exercise.isPlanExercise) {
+      markExerciseCompleted(exercise.id);
     }
     advanceExercise();
   };
 
-  const openExerciseLog = () => {
+  // Done without details: records completion only — no sets, reps, weight
+  // or records are invented. Details can still be added in the log later.
+  const handleQuickComplete = async () => {
+    if (!currentExercise) return;
+    const exercise = currentExercise;
+    if (exercise.isPlanExercise) markExerciseCompleted(exercise.id);
+    const id = await ensureWorkoutSession();
+    if (id && user?.id) {
+      recordQuickCompletion({ userId: user.id, sessionId: id, exerciseId: exercise.id, exerciseName: exercise.name }).catch(() => undefined);
+    }
+    advanceExercise();
+  };
+
+  const leaveWorkout = () => {
+    const id = sessionIdRef.current;
+    if (id) updateSessionTiming(id, seconds, false).catch(() => undefined);
+    router.back();
+  };
+
+  const openExerciseLog = async () => {
     if (!currentExercise || sessionIndex === null || !todaySession || !plan) return;
     const planExercise = todaySession.exercises.find((exercise) => exercise.exercise_id === currentExercise.id);
     if (!planExercise) return;
+    // Let just-logged sets land first so the log shows them (and doesn't
+    // offer to re-add them); never wait more than a few seconds.
+    await Promise.race([flushSets(), new Promise((resolve) => setTimeout(resolve, 4000))]);
+    const sessionId = await ensureWorkoutSession();
     returningFromLog.current = true;
     router.push({
       pathname: "/workout-log",
@@ -325,6 +520,8 @@ export default function WorkoutSessionScreen() {
         sessionIndex: String(sessionIndex),
         planWeek: String(Math.floor(sessionIndex / Math.max(1, plan.days_per_week)) + 1),
         threadId: activeThreadId ?? undefined,
+        workoutSessionId: sessionId ?? undefined,
+        from: "session",
       },
     });
   };
@@ -336,6 +533,23 @@ export default function WorkoutSessionScreen() {
       params: { ask: t("workout_session.ask_coach_prefill", { exercise: currentExercise.name }) },
     });
   };
+
+  // Saving state for logged sets: quiet while pending, explicit (with a
+  // retry) when the server didn't take them.
+  const saveStatus =
+    failedCount > 0 ? (
+      <View style={styles.saveStatus} accessibilityLiveRegion="polite">
+        <Ionicons name="alert-circle" size={16} color={coachDark.coralOnDark} />
+        <Text style={styles.saveStatusFailed}>{t("workout_session.sets_not_saved", { count: failedCount })}</Text>
+        <TouchableOpacity onPress={() => void flushSets()} accessibilityRole="button" hitSlop={8} style={styles.saveRetry}>
+          <Text style={styles.saveRetryText}>{t("workout_session.retry")}</Text>
+        </TouchableOpacity>
+      </View>
+    ) : pendingCount > 0 ? (
+      <View style={styles.saveStatus}>
+        <Text style={styles.saveStatusText}>{t("workout_session.saving_sets")}</Text>
+      </View>
+    ) : null;
 
   if (!resolved || (exercises.length > 0 && !restored)) {
     return <View style={[styles.screen, { paddingTop: insets.top }]}><StatusBar style="light" /></View>;
@@ -363,6 +577,7 @@ export default function WorkoutSessionScreen() {
         <Text style={styles.emptyBody}>
           {t(exercises[0]?.isPlanExercise ? "workout_session.complete_body_plan" : "workout_session.complete_body_adhoc")}
         </Text>
+        {saveStatus}
         <TouchableOpacity style={styles.emptyButton} onPress={() => router.push("/(tabs)")}>
           <Text style={styles.emptyButtonText}>{t("workout_session.done_button")}</Text>
         </TouchableOpacity>
@@ -375,7 +590,7 @@ export default function WorkoutSessionScreen() {
       <StatusBar style="light" />
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={leaveWorkout}
           style={styles.iconButton}
           accessibilityRole="button"
           accessibilityLabel={t(isPlanWorkout ? "workout_session.leave_saved" : "workout_session.end_workout")}
@@ -411,7 +626,7 @@ export default function WorkoutSessionScreen() {
           </Text>
           {isPlanWorkout && user ? (
             <TouchableOpacity
-              onPress={openExerciseLog}
+              onPress={() => void openExerciseLog()}
               style={styles.logLink}
               accessibilityRole="button"
               accessibilityHint={t("workout_session.edit_sets_hint")}
@@ -461,6 +676,15 @@ export default function WorkoutSessionScreen() {
         <TouchableOpacity style={styles.logSetButton} onPress={handleLogSet} accessibilityRole="button">
           <Ionicons name="checkmark" size={22} color={coachDark.bg} />
           <Text style={styles.logSetText}>{t("workout_session.log_set")}</Text>
+        </TouchableOpacity>
+        {saveStatus}
+        <TouchableOpacity
+          onPress={() => void handleQuickComplete()}
+          style={styles.quickDone}
+          accessibilityRole="button"
+          accessibilityHint={t("workout_session.quick_done_hint")}
+        >
+          <Text style={styles.quickDoneText}>{t("workout_session.quick_done")}</Text>
         </TouchableOpacity>
         {nextExercise ? (
           <View style={styles.nextRow}>
@@ -518,6 +742,13 @@ const styles = StyleSheet.create({
   coachTipMic: { width: 48, height: 48, borderRadius: radii.pill, backgroundColor: coachColors.coachGold, alignItems: "center", justifyContent: "center" },
 
   footer: { gap: spacing.sm, paddingTop: spacing.sm },
+  saveStatus: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 28 },
+  saveStatusText: { color: coachDark.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 13 },
+  saveStatusFailed: { color: coachDark.coralOnDark, fontFamily: coachFonts.bodyBold, fontSize: 13 },
+  saveRetry: { minHeight: 32, paddingHorizontal: 10, justifyContent: "center" },
+  saveRetryText: { color: coachDark.text, fontFamily: coachFonts.bodyExtraBold, fontSize: 13, textDecorationLine: "underline" },
+  quickDone: { alignSelf: "center", minHeight: 40, justifyContent: "center", paddingHorizontal: 12 },
+  quickDoneText: { color: coachDark.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 13, textDecorationLine: "underline" },
   logSetButton: {
     height: 72,
     borderRadius: radii.pill,
