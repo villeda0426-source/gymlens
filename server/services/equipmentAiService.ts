@@ -1,33 +1,37 @@
 import {
   EQUIPMENT_IDENTIFICATION_SCHEMA,
+  EQUIPMENT_OBSERVATION_PROMPT,
+  EQUIPMENT_OBSERVATION_SCHEMA,
   EQUIPMENT_SYSTEM_PROMPT,
   EquipmentIdentification,
+  EquipmentObservation,
 } from "../../lib/ai";
 import {
   createStructuredResponse,
-  createTextResponse,
   imageDataUrl,
   OPENAI_VISION_MODEL,
 } from "./openaiService";
 
-export async function extractEquipmentName(base64Image: string): Promise<string> {
-  const text = await createTextResponse({
+// Scan step 1: what the photo shows, including any legible brand/model
+// text. High detail so model plates and decals can actually be read.
+export async function observeEquipment(base64Image: string): Promise<EquipmentObservation> {
+  return createStructuredResponse<EquipmentObservation>({
     model: OPENAI_VISION_MODEL,
-    instructions: "Identify gym equipment from an image. Return only its common English name in 2-5 words, without punctuation or explanation.",
+    instructions: EQUIPMENT_OBSERVATION_PROMPT,
     input: [
       {
         role: "user",
         content: [
-          { type: "input_text", text: "What gym equipment is shown?" },
-          { type: "input_image", image_url: imageDataUrl(base64Image), detail: "low" },
+          { type: "input_text", text: "Describe the gym equipment in this photo." },
+          { type: "input_image", image_url: imageDataUrl(base64Image), detail: "high" },
         ],
       },
     ],
-    maxOutputTokens: 200,
-    timeoutMs: 25000,
+    schemaName: "equipment_observation",
+    schema: EQUIPMENT_OBSERVATION_SCHEMA,
+    maxOutputTokens: 1200,
+    timeoutMs: 30000,
   });
-
-  return text.replace(/[.!?,]/g, "").trim();
 }
 
 export async function identifyEquipment(base64Image: string): Promise<EquipmentIdentification> {

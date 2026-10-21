@@ -10,6 +10,7 @@ import LoadingSpinner from "@/components/UI/LoadingSpinner";
 import { useEquipmentIdentify } from "@/hooks/useEquipmentIdentify";
 import GuestPromptModal from "@/components/UI/GuestPromptModal";
 import { useTranslation } from "react-i18next";
+import { parseCatalogMatch } from "@/lib/equipmentCatalogMatch";
 import { coachDark } from "@/constants/theme";
 
 export default function ScanScreen() {
@@ -41,7 +42,7 @@ export default function ScanScreen() {
         saveToken: response.result.save_failed ? response.result.save_token : undefined,
       };
       const alternates: ScanCandidate[] = Array.isArray(response.result.alternates)
-        ? response.result.alternates.map((alt: any) => ({ id: alt.id, name: alt.name, confidence: alt.confidence ?? 0 }))
+        ? response.result.alternates.map((alt: any) => ({ id: alt.id, name: alt.name }))
         : [];
       setCandidates([primary, ...alternates]);
     }
@@ -100,6 +101,8 @@ export default function ScanScreen() {
           onNotThisOne={handleRetake}
           onShowMe={handleShowMe}
           saving={saving}
+          catalogMatch={parseCatalogMatch(lastResult?.catalog_match)}
+          onRetake={handleRetake}
         />
         <GuestPromptModal
           visible={showGuestPrompt}

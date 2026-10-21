@@ -57,7 +57,17 @@
     "show_me": "Show me",
     "show_me_unavailable": "We couldn't save that result. Please try scanning again.",
     "save_failed_title": "Couldn't save yet",
-    "save_failed_message": "Your scan is still here. Tap Show me to try saving again — no need to retake the photo."
+    "save_failed_message": "Your scan is still here. Tap Show me to try saving again — no need to retake the photo.",
+    "alternative": "Other possibility",
+    "level_model": "Model read from its label: {{name}}",
+    "level_series": "Series read from its label: {{name}}",
+    "level_manufacturer": "Brand read from its label: {{brand}}. Exact model not confirmed.",
+    "level_type": "Equipment type identified from the photo. Exact brand and model not confirmed.",
+    "level_none": "Not in our equipment catalog yet. The instructions are for this general type of equipment.",
+    "catalog_unavailable": "Model details are unavailable right now. Showing the general equipment type.",
+    "possible_models": "Possible models (not visually confirmed)",
+    "retake_model_label": "For the exact model, photograph its label",
+    "retake_full_machine": "Retake with the whole machine in frame"
   },
   "home": {
     "good_morning": "Good morning",

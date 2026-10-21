@@ -36,6 +36,9 @@ interface EquipmentResult {
     curator_approved?: boolean;
   }>;
   identification_id?: string;
+  // Research-catalog qualification (lib/equipmentCatalogMatch.ts); its ids
+  // are catalog items, separate from this row's public.equipment `id`.
+  catalog_match?: unknown;
 }
 
 interface EquipmentStore {

@@ -57,7 +57,17 @@
     "show_me": "Mostrar",
     "show_me_unavailable": "No pudimos guardar ese resultado. Intenta escanear de nuevo.",
     "save_failed_title": "Aún no se pudo guardar",
-    "save_failed_message": "Tu escaneo sigue aquí. Toca Muéstrame para intentar guardarlo de nuevo, sin repetir la foto."
+    "save_failed_message": "Tu escaneo sigue aquí. Toca Muéstrame para intentar guardarlo de nuevo, sin repetir la foto.",
+    "alternative": "Otra posibilidad",
+    "level_model": "Modelo leído en su etiqueta: {{name}}",
+    "level_series": "Serie leída en su etiqueta: {{name}}",
+    "level_manufacturer": "Marca leída en su etiqueta: {{brand}}. Modelo exacto sin confirmar.",
+    "level_type": "Tipo de equipo identificado por la foto. Marca y modelo exactos sin confirmar.",
+    "level_none": "Aún no está en nuestro catálogo de equipos. Las instrucciones son para este tipo general de equipo.",
+    "catalog_unavailable": "Los detalles del modelo no están disponibles ahora. Se muestra el tipo general de equipo.",
+    "possible_models": "Modelos posibles (sin confirmar visualmente)",
+    "retake_model_label": "Para el modelo exacto, fotografía su etiqueta",
+    "retake_full_machine": "Repite la foto con toda la máquina visible"
   },
   "home": {
     "good_morning": "Buenos días",
