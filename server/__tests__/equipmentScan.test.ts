@@ -362,6 +362,25 @@ test("equipment list outage: identification kept for a save retry, nothing writt
   assert.deepEqual(h.calls.saved, []);
 });
 
+test("database first: a library match answers without the full AI identification", async () => {
+  const h = harness({ observation: observation({ equipment_type: "leg press" }) });
+  const result = await scan(h);
+  assert.equal(result.status, 200);
+  assert.equal(result.body.fromCache, true);
+  assert.equal(result.body.id, "legacy-leg-press");
+  assert.equal(h.calls.identify, 0);
+  assert.deepEqual(h.calls.saved, []);
+});
+
+test("no library match: full AI identification runs once and is saved for next time", async () => {
+  const h = harness({ observation: observation({ equipment_type: "sled push", type_confidence: 0.8 }) });
+  const result = await scan(h);
+  assert.equal(result.status, 200);
+  assert.equal(result.body.fromCache, false);
+  assert.equal(h.calls.identify, 1);
+  assert.deepEqual(h.calls.saved, ["Sled Push"]);
+});
+
 test("legacy response shape is preserved for existing app builds", async () => {
   const { body } = await scan(harness({ observation: observation({ equipment_type: "leg press" }) }));
   for (const key of ["id", "name", "confidence", "videos", "identification_id", "fromCache", "alternates"]) {

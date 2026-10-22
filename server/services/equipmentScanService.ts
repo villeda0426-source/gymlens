@@ -1,5 +1,17 @@
 // Equipment scan: photo -> observation -> catalog candidates -> qualified
-// result. Every outside call (OpenAI, Supabase, YouTube) is injected through
+// result.
+//
+// ORDER — database first, full AI only when nothing matches:
+// 1. Read the photo (observe): a short vision call that only says what
+//    type of machine it is and any printed brand/model text. A photo can't
+//    be looked up without this step; it writes nothing.
+// 2. Look it up in our database: the research catalog
+//    (equipment_catalog_*) and the app's equipment library
+//    (public.equipment). A library match returns its stored tutorial,
+//    videos and safety tips — no further AI call (fromCache: true).
+// 3. Only when the library has no match: full AI identification
+//    (instructions, safety, video search), saved to the library so the
+//    next scan of that machine is a step-2 match (fromCache: false). Every outside call (OpenAI, Supabase, YouTube) is injected through
 // ScanDeps so the whole flow runs in tests with mocked responses
 // (server/__tests__/equipmentScan.test.ts).
 //
@@ -306,7 +318,8 @@ export async function scanEquipment(request: ScanRequest, deps: ScanDeps): Promi
     }
   }
 
-  // ── New type: full identification for instructions ──────────────────────
+  // ── No library match: full AI identification for instructions ──────────
+  console.log("[identify] no library match for", observation.equipment_type, "— calling full AI identification");
   const identification = await deps.identify(request.image);
   if (
     !identification?.name ||
