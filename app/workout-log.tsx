@@ -619,7 +619,9 @@ export default function WorkoutLogScreen() {
               <Text style={[styles.columnHeader, styles.colSet]}>{t("workout_log.set")}</Text>
               <Text style={[styles.columnHeader, styles.colReps]}>{t("workout_log.reps")}</Text>
               <Text style={[styles.columnHeader, styles.colWeight]}>{t(`workout_log.weight_column.${load}`)}</Text>
-              <Text style={[styles.columnHeader, styles.colDone]}>{t(editing ? "workout_log.remove" : "workout_log.done")}</Text>
+              <Text style={[styles.columnHeader, styles.colDone]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                {t(editing ? "workout_log.remove" : "workout_log.done")}
+              </Text>
             </View>
 
             {sets.map((set, index) => (

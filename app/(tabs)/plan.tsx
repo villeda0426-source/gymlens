@@ -435,14 +435,10 @@ function WorkoutDetailModal({
           </View>
 
           {completedCount < session.exercises.length ? (
-            <Pressable
-              style={({ pressed }) => [styles.detailStartButton, pressed && styles.pressed]}
-              onPress={onStart}
-              accessibilityRole="button"
-            >
+            <TouchableOpacity style={styles.detailStartButton} activeOpacity={0.86} onPress={onStart} accessibilityRole="button">
               <Ionicons name="play" size={16} color={coachColors.card} />
               <Text style={styles.detailStartText}>{t(completedCount > 0 ? "plan.continue_workout" : "home.start_workout")}</Text>
-            </Pressable>
+            </TouchableOpacity>
           ) : null}
 
           <View style={styles.detailPanel}>
@@ -717,8 +713,9 @@ function NextWorkoutHero({
           </View>
         ))}
       </View>
-      <Pressable
-        style={({ pressed }) => [styles.heroStartButton, pressed && styles.pressed]}
+      <TouchableOpacity
+        style={styles.heroStartButton}
+        activeOpacity={0.86}
         onPress={onStart}
         accessibilityRole="button"
         accessibilityLabel={t(resuming ? "plan.resume_workout_number" : "plan.start_workout_number", { number: item.number })}
@@ -727,7 +724,7 @@ function NextWorkoutHero({
         <Text style={styles.heroStartText}>
           {t(resuming ? "plan.resume_workout" : inProgress ? "plan.continue_workout" : "home.start_workout")}
         </Text>
-      </Pressable>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.heroLink} onPress={onDetails} accessibilityRole="button">
         <Text style={styles.heroLinkText}>{t("plan.view_details")}</Text>
         <Ionicons name="chevron-forward" size={16} color={coachColors.text} />
@@ -781,13 +778,14 @@ function RestHero({ tip, nextNumber, onStartAnyway }: { tip: RestTipKey; nextNum
       <Text style={styles.heroTitle}>{t("plan.rest_day")}</Text>
       <Text style={styles.restHeroText}>{t(`plan.rest_tips.${tip}`)}</Text>
       <Text style={styles.restHeroNext}>{t("plan.rest_then", { number: nextNumber })}</Text>
-      <Pressable
-        style={({ pressed }) => [styles.restHeroButton, pressed && styles.pressed]}
+      <TouchableOpacity
+        style={styles.restHeroButton}
+        activeOpacity={0.86}
         onPress={onStartAnyway}
         accessibilityRole="button"
       >
         <Text style={styles.restHeroButtonText}>{t("plan.train_anyway", { number: nextNumber })}</Text>
-      </Pressable>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -804,14 +802,10 @@ function WorkoutRow({
   const { t } = useTranslation();
   const { session } = item;
   return (
-    <Pressable
+    <TouchableOpacity
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.workoutRow,
-        isNext && styles.workoutRowNext,
-        item.complete && styles.workoutRowDone,
-        pressed && styles.pressed,
-      ]}
+      activeOpacity={0.86}
+      style={[styles.workoutRow, isNext && styles.workoutRowNext, item.complete && styles.workoutRowDone]}
       accessibilityRole="button"
       accessibilityLabel={`${t("plan.workout_number", { number: item.number })}, ${session.focus}${item.complete ? `, ${t("plan.done")}` : ""}`}
     >
@@ -838,7 +832,7 @@ function WorkoutRow({
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={coachColors.textSecondary} />
-    </Pressable>
+    </TouchableOpacity>
   );
 }
 
