@@ -40,6 +40,7 @@ import {
   sessionDisplayName,
   type PlanSequenceItem,
   type RestTipKey,
+  restPreference,
 } from "@/lib/planSequence";
 import { useTabBarSpace } from "@/components/CoachTabBar";
 import { apiFetch } from "@/lib/api";
@@ -58,6 +59,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { isActiveFor, useActiveWorkoutStore } from "@/store/activeWorkoutStore";
 import { exerciseLoad } from "@/lib/exerciseLoad";
+import type { RestPreference } from "@/lib/coachTrainer";
 import { findOrCreatePlanSession, findPlanSession, recordQuickCompletion, removeQuickCompletion } from "@/lib/workoutJournal";
 import { useWorkoutGuideStore } from "@/store/workoutGuideStore";
 import { MuscleDelta, useMuscleProgressStore } from "@/store/muscleProgressStore";
@@ -734,6 +736,40 @@ function NextWorkoutHero({
   );
 }
 
+// Where rest days go: the coach's recovery rules (default) or simply one a
+// week. Only changes where rests appear — never the workouts or progress.
+function RestPreferenceControl({ value, onChange }: { value: RestPreference; onChange: (value: RestPreference) => void }) {
+  const { t } = useTranslation();
+  const options: RestPreference[] = ["recovery", "weekly"];
+  return (
+    <View style={styles.restPref}>
+      <View style={styles.restPrefRow}>
+        <Text style={styles.restPrefLabel}>{t("plan.rest_preference.label")}</Text>
+        <View style={styles.restPrefSegments} accessibilityRole="radiogroup">
+          {options.map((option) => {
+            const selected = option === value;
+            return (
+              <Pressable
+                key={option}
+                onPress={() => onChange(option)}
+                style={[styles.restPrefSegment, selected && styles.restPrefSegmentSelected]}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                hitSlop={4}
+              >
+                <Text style={[styles.restPrefSegmentText, selected && styles.restPrefSegmentTextSelected]} numberOfLines={1}>
+                  {t(`plan.rest_preference.${option}`)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+      <Text style={styles.restPrefHint}>{t(`plan.rest_preference.${value}_hint`)}</Text>
+    </View>
+  );
+}
+
 function RestHero({ tip, nextNumber, onStartAnyway }: { tip: RestTipKey; nextNumber: number; onStartAnyway: () => void }) {
   const { t } = useTranslation();
   return (
@@ -842,6 +878,7 @@ export default function PlanScreen() {
     selectThread,
     hasLoaded,
     loadTrainer,
+    setRestPreference,
   } = useCoachTrainerStore();
   const completeExercise = useMuscleProgressStore((state) => state.completeExercise);
   const activeWorkout = useActiveWorkoutStore((state) => state.active);
@@ -1324,6 +1361,10 @@ export default function PlanScreen() {
               <Text style={styles.listSubtitle}>{t("plan.in_order_hint")}</Text>
             </View>
 
+            {plan.sessions.length > 1 ? (
+              <RestPreferenceControl value={restPreference(plan)} onChange={setRestPreference} />
+            ) : null}
+
             <View style={styles.sequenceList}>
               {hiddenDoneCount > 0 ? (
                 <TouchableOpacity
@@ -1570,6 +1611,22 @@ const styles = StyleSheet.create({
   listTitle: { color: coachColors.text, fontFamily: coachFonts.headingSemiBold, fontSize: 20 },
   listSubtitle: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 14 },
   sequenceList: { gap: spacing.sm },
+  restPref: { gap: 6, marginTop: -spacing.xs },
+  restPrefRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, flexWrap: "wrap" },
+  restPrefLabel: { color: coachColors.text, fontFamily: coachFonts.bodyBold, fontSize: 14 },
+  restPrefSegments: {
+    flexDirection: "row",
+    padding: 3,
+    borderRadius: radii.pill,
+    backgroundColor: coachColors.card,
+    borderWidth: 1,
+    borderColor: coachColors.border,
+  },
+  restPrefSegment: { minHeight: 38, paddingHorizontal: 14, borderRadius: radii.pill, alignItems: "center", justifyContent: "center" },
+  restPrefSegmentSelected: { backgroundColor: coachColors.coachNavy },
+  restPrefSegmentText: { color: coachColors.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 13 },
+  restPrefSegmentTextSelected: { color: coachColors.card, fontFamily: coachFonts.bodyBold },
+  restPrefHint: { color: coachColors.textSecondary, fontFamily: coachFonts.body, fontSize: 13, lineHeight: 18 },
   weekDivider: {
     color: coachColors.textSecondary,
     fontFamily: coachFonts.bodyExtraBold,

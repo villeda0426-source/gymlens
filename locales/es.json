@@ -805,7 +805,14 @@
     "resume_workout_number": "Continuar entrenamiento {{number}}",
     "show_completed": "Mostrar {{count}} entrenamiento completado",
     "show_completed_plural": "Mostrar {{count}} entrenamientos completados",
-    "hide_completed": "Ocultar entrenamientos completados"
+    "hide_completed": "Ocultar entrenamientos completados",
+    "rest_preference": {
+      "label": "Días de descanso",
+      "recovery": "Según recuperación",
+      "weekly": "Uno por semana",
+      "recovery_hint": "Entrena días seguidos; el descanso cae donde se juntarían sesiones fuertes de los mismos músculos, más uno al cerrar cada semana.",
+      "weekly_hint": "Un día de descanso cierra cada semana. Entrena el resto de tus días seguidos."
+    }
   },
   "avatar_progress": {
     "title": "Avatar de progreso",

@@ -30,6 +30,11 @@ export type CoachSession = {
   exercises: CoachExercise[];
 };
 
+// Where rest days go in the plan's order (lib/planSequence.ts): "recovery"
+// (default) lets the coach's recovery rules place them; "weekly" is exactly
+// one rest day per training week. Set by the person, kept across plan updates.
+export type RestPreference = "recovery" | "weekly";
+
 export type CoachPlan = {
   goal: string;
   goal_type: "strength" | "hypertrophy" | "fat_loss" | "endurance" | "general_fitness" | "sport_specific";
@@ -44,6 +49,7 @@ export type CoachPlan = {
   sessions: CoachSession[];
   weekly_notes: string;
   safety_flags: string[];
+  rest_preference?: RestPreference;
 };
 
 export type CoachResponse =

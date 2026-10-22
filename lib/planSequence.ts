@@ -9,7 +9,10 @@
 // - extra rests only break up hard sessions on the same muscles: beginners
 //   never do two of those in a row, everyone else at most two
 // - a generous cap on consecutive training days, by experience
-import type { CoachPlan, CoachSession } from "@/lib/coachTrainer";
+// Someone who'd rather just take one rest day a week can choose that
+// instead (plan.rest_preference "weekly"): one rest closes each week and
+// nothing else is inserted.
+import type { CoachPlan, CoachSession, RestPreference } from "./coachTrainer";
 
 export type RestTipKey = "lower" | "upper" | "full";
 
@@ -97,6 +100,10 @@ function restTipFor(session: CoachSession): RestTipKey {
   return "full";
 }
 
+export function restPreference(plan: Pick<CoachPlan, "rest_preference">): RestPreference {
+  return plan.rest_preference === "weekly" ? "weekly" : "recovery";
+}
+
 export function isSessionComplete(session: CoachSession, completedIds: string[]): boolean {
   return session.exercises.length > 0 && session.exercises.every((exercise) => completedIds.includes(exercise.exercise_id));
 }
@@ -116,6 +123,15 @@ export function restAfterIndexes(plan: CoachPlan): Set<number> {
   const maxSameMuscleRun = daysPerWeek >= 4 ? 2 : MAX_SAME_MUSCLE_RUN[plan.experience_level] ?? 2;
   // A week has 7 days: whatever training doesn't use is room for rest.
   const restBudgetPerWeek = Math.max(0, 7 - daysPerWeek);
+
+  if (restPreference(plan) === "weekly") {
+    sessions.forEach((_, index) => {
+      const endOfWeek = index % daysPerWeek === daysPerWeek - 1;
+      if (endOfWeek && index + 1 < sessions.length && restBudgetPerWeek > 0) rests.add(index);
+    });
+    return rests;
+  }
+
   let streak = 0;
   let sameMuscleRun = 1;
   let restsThisWeek = 0;

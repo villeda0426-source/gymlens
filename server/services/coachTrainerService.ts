@@ -24,7 +24,7 @@ Confidence is not recklessness. The best coaches are also the safest: they scree
 The CONTEXT includes language: "en" or "es". Write every user-facing string in that language, including messages, summaries, changes, plan goals, session labels, focus areas, exercise names, muscle names, equipment, constraints, progression instructions, substitutions, coaching notes, weekly notes, and safety flags. Keep JSON property names and enum values exactly as defined by the schema. For Spanish, use natural neutral Latin American Spanish and retain established exercise names when translating them would be unclear.
 
 ## SCHEDULING — ORDER, NOT WEEKDAYS
-People train on whatever days suit them, so the app numbers workouts in order (Workout 1, Workout 2, Rest, Workout 3...). Never use weekday names (Monday, Tuesday, lunes, martes...) anywhere — not in session labels, focus, summaries, notes, or replies. Refer to sessions by order ("Workout 2", "the next workout"). Respect the person's chosen training frequency: consecutive training days are normal and fine when the muscle groups or intensity differ (e.g. upper then lower). Do NOT schedule a rest day after every workout. Default to one rest day per training week, adding more only where hard sessions for the same muscle groups would otherwise run back to back (beginners on 3 or fewer days a week get a little more spacing). Describe rest relative to workouts (e.g. "rest a day after Workout 4") in weekly_notes.
+People train on whatever days suit them, so the app numbers workouts in order (Workout 1, Workout 2, Rest, Workout 3...). Never use weekday names (Monday, Tuesday, lunes, martes...) anywhere — not in session labels, focus, summaries, notes, or replies. Refer to sessions by order ("Workout 2", "the next workout"). Respect the person's chosen training frequency: consecutive training days are normal and fine when the muscle groups or intensity differ (e.g. upper then lower). Do NOT schedule a rest day after every workout. Default to one rest day per training week, adding more only where hard sessions for the same muscle groups would otherwise run back to back (beginners on 3 or fewer days a week get a little more spacing). Describe rest relative to workouts (e.g. "rest a day after Workout 4") in weekly_notes. Never put a rest day in the sessions array — every session must be a workout with exercises; the app places rest days itself.
 
 ## UNITS
 The CONTEXT includes the user's preferred unit: "kg" or "lbs". Prescribe every load in that unit and echo it in the plan's "units" field. Use unit-appropriate increments — typically 2.5 kg / 5 lbs for upper-body lifts and 5 kg / 10 lbs for lower-body lifts, scaled to the user's level. All loads the app sends back in logs are in this same unit.
@@ -321,7 +321,11 @@ function enforcePlanGuardrails(response: CoachResponse, previousPlan?: Plan): Co
     previousPlan?.sessions.flatMap((session) => session.exercises).map((exercise) => [exercise.exercise_id, exercise]) ?? []
   );
   let adjusted = false;
-  const sessions = response.plan.sessions.slice(0, 6).map((session) => ({
+  // Rest days aren't sessions: the app places them in the plan's order
+  // (lib/planSequence.ts). An empty "Rest" session would be a workout that
+  // can never be completed, so drop it here (old clients included).
+  const trainingSessions = response.plan.sessions.filter((session) => session.exercises.length > 0);
+  const sessions = (trainingSessions.length > 0 ? trainingSessions : response.plan.sessions).slice(0, 6).map((session) => ({
     ...session,
     estimated_minutes: Math.max(10, Math.min(120, Math.round(session.estimated_minutes))),
     exercises: session.exercises.slice(0, 6).map((exercise) => {

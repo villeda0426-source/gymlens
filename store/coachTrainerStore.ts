@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
-import { CoachMessage, CoachPlan, CoachResponse, Units } from "@/lib/coachTrainer";
+import { CoachMessage, CoachPlan, CoachResponse, RestPreference, Units } from "@/lib/coachTrainer";
 
 const STORAGE_KEY = "coachlift_ai_trainer_state_v1";
 
@@ -70,6 +70,7 @@ interface CoachTrainerState {
   setUnits: (units: Units) => void;
   setPlan: (plan: CoachPlan | null) => void;
   updatePlan: (plan: CoachPlan) => void;
+  setRestPreference: (preference: RestPreference) => void;
   setCoachAvatar: (avatar: Omit<CoachAvatarConfig, "createdAt">) => void;
   enterCoachChat: () => void;
   leaveCoachChat: () => void;
@@ -157,9 +158,13 @@ function normalizePlanTimeline(plan: CoachPlan | null): CoachPlan | null {
   const daysPerWeek = Math.max(1, Math.round(plan.days_per_week || 1));
   const weeks = Math.max(1, Math.round(plan.timeline_weeks || 1));
   const expectedSessions = daysPerWeek * weeks;
+  // A session with no exercises is a "rest day" the model wrote into the
+  // workouts (rest is placed by lib/planSequence.ts, not stored) — kept, it
+  // would be a workout that can never be completed.
+  const trainingSessions = plan.sessions.filter((session) => session.exercises.length > 0);
   const normalizedPlan: CoachPlan = {
     ...plan,
-    sessions: plan.sessions.map((session, index) => {
+    sessions: trainingSessions.map((session, index) => {
       const week = Math.floor(index / daysPerWeek) + 1;
       const dayInWeek = (index % daysPerWeek) + 1;
       const baseLabel = stripSchedulePrefix(session.day_label) || session.focus;
@@ -179,9 +184,12 @@ function normalizePlanTimeline(plan: CoachPlan | null): CoachPlan | null {
   // otherwise finish its twin the moment one is done.
   const usedIds = new Set<string>();
   const sessions = Array.from({ length: expectedSessions }, (_, index) => {
-    const template = weeklyTemplate[index % weeklyTemplate.length];
     const week = Math.floor(index / daysPerWeek) + 1;
     const dayInWeek = (index % daysPerWeek) + 1;
+    // Every week starts from the template's first workout. The model writes
+    // at most 4 sessions, so a 5-6 day week repeats the first ones within
+    // the week (A B C D A B) rather than drifting across weeks.
+    const template = weeklyTemplate[(dayInWeek - 1) % weeklyTemplate.length];
     const baseLabel = stripSchedulePrefix(template.day_label) || template.focus;
 
     return {
@@ -256,9 +264,20 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
 
   updatePlan: (plan) => {
     set((state) => {
-      const normalizedPlan = normalizePlanTimeline(plan);
+      // The person's rest-day choice outlives a coach update to the plan.
+      const keepRest = state.plan?.rest_preference && !plan.rest_preference ? { rest_preference: state.plan.rest_preference } : {};
+      const normalizedPlan = normalizePlanTimeline({ ...plan, ...keepRest });
       return { plan: normalizedPlan, ...syncActiveThread(state, { plan: normalizedPlan }) };
     });
+    persist(get());
+  },
+
+  setRestPreference: (preference) => {
+    const current = get().plan;
+    if (!current) return;
+    // Only where rests are shown changes — sessions, ids and progress don't.
+    const plan = { ...current, rest_preference: preference };
+    set((state) => ({ plan, ...syncActiveThread(state, { plan }) }));
     persist(get());
   },
 
