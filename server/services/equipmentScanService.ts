@@ -265,9 +265,14 @@ export async function scanEquipment(request: ScanRequest, deps: ScanDeps): Promi
     matchCatalog({ ...observation, type_confidence: typeConfidence }, deps.catalog, request.gymSlug),
     deps.legacy.list().catch((error) => {
       console.error("[identify] equipment list error:", error?.message ?? error);
-      return [] as { id: string; name: string }[];
+      return null;
     }),
   ]);
+  // Unknown list: tutorials can't be matched, and saving could duplicate a
+  // machine that already exists — so a new identification is kept for a
+  // save retry instead of written blind.
+  const listUnavailable = legacyList === null;
+  const legacyRows = legacyList ?? [];
   const catalog_match = catalogMatchBody({ ...observation, type_confidence: typeConfidence }, catalogResult.assessment, catalogResult.status);
   console.log("[identify] catalog:", catalog_match.status, "| level:", catalog_match.level ?? "—", "| candidates:", catalog_match.candidates.length);
 
@@ -277,7 +282,7 @@ export async function scanEquipment(request: ScanRequest, deps: ScanDeps): Promi
     catalog_match.type?.name ?? "",
     ...catalogResult.typeAliases,
   ];
-  const legacyMatch = findBestLegacyMatch(legacyNames, legacyList);
+  const legacyMatch = findBestLegacyMatch(legacyNames, legacyRows);
   if (legacyMatch) {
     const cached = await deps.legacy.fetch(legacyMatch.id);
     if (cached) {
@@ -294,7 +299,7 @@ export async function scanEquipment(request: ScanRequest, deps: ScanDeps): Promi
           videos,
           identification_id: identificationId,
           fromCache: true,
-          alternates: legacyAlternates(observation, catalogResult.assessment, legacyList, legacyMatch.id),
+          alternates: legacyAlternates(observation, catalogResult.assessment, legacyRows, legacyMatch.id),
           catalog_match,
         },
       };
@@ -312,7 +317,7 @@ export async function scanEquipment(request: ScanRequest, deps: ScanDeps): Promi
   }
 
   const videos = await deps.videos(identification.search_query);
-  const equipment = await deps.legacy.save(identification, legacyList);
+  const equipment = listUnavailable ? null : await deps.legacy.save(identification, legacyRows);
   const confidence = Math.min(typeConfidence, clampConfidence(identification.confidence));
 
   if (!equipment) {
@@ -351,7 +356,7 @@ export async function scanEquipment(request: ScanRequest, deps: ScanDeps): Promi
       videos,
       identification_id: identificationId,
       fromCache: false,
-      alternates: legacyAlternates(observation, catalogResult.assessment, legacyList, equipment.id),
+      alternates: legacyAlternates(observation, catalogResult.assessment, legacyRows, equipment.id),
       catalog_match,
     },
   };

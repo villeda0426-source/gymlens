@@ -71,12 +71,33 @@ async function upsertIdentificationRecord(
     identificationId = inserted?.id ?? null;
   }
 
-  // Per-user tracking is best-effort because older production schemas have a
-  // unique equipment_id constraint that prevents one row per user/equipment.
-  if (userId) {
-    const { error: userErr } = await supabase
-      .from("equipment_identifications")
-      .insert({
+  if (userId) await recordUserScan(equipmentId, equipmentName, userId, now);
+
+  return identificationId;
+}
+
+// The person's own scan history (Search tab "Recent"): one row per user per
+// equipment, bumped on every rescan so it sorts to the top. Best-effort — a
+// scan result never fails because history couldn't be written. Until
+// 20261021200000_equipment_identifications_per_user.sql is applied, the old
+// UNIQUE (equipment_id) rejects these inserts (23505), which is logged.
+async function recordUserScan(equipmentId: string, equipmentName: string, userId: string, now: string) {
+  const { data: existing, error: lookupErr } = await supabase
+    .from("equipment_identifications")
+    .select("id, scan_count")
+    .eq("equipment_id", equipmentId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (lookupErr) {
+    console.error("[identify] user scan lookup error:", lookupErr.message);
+    return;
+  }
+  const { error } = existing
+    ? await supabase
+        .from("equipment_identifications")
+        .update({ scan_count: existing.scan_count + 1, last_scanned_at: now })
+        .eq("id", existing.id)
+    : await supabase.from("equipment_identifications").insert({
         equipment_id: equipmentId,
         equipment_name: equipmentName,
         user_id: userId,
@@ -84,16 +105,7 @@ async function upsertIdentificationRecord(
         first_scanned_at: now,
         last_scanned_at: now,
       });
-    if (userErr?.code === "23505") {
-      console.log("[identify] user scan already tracked for:", equipmentName);
-    } else if (userErr) {
-      console.error("[identify] user scan insert error:", userErr.message);
-    } else {
-      console.log(`SAVED TO DB: ${equipmentName}`);
-    }
-  }
-
-  return identificationId;
+  if (error) console.error(`[identify] user scan ${existing ? "update" : "insert"} error (${error.code}):`, error.message);
 }
 
 // ─── Saving a new identification ─────────────────────────────────────────────
@@ -244,7 +256,13 @@ router.post("/save", async (req: Request, res: Response) => {
       pendingSaves.delete(token);
       return res.status(410).json({ error: "That scan expired. Please scan the equipment again." });
     }
-    const { data: allEquipment } = await supabase.from("equipment").select("id, name");
+    // Without the current list, saving could duplicate an existing machine;
+    // treat it like any other temporary failure (the token stays valid).
+    const { data: allEquipment, error: listError } = await supabase.from("equipment").select("id, name");
+    if (listError) {
+      console.error("[identify] save retry list error:", listError.message);
+      return res.status(503).json({ error: "Still couldn't save it. Please try again in a moment." });
+    }
     const equipment = await saveIdentifiedEquipment(pending.identification, allEquipment ?? []);
     if (!equipment) {
       return res.status(502).json({ error: "Still couldn't save it. Please try again in a moment." });

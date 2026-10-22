@@ -9,6 +9,16 @@ import { apiFetch, getApiBase, getApiUnavailableMessage } from "@/lib/api";
 const MAX_DIMENSION = 1024;
 const COMPRESS_QUALITY = 0.7;
 
+// Why a scan didn't produce a result, so the message says what to do next:
+// fix the connection, take a clearer photo, or simply try again.
+export type ScanErrorKind = "connection" | "unclear_photo" | "service";
+
+function scanErrorKind(err: any): ScanErrorKind {
+  if (err?.isNetworkError || err?.name === "AbortError") return "connection";
+  if (err?.status === 422 || err?.status === 400) return "unclear_photo";
+  return "service";
+}
+
 export function useEquipmentIdentify() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,10 +83,11 @@ export function useEquipmentIdentify() {
       return { result, requiresAuth: false };
     } catch (err: any) {
       const message = err?.message || getApiUnavailableMessage();
+      const kind = scanErrorKind(err);
 
-      console.error("[identify] error:", err.message, "| status:", err.status, "| msg:", message);
+      console.error("[identify] error:", err.message, "| status:", err.status, "| kind:", kind);
       setError(message);
-      return { error: message };
+      return { error: message, kind };
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +95,7 @@ export function useEquipmentIdentify() {
 
   // The equipment was identified but not saved: retry only the save, with
   // the result the server kept — no new photo, no second identification.
-  const retrySave = async (result: any): Promise<{ id?: string; error?: string }> => {
+  const retrySave = async (result: any): Promise<{ id?: string; error?: string; expired?: boolean }> => {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
@@ -105,7 +116,10 @@ export function useEquipmentIdentify() {
       addToRecentlyViewed(savedResult);
       return { id: saved.id };
     } catch (err: any) {
-      return { error: err?.message || getApiUnavailableMessage() };
+      // 410: the server no longer holds this identification (it expired or
+      // the server restarted), so retrying the save can't work — the photo
+      // has to be identified again.
+      return { error: err?.message || getApiUnavailableMessage(), expired: err?.status === 410 };
     }
   };
 

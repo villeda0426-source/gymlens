@@ -67,7 +67,8 @@
     "catalog_unavailable": "Model details are unavailable right now. Showing the general equipment type.",
     "possible_models": "Possible models (not visually confirmed)",
     "retake_model_label": "For the exact model, photograph its label",
-    "retake_full_machine": "Retake with the whole machine in frame"
+    "retake_full_machine": "Retake with the whole machine in frame",
+    "save_expired_message": "This scan expired before it could be saved. Tap Identify Equipment to check the same photo again."
   },
   "home": {
     "good_morning": "Good morning",
@@ -864,7 +865,10 @@
     "identification_failed": "Could not identify equipment. Please try a clearer photo.",
     "auth_failed": "Authentication failed. Please try again.",
     "save_failed": "Could not save. Please try again.",
-    "identification_title": "Identification Failed"
+    "identification_title": "Identification Failed",
+    "connection_title": "Can't reach SpotLift",
+    "connection_scan_message": "Check your connection, then tap Identify Equipment again — your photo is still here.",
+    "scan_service_title": "Scan didn't finish"
   },
   "search_history": {
     "recent": "Recent",

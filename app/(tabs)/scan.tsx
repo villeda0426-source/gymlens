@@ -30,7 +30,19 @@ export default function ScanScreen() {
     if (!capturedUri) return;
     const response = await identify(capturedUri);
     if (response?.requiresAuth) { setShowGuestPrompt(true); return; }
-    if (response?.error) { Alert.alert(t("errors.identification_title"), response.error, [{ text: "OK" }]); return; }
+    if (response?.error) {
+      // Connection trouble and service hiccups aren't the photo's fault: say
+      // so, and keep the photo so Identify can simply be tapped again.
+      const title =
+        response.kind === "connection"
+          ? t("errors.connection_title")
+          : response.kind === "unclear_photo"
+            ? t("errors.identification_title")
+            : t("errors.scan_service_title");
+      const message = response.kind === "connection" ? t("errors.connection_scan_message") : response.error;
+      Alert.alert(title, message, [{ text: "OK" }]);
+      return;
+    }
     if (response?.result) {
       setLastResult(response.result);
       // Coach Forward Phase 6: confirm the match with ScanResultSheet instead
@@ -61,6 +73,14 @@ export default function ScanScreen() {
       setSaving(true);
       const saved = await retrySave(lastResult);
       setSaving(false);
+      if (saved.expired) {
+        // Nothing left to retry on the server; the photo is still here, so
+        // close the sheet and let Identify run on it again.
+        setCandidates([]);
+        setLastResult(null);
+        Alert.alert(t("scan_result.save_failed_title"), t("scan_result.save_expired_message"));
+        return;
+      }
       if (!saved.id) {
         Alert.alert(t("scan_result.save_failed_title"), t("scan_result.save_failed_message"));
         return;

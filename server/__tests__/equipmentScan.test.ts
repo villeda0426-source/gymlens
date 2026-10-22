@@ -112,6 +112,7 @@ function harness(options: {
   observation: EquipmentObservation;
   catalogFails?: boolean;
   saveFails?: boolean;
+  listFails?: boolean;
   gymListedIds?: string[];
   identification?: EquipmentIdentification;
 }): Harness {
@@ -136,6 +137,7 @@ function harness(options: {
   };
   const legacy: LegacyEquipmentRepo = {
     async list() {
+      if (options.listFails) throw new Error("equipment list: connection reset");
       return LEGACY_ROWS;
     },
     async fetch(id) {
@@ -347,6 +349,17 @@ test("save failure: newer apps get a retry token, older builds keep the 502", as
   const legacy = await scan(harness({ observation: obs, saveFails: true }), false);
   assert.equal(legacy.status, 502);
   assert.equal(legacy.body.error, "I identified the equipment but couldn't save it. Please try again.");
+});
+
+test("equipment list outage: identification kept for a save retry, nothing written blind", async () => {
+  const h = harness({ observation: observation({ equipment_type: "sled push", type_confidence: 0.8 }), listFails: true });
+  const result = await scan(h, true);
+  assert.equal(result.status, 200);
+  assert.equal(result.body.save_failed, true);
+  assert.equal(result.body.save_token, "save-token-1");
+  assert.equal(result.body.name, "Sled Push");
+  // Saving without the list could duplicate an existing machine.
+  assert.deepEqual(h.calls.saved, []);
 });
 
 test("legacy response shape is preserved for existing app builds", async () => {
