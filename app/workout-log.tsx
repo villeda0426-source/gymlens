@@ -87,6 +87,22 @@ function toLocalSet(row: WorkoutSetRow): LocalSet {
   };
 }
 
+// Weight as typed: digits with one decimal point (a comma counts, for
+// keyboards that use one), so "22.5.5" can't silently save as nothing.
+function cleanWeightInput(value: string): string {
+  const [whole, ...rest] = value.replace(/,/g, ".").replace(/[^0-9.]/g, "").split(".");
+  return rest.length ? `${whole}.${rest.join("").slice(0, 2)}` : whole;
+}
+
+// Blank = no weight. Capped at a value no free weight or stack exceeds, so
+// a typo can't become an impossible personal record.
+const MAX_WEIGHT = 2000;
+function parseWeight(value: string): number | null {
+  const parsed = Number.parseFloat(value);
+  if (value.trim() === "" || !Number.isFinite(parsed)) return null;
+  return Math.min(MAX_WEIGHT, Math.max(0, Math.round(parsed * 100) / 100));
+}
+
 function formatWeight(valueKg: number | null, unit: Units, t: (key: string, opts?: any) => string): string {
   if (valueKg === null) return t("workout_log.no_pr");
   const value = fromKg(valueKg, unit);
@@ -304,9 +320,22 @@ export default function WorkoutLogScreen() {
   // The workout occurrence, created on the first write when it doesn't
   // exist yet. Never blocks a set save: without it the set still saves,
   // just unlinked (as before the journal existed).
-  const ensureSession = async (): Promise<string | null> => {
-    if (workoutSessionId) return workoutSessionId;
-    if (!user?.id || !journalOn) return null;
+  const sessionPromise = useRef<Promise<string | null> | null>(null);
+  const ensureSession = (): Promise<string | null> => {
+    if (workoutSessionId) return Promise.resolve(workoutSessionId);
+    if (!user?.id || !journalOn) return Promise.resolve(null);
+    // Several sets can save at once ("Use previous sets"): share one
+    // lookup/insert so they can't create duplicate workouts.
+    if (!sessionPromise.current) {
+      sessionPromise.current = createSession().finally(() => {
+        sessionPromise.current = null;
+      });
+    }
+    return sessionPromise.current;
+  };
+
+  const createSession = async (): Promise<string | null> => {
+    if (!user?.id) return null;
     try {
       const id =
         sessionIndexNumber !== null
@@ -356,7 +385,7 @@ export default function WorkoutLogScreen() {
     setSets((prev) => prev.map((s) => (s.setNumber === target.setNumber ? { ...target, saving: true, error: false } : s)));
 
     const reps = target.reps.trim() === "" ? null : Math.max(0, Math.min(500, Math.round(Number(target.reps))));
-    const weightValue = target.weightValue.trim() === "" ? null : Math.max(0, Number(target.weightValue));
+    const weightValue = parseWeight(target.weightValue);
 
     try {
       const sessionId = await ensureSession();
@@ -451,6 +480,13 @@ export default function WorkoutLogScreen() {
   // Remove one set (completed or not), then close the gap in numbering so
   // the log stays Set 1, 2, 3... Confirmed first, so a stray tap can't do it.
   const handleDeleteSet = (target: LocalSet) => {
+    // A save still in flight would land after the delete and renumbering
+    // (keyed by set number) and bring a removed set back or overwrite its
+    // neighbour — wait for saves to finish first.
+    if (sets.some((s) => s.saving) || inFlight.current.size > 0) {
+      Alert.alert(t("workout_log.delete_wait"));
+      return;
+    }
     Alert.alert(
       t("workout_log.delete_set_title", { set: target.setNumber }),
       t(target.completed ? "workout_log.delete_set_message_done" : "workout_log.delete_set_message"),
@@ -460,6 +496,10 @@ export default function WorkoutLogScreen() {
           text: t("workout_log.delete_set_confirm"),
           style: "destructive",
           onPress: async () => {
+            if (inFlight.current.size > 0) {
+              Alert.alert(t("workout_log.delete_wait"));
+              return;
+            }
             const remaining = sets.filter((s) => s.setNumber !== target.setNumber);
             const renumbered = remaining.map((s, index) => ({ ...s, setNumber: index + 1 }));
             setSets(renumbered);
@@ -482,6 +522,20 @@ export default function WorkoutLogScreen() {
     );
   };
 
+  // Back returns to the screen that opened the log (the workout session or
+  // the Plan tab). Opened with nothing underneath — a restored or linked
+  // screen — go to the workout it belongs to, or the Plan tab.
+  const handleBack = () => {
+    Keyboard.dismiss();
+    if (router.canGoBack()) {
+      router.back();
+    } else if (fromSession && sessionIndexNumber !== null) {
+      router.replace({ pathname: "/workout-session", params: { sessionIndex: String(sessionIndexNumber) } });
+    } else {
+      router.replace("/(tabs)/plan");
+    }
+  };
+
   if (!user) {
     return (
       <SafeScreen edges={["top"]} style={styles.screen}>
@@ -497,7 +551,7 @@ export default function WorkoutLogScreen() {
       <View style={styles.header}>
         {/* From the guided session, Back returns to it — say so. */}
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={handleBack}
           style={[styles.backButton, labelledBack && styles.backButtonLabelled]}
           accessibilityRole="button"
           accessibilityLabel={t(fromSession ? "workout_log.back_to_workout" : "workout_log.back")}
@@ -599,7 +653,7 @@ export default function WorkoutLogScreen() {
                     style={[styles.cellInput, styles.weightInput]}
                     value={set.weightValue}
                     onChangeText={(value) =>
-                      setSets((prev) => prev.map((s, i) => (i === index ? { ...s, weightValue: value.replace(/[^0-9.]/g, "") } : s)))
+                      setSets((prev) => prev.map((s, i) => (i === index ? { ...s, weightValue: cleanWeightInput(value) } : s)))
                     }
                     onBlur={() => persistSet(set)}
                     onSubmitEditing={() => Keyboard.dismiss()}
