@@ -151,7 +151,7 @@ Answers are saved as **structured profile fields** (goal, daysPerWeek, sessionMi
 - [ ] If using the official PAR-Q+ form, check its license (our step 5 list is paraphrased).
 - [ ] Mockup images for Scan, Equipment, Workout, Coach week (Claude Code matches pictures better than text).
 - [ ] Brand cleanup: remove the unused dark/neon palette in `tailwind.config.js`; rename ndNavy/ndGold; give errors their own red, separate from coral.
-- [ ] Android store feature graphic says "Spolift". Fix the spelling.
+- [x] "Spolift" typo fixed: Android feature graphic (2026-09-16); app logo, splash, letters logo and website logo (2026-10-21).
 - [ ] Security: `.env` holds `SUPABASE_SERVICE_ROLE_KEY` and a Gmail app password. Make sure they're only used server-side, never in app code.
 - [ ] Add CLAUDE.md rules (Section 10).
 
