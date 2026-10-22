@@ -382,7 +382,8 @@
     "use_previous": "Use previous sets",
     "use_previous_hint": "Fills in your last workout's sets. Tick Done on each one you actually do.",
     "quick_done": "Mark done without details",
-    "quick_done_note": "Marked done. You can still add your sets."
+    "quick_done_note": "Marked done. You can still add your sets.",
+    "delete_wait": "One moment — still saving your sets. Try removing it again in a second."
   },
   "trainer": {
     "personal_trainer": "Coach",
@@ -668,7 +669,14 @@
     "retry": "Retry",
     "saving_sets": "Saving…",
     "quick_done": "Done — skip details",
-    "quick_done_hint": "Marks this exercise done without logging weights or reps."
+    "quick_done_hint": "Marks this exercise done without logging weights or reps.",
+    "all_exercises": "Exercises in this workout",
+    "all_exercises_hint": "Open any exercise to see or fix its sets. Back brings you here.",
+    "exercise_row_label": "Exercise {{number}}, {{name}}, {{status}}",
+    "status_done": "Done",
+    "status_now": "Now",
+    "status_todo": "Not started",
+    "sets_by_reps": "{{sets}} × {{reps}} reps"
   },
   "plan": {
     "title": "Your plan",

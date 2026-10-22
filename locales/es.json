@@ -382,7 +382,8 @@
     "use_previous": "Usar series anteriores",
     "use_previous_hint": "Rellena las series de tu último entrenamiento. Marca Hecho en cada una que realmente hagas.",
     "quick_done": "Marcar como hecho sin detalles",
-    "quick_done_note": "Marcado como hecho. Aún puedes agregar tus series."
+    "quick_done_note": "Marcado como hecho. Aún puedes agregar tus series.",
+    "delete_wait": "Un momento: aún se están guardando tus series. Intenta quitarla de nuevo en un segundo."
   },
   "trainer": {
     "personal_trainer": "Coach",
@@ -668,7 +669,14 @@
     "retry": "Reintentar",
     "saving_sets": "Guardando…",
     "quick_done": "Hecho: omitir detalles",
-    "quick_done_hint": "Marca este ejercicio como hecho sin registrar pesos ni repeticiones."
+    "quick_done_hint": "Marca este ejercicio como hecho sin registrar pesos ni repeticiones.",
+    "all_exercises": "Ejercicios de este entrenamiento",
+    "all_exercises_hint": "Abre cualquier ejercicio para ver o corregir sus series. Atrás te regresa aquí.",
+    "exercise_row_label": "Ejercicio {{number}}, {{name}}, {{status}}",
+    "status_done": "Hecho",
+    "status_now": "Ahora",
+    "status_todo": "Sin empezar",
+    "sets_by_reps": "{{sets}} × {{reps}} reps"
   },
   "plan": {
     "title": "Tu plan",

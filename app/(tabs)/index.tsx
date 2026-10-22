@@ -8,7 +8,7 @@
 // the Talk-to-Coach/Weekly-Plan action grid are dropped: the wordmark isn't
 // in the mockup's home header, and their jobs are now covered by the Coach
 // card, the Today card, and the tab bar.
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -20,7 +20,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "@/store/authStore";
@@ -65,6 +65,13 @@ export default function HomeScreen() {
     loadTrainer();
     loadActiveWorkout();
   }, [loadTrainer, loadActiveWorkout]);
+
+  const navigating = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      navigating.current = false;
+    }, [])
+  );
 
   const handleWorkoutSearch = async () => {
     const query = workoutQuery.trim();
@@ -224,9 +231,12 @@ export default function HomeScreen() {
               ) : null}
               <TouchableOpacity
                 style={styles.startWorkoutButton}
-                onPress={() =>
-                  router.push({ pathname: "/workout-session", params: { sessionIndex: String(nextWorkout!.sessionIndex) } })
-                }
+                onPress={() => {
+                  // One push per tap — a double tap would stack two sessions.
+                  if (navigating.current) return;
+                  navigating.current = true;
+                  router.push({ pathname: "/workout-session", params: { sessionIndex: String(nextWorkout!.sessionIndex) } });
+                }}
               >
                 <Ionicons name="play" size={16} color={coachColors.card} />
                 <Text style={styles.startWorkoutText}>{t(activeItem ? "plan.resume_workout" : "home.start_workout")}</Text>

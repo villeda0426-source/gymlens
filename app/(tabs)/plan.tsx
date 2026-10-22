@@ -911,8 +911,12 @@ export default function PlanScreen() {
   // Back from an exercise's Workout Log opened from a workout's details:
   // return to that workout, not the top of the Plan tab.
   const reopenWorkoutLabel = useRef<string | null>(null);
+  // One push per tap: a double tap on Start/Resume or an exercise would
+  // stack two workout (or log) screens over the same session.
+  const navigating = useRef(false);
   useFocusEffect(
     useCallback(() => {
+      navigating.current = false;
       const label = reopenWorkoutLabel.current;
       if (!label) return;
       reopenWorkoutLabel.current = null;
@@ -955,6 +959,8 @@ export default function PlanScreen() {
     selectedSession && plan ? plan.sessions.findIndex((session) => session.day_label === selectedSession.day_label) : -1;
 
   const handleStartWorkout = (sessionIndex: number) => {
+    if (navigating.current) return;
+    navigating.current = true;
     setWorkoutDetailVisible(false);
     requestAnimationFrame(() =>
       router.push({ pathname: "/workout-session", params: { sessionIndex: String(sessionIndex) } })
@@ -1085,6 +1091,8 @@ export default function PlanScreen() {
   // (index/label/week) is derived here rather than threaded through every
   // prop layer — session is one of the same objects in plan.sessions.
   const handleOpenExercise = (exercise: PlanExercise, session: CoachPlan["sessions"][number]) => {
+    if (navigating.current) return;
+    navigating.current = true;
     // Seed the shared guide store with the same richer, target-load/RPE-aware
     // fallback the old direct-to-guide-screen flow used, so workout-log.tsx
     // has real content immediately instead of a thinner one it builds itself.

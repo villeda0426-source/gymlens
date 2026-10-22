@@ -12,7 +12,7 @@
 // the device (store/activeWorkoutStore.ts) until the server confirms them.
 // Position and timer resume from the same store.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -23,6 +23,7 @@ import * as Haptics from "expo-haptics";
 import { coachColors, coachDark, coachFonts, radii, spacing } from "@/constants/theme";
 import Stepper from "@/components/UI/Stepper";
 import SegmentedProgressBar from "@/components/UI/SegmentedProgressBar";
+import BottomSheet from "@/components/UI/BottomSheet";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import CoachIcon from "@/components/Coach/CoachIcon";
 import { buildPlanSequence, nextWorkoutItem } from "@/lib/planSequence";
@@ -212,6 +213,7 @@ export default function WorkoutSessionScreen() {
   const [seconds, setSeconds] = useState(0);
   const [paused, setPaused] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [listVisible, setListVisible] = useState(false);
   const [restored, setRestored] = useState(false);
   const instanceIds = useRef<Record<string, string>>({});
   // Logged sets and whether the server has them (pending/saved/failed).
@@ -258,8 +260,22 @@ export default function WorkoutSessionScreen() {
 
   // The workout occurrence shared with the Workout Log and extras. Created
   // once; never blocks logging (sets still save without it).
-  const ensureWorkoutSession = async (): Promise<string | null> => {
-    if (sessionIdRef.current) return sessionIdRef.current;
+  const sessionPromise = useRef<Promise<string | null> | null>(null);
+  const ensureWorkoutSession = (): Promise<string | null> => {
+    if (sessionIdRef.current) return Promise.resolve(sessionIdRef.current);
+    if (!user?.id) return Promise.resolve(null);
+    // One lookup/insert at a time: the start-up effect, a logged set and
+    // "Edit sets" can all ask at once, and each asking separately could
+    // create duplicate workout rows.
+    if (!sessionPromise.current) {
+      sessionPromise.current = createWorkoutSession().finally(() => {
+        sessionPromise.current = null;
+      });
+    }
+    return sessionPromise.current;
+  };
+
+  const createWorkoutSession = async (): Promise<string | null> => {
     if (!user?.id) return null;
     try {
       const id =
@@ -337,8 +353,15 @@ export default function WorkoutSessionScreen() {
         setWorkoutSessionId(saved.workoutSessionId);
       }
       if (saved.unsavedSets?.length) updateQueue(saved.unsavedSets.map((item) => ({ ...item, status: "failed" as const })));
-      setExerciseIndex(Math.min(saved.exerciseIndex, exercises.length - 1));
-      setSetIndex(saved.setIndex);
+      // The saved exercise may have been finished since (from its log or the
+      // Plan tab): pick up at the first one still open instead.
+      const savedIndex = Math.min(saved.exerciseIndex, exercises.length - 1);
+      const savedDone = completedExerciseIds.includes(exercises[savedIndex]?.id ?? "");
+      const firstOpen = exercises.findIndex((exercise) => !completedExerciseIds.includes(exercise.id));
+      const resumeAt = savedDone && firstOpen >= 0 ? firstOpen : savedIndex;
+      setExerciseIndex(resumeAt);
+      setSetIndex(resumeAt === savedIndex ? saved.setIndex : 0);
+      if (resumeAt !== savedIndex) alignWithSaved.current = true;
       setSeconds(saved.elapsedSeconds);
       setWeight(saved.weight);
       setReps(saved.reps);
@@ -398,10 +421,17 @@ export default function WorkoutSessionScreen() {
   }, [paused, finished, restored]);
 
   const advanceExercise = () => {
-    if (exerciseIndex + 1 < exercises.length) {
-      setExerciseIndex(exerciseIndex + 1);
+    // The next exercise not already finished — one may have been completed
+    // out of order from its Workout Log or the Plan tab.
+    const done = useCoachTrainerStore.getState().completedExerciseIds;
+    const next = exercises.findIndex(
+      (exercise, index) => index > exerciseIndex && !(exercise.isPlanExercise && done.includes(exercise.id))
+    );
+    const remaining = next >= 0 ? next : exercises.findIndex((exercise) => exercise.isPlanExercise && !done.includes(exercise.id));
+    if (remaining >= 0 && remaining !== exerciseIndex) {
+      setExerciseIndex(remaining);
       setSetIndex(0);
-      setReps(exercises[exerciseIndex + 1]?.defaultReps ?? 10);
+      setReps(exercises[remaining]?.defaultReps ?? 10);
     } else {
       setFinished(true);
       const id = sessionIdRef.current;
@@ -464,7 +494,20 @@ export default function WorkoutSessionScreen() {
     }, [currentExercise?.id, sessionIndex])
   );
 
+  // A second tap while the first is still being recorded would log the same
+  // set number twice (and skip a set); ignore it until the first lands.
+  const logging = useRef(false);
   const handleLogSet = async () => {
+    if (!currentExercise || logging.current) return;
+    logging.current = true;
+    try {
+      await logCurrentSet();
+    } finally {
+      logging.current = false;
+    }
+  };
+
+  const logCurrentSet = async () => {
     if (!currentExercise) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
     const exercise = currentExercise;
@@ -517,18 +560,32 @@ export default function WorkoutSessionScreen() {
   const leaveWorkout = () => {
     const id = sessionIdRef.current;
     if (id) updateSessionTiming(id, seconds, false).catch(() => undefined);
-    router.back();
+    exitSession();
   };
 
-  const openExerciseLog = async () => {
-    if (!currentExercise || sessionIndex === null || !todaySession || !plan) return;
-    const planExercise = todaySession.exercises.find((exercise) => exercise.exercise_id === currentExercise.id);
-    if (!planExercise) return;
+  // Back to wherever the workout was started from; opened with nothing
+  // underneath (a restored or linked screen), go to the Plan tab instead.
+  const exitSession = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)/plan");
+  };
+
+  // Any exercise in this workout (the current one from "Edit sets", others
+  // from the exercise list); Back from the log returns here.
+  const openingLog = useRef(false);
+  const openExerciseLog = async (exerciseId: string | undefined = currentExercise?.id) => {
+    if (!exerciseId || sessionIndex === null || !todaySession || !plan || openingLog.current) return;
+    const planExercise = todaySession.exercises.find((exercise) => exercise.exercise_id === exerciseId);
+    const sessionExercise = exerciseFor(exerciseId);
+    if (!planExercise || !sessionExercise) return;
+    openingLog.current = true;
+    setListVisible(false);
     // Let just-logged sets land first so the log shows them (and doesn't
     // offer to re-add them); never wait more than a few seconds.
     await Promise.race([flushSets(), new Promise((resolve) => setTimeout(resolve, 4000))]);
     const sessionId = await ensureWorkoutSession();
     returningFromLog.current = true;
+    openingLog.current = false;
     router.push({
       pathname: "/workout-log",
       params: {
@@ -537,7 +594,7 @@ export default function WorkoutSessionScreen() {
         plannedSetCount: String(planExercise.sets),
         repMin: String(planExercise.rep_range.min),
         repMax: String(planExercise.rep_range.max),
-        load: currentExercise.load,
+        load: sessionExercise.load,
         sessionLabel: todaySession.day_label,
         sessionIndex: String(sessionIndex),
         planWeek: String(Math.floor(sessionIndex / Math.max(1, plan.days_per_week)) + 1),
@@ -600,7 +657,7 @@ export default function WorkoutSessionScreen() {
           {t(exercises[0]?.isPlanExercise ? "workout_session.complete_body_plan" : "workout_session.complete_body_adhoc")}
         </Text>
         {saveStatus}
-        <TouchableOpacity style={styles.emptyButton} onPress={() => router.push("/(tabs)")}>
+        <TouchableOpacity style={styles.emptyButton} onPress={exitSession}>
           <Text style={styles.emptyButtonText}>{t("workout_session.done_button")}</Text>
         </TouchableOpacity>
       </View>
@@ -629,14 +686,26 @@ export default function WorkoutSessionScreen() {
           </Text>
           <Text style={styles.headerClock}>{formatClock(seconds)}</Text>
         </View>
-        <TouchableOpacity
-          onPress={() => setPaused((value) => !value)}
-          style={styles.iconButton}
-          accessibilityRole="button"
-          accessibilityLabel={t(paused ? "workout_session.resume" : "workout_session.pause")}
-        >
-          <Ionicons name={paused ? "play" : "pause"} size={16} color={coachDark.text} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {isPlanWorkout && exercises.length > 1 ? (
+            <TouchableOpacity
+              onPress={() => setListVisible(true)}
+              style={styles.iconButton}
+              accessibilityRole="button"
+              accessibilityLabel={t("workout_session.all_exercises")}
+            >
+              <Ionicons name="list" size={18} color={coachDark.text} />
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity
+            onPress={() => setPaused((value) => !value)}
+            style={styles.iconButton}
+            accessibilityRole="button"
+            accessibilityLabel={t(paused ? "workout_session.resume" : "workout_session.pause")}
+          >
+            <Ionicons name={paused ? "play" : "pause"} size={16} color={coachDark.text} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.body}>
@@ -648,7 +717,7 @@ export default function WorkoutSessionScreen() {
           </Text>
           {isPlanWorkout && user ? (
             <TouchableOpacity
-              onPress={() => void openExerciseLog()}
+              onPress={() => void openExerciseLog(currentExercise?.id)}
               style={styles.logLink}
               accessibilityRole="button"
               accessibilityHint={t("workout_session.edit_sets_hint")}
@@ -717,6 +786,61 @@ export default function WorkoutSessionScreen() {
           </View>
         ) : null}
       </View>
+
+      {/* Every exercise in this workout; a row opens its Workout Log and
+          Back from the log returns here. */}
+      <BottomSheet visible={listVisible} onClose={() => setListVisible(false)} style={styles.listSheet}>
+        <View style={styles.listHeader}>
+          <Text style={styles.listTitle}>{t("workout_session.all_exercises")}</Text>
+          <TouchableOpacity
+            onPress={() => setListVisible(false)}
+            style={styles.iconButton}
+            accessibilityRole="button"
+            accessibilityLabel={t("common.close")}
+          >
+            <Ionicons name="close" size={18} color={coachDark.text} />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.listHint}>{t("workout_session.all_exercises_hint")}</Text>
+        <ScrollView contentContainerStyle={styles.listRows}>
+          {exercises.map((exercise, index) => {
+            const done = exercise.isPlanExercise && completedExerciseIds.includes(exercise.id);
+            const current = index === exerciseIndex;
+            return (
+              <TouchableOpacity
+                key={exercise.id}
+                style={[styles.listRow, current && styles.listRowCurrent]}
+                onPress={() => void openExerciseLog(exercise.id)}
+                accessibilityRole="button"
+                accessibilityLabel={t("workout_session.exercise_row_label", {
+                  number: index + 1,
+                  name: exercise.name,
+                  status: t(done ? "workout_session.status_done" : current ? "workout_session.status_now" : "workout_session.status_todo"),
+                })}
+                accessibilityHint={t("workout_session.edit_sets_hint")}
+              >
+                <View style={[styles.listStatus, done && styles.listStatusDone]}>
+                  {done ? (
+                    <Ionicons name="checkmark" size={16} color={coachDark.limeOnDarkText} />
+                  ) : (
+                    <Text style={styles.listNumber}>{index + 1}</Text>
+                  )}
+                </View>
+                <View style={styles.listText}>
+                  <Text style={styles.listName} numberOfLines={2}>{exercise.name}</Text>
+                  <Text style={styles.listMeta}>{t("workout_session.sets_by_reps", { sets: exercise.sets, reps: exercise.repsLabel })}</Text>
+                </View>
+                {current && !done ? (
+                  <View style={styles.nowChip}>
+                    <Text style={styles.nowChipText}>{t("workout_session.status_now")}</Text>
+                  </View>
+                ) : null}
+                <Ionicons name="chevron-forward" size={18} color={coachDark.textSecondary} />
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </BottomSheet>
     </View>
   );
 }
@@ -732,6 +856,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingBottom: spacing.md },
   iconButton: { width: 44, height: 44, borderRadius: radii.pill, backgroundColor: coachDark.surface, alignItems: "center", justifyContent: "center" },
   headerCenter: { flex: 1, alignItems: "center", paddingHorizontal: spacing.sm },
+  headerActions: { flexDirection: "row", gap: spacing.sm },
   headerEyebrow: { color: coachDark.textSecondary, fontFamily: coachFonts.bodyExtraBold, fontSize: 12, letterSpacing: 1.4 },
   headerClock: { color: coachDark.text, fontFamily: coachFonts.heading, fontSize: 22, fontVariant: ["tabular-nums"], marginTop: 2 },
 
@@ -782,5 +907,29 @@ const styles = StyleSheet.create({
   },
   logSetText: { color: coachDark.bg, fontFamily: coachFonts.headingExtraBold, fontSize: 22 },
   nextRow: { flexDirection: "row", justifyContent: "space-between" },
+  listSheet: { backgroundColor: coachDark.surface, paddingBottom: spacing.xxl, gap: spacing.sm },
+  listHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  listTitle: { color: coachDark.text, fontFamily: coachFonts.headingSemiBold, fontSize: 20 },
+  listHint: { color: coachDark.textSecondary, fontFamily: coachFonts.body, fontSize: 14, lineHeight: 19 },
+  listRows: { gap: spacing.sm, paddingTop: spacing.xs },
+  listRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    minHeight: 64,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 16,
+    backgroundColor: coachDark.raised,
+  },
+  listRowCurrent: { borderWidth: 1.5, borderColor: coachDark.coralOnDark },
+  listStatus: { width: 32, height: 32, borderRadius: radii.pill, borderWidth: 1.5, borderColor: coachDark.textSecondary, alignItems: "center", justifyContent: "center" },
+  listStatusDone: { backgroundColor: coachDark.limeOnDark, borderColor: coachDark.limeOnDark },
+  listNumber: { color: coachDark.text, fontFamily: coachFonts.bodyBold, fontSize: 14, fontVariant: ["tabular-nums"] },
+  listText: { flex: 1, gap: 2 },
+  listName: { color: coachDark.text, fontFamily: coachFonts.bodyBold, fontSize: 16 },
+  listMeta: { color: coachDark.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 13, fontVariant: ["tabular-nums"] },
+  nowChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radii.pill, backgroundColor: coachDark.coralOnDark },
+  nowChipText: { color: coachDark.bg, fontFamily: coachFonts.bodyExtraBold, fontSize: 12 },
   nextText: { color: coachDark.textSecondary, fontFamily: coachFonts.bodySemiBold, fontSize: 14, fontVariant: ["tabular-nums"] },
 });
