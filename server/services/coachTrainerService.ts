@@ -176,6 +176,8 @@ export type CoachCallOptions = {
   primaryTimeoutMs?: number;
   fallbackTimeoutMs?: number;
   timing?: CoachStageTiming;
+  // ai_usage_events.feature, e.g. "coach_intake"; defaults to "coach_trainer".
+  telemetryFeature?: string;
 };
 
 export type CoachStageTiming = {
@@ -506,7 +508,7 @@ async function callCoach(messages: CoachMessage[], options: CoachCallOptions = {
         input: nextMessages,
         maxOutputTokens: Number.isFinite(COACH_TRAINER_MAX_TOKENS) ? COACH_TRAINER_MAX_TOKENS : 5000,
         timeoutMs,
-        telemetryFeature: "coach_trainer",
+        telemetryFeature: options.telemetryFeature ?? "coach_trainer",
       });
     } finally {
       if (timing) timing.openAiMs += Date.now() - openAiStartedAt;

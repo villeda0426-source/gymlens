@@ -18,6 +18,7 @@ import {
   evaluateWorkoutFeedback,
   WorkoutFeedback,
 } from "../../lib/coachingEngine";
+import { currentContext, runWithContext, type RequestContext } from "../lib/requestContext";
 
 const router = Router();
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -114,6 +115,9 @@ async function runCoachRequest(req: Request, coachOptions: CoachCallOptions = ge
     throw new Error("units must be kg or lbs.");
   }
 
+  // Same timing object; only adds the per-mode AI usage feature name.
+  coachOptions = { ...coachOptions, telemetryFeature: coachOptions.telemetryFeature ?? `coach_${mode}` };
+
   if (mode === "intake") {
     const userMessage = typeof req.body?.userMessage === "string" ? req.body.userMessage.trim() : "";
     if (!userMessage) {
@@ -147,7 +151,15 @@ async function runCoachRequest(req: Request, coachOptions: CoachCallOptions = ge
   return chatWithCoach(units, question, currentPlan, language, coachOptions);
 }
 
-async function processCoachJob(jobId: string, payload: unknown, ageBand?: AgeBand) {
+type JobContext = Omit<RequestContext, "resolveUserId"> & { userId: string | null };
+
+// Runs after the response is sent, so it carries the request's verified user
+// and version metadata explicitly (AI usage attribution reads them).
+function processCoachJob(jobId: string, payload: unknown, ageBand: AgeBand | undefined, context: JobContext) {
+  return runWithContext(context, () => runCoachJob(jobId, payload, ageBand));
+}
+
+async function runCoachJob(jobId: string, payload: unknown, ageBand?: AgeBand) {
   const processStartedAt = Date.now();
   const timing: CoachStageTiming = { openAiMs: 0, validationMs: 0, retryMs: 0, attempts: 0, fallbackUsed: false };
   const { data: jobRow } = await supabase
@@ -240,7 +252,15 @@ router.post("/jobs", async (req: Request, res: Response) => {
 
     if (error) throw error;
 
-    void processCoachJob(data.id, req.body, ageBand);
+    const requestContext = currentContext();
+    void processCoachJob(data.id, req.body, ageBand, {
+      requestId: requestContext?.requestId ?? data.id,
+      platform: requestContext?.platform ?? null,
+      appVersion: requestContext?.appVersion ?? null,
+      buildNumber: requestContext?.buildNumber ?? null,
+      installationId: requestContext?.installationId ?? null,
+      userId,
+    });
     return res.status(202).json({ jobId: data.id, status: data.status });
   } catch (error: any) {
     console.error("[coach-trainer-jobs] create error:", error.message ?? error);
@@ -386,7 +406,7 @@ router.post("/evaluate", async (req: Request, res: Response) => {
         currentPlan,
         { latest_feedback: feedback, coaching_summary: compactSummary },
         language,
-        getCoachTimeouts(req)
+        { ...getCoachTimeouts(req), telemetryFeature: "coach_workout_review" }
       );
       if (aiResponse.status === "plan_updated") {
         finalDecision = {

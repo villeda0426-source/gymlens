@@ -13,8 +13,17 @@ import videosRouter from "./routes/videos";
 import workoutSearchRouter from "./routes/workout-search";
 import coachTrainerRouter from "./routes/coach-trainer";
 import accountRouter from "./routes/account";
+import analyticsRouter from "./routes/analytics";
+import { requestContextMiddleware } from "./lib/requestContext";
 
 const app = express();
+// Railway terminates TLS at one proxy hop; without this, req.ip is the
+// proxy's address and every user shares one rate-limit bucket.
+app.set("trust proxy", 1);
+
+// First: request id, client version metadata and lazy user verification for
+// everything after it (structured request log + AI usage attribution).
+app.use(requestContextMiddleware);
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
@@ -81,7 +90,14 @@ const RATE_MAX_REQUESTS = 120;
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 
 app.use((req, res, next) => {
-  if (req.path === "/health" || req.path === "/api/app-version" || req.path === "/api/dependency-health") {
+  // Analytics has its own, separate limits (server/routes/analytics.ts) so
+  // background delivery never uses up a person's budget for real features.
+  if (
+    req.path === "/health" ||
+    req.path === "/api/app-version" ||
+    req.path === "/api/dependency-health" ||
+    req.path.startsWith("/api/analytics/")
+  ) {
     next();
     return;
   }
@@ -156,6 +172,22 @@ app.use("/workout-search", workoutSearchRouter);
 app.use("/api/workout-search", workoutSearchRouter);
 app.use("/api/coach-trainer", coachTrainerRouter);
 app.use("/api/account", accountRouter);
+app.use("/api/analytics", analyticsRouter);
+
+// Retention (docs/analytics/README.md): purge expired analytics rows daily.
+// Runs inside Postgres; missing function (migration not applied) is ignored.
+if (healthSupabase) {
+  const purge = async () => {
+    const { data, error } = await healthSupabase.rpc("purge_expired_analytics");
+    if (error && !/function|does not exist|schema cache/i.test(error.message)) {
+      console.error("[analytics] retention purge error:", error.message);
+    } else if (!error && data) {
+      console.log(JSON.stringify({ event: "analytics_retention_purge", deleted: data }));
+    }
+  };
+  setTimeout(() => void purge(), 60_000);
+  setInterval(() => void purge(), 24 * 60 * 60 * 1000);
+}
 
 const PORT = Number(process.env.PORT) || 3001;
 app.listen(PORT, "0.0.0.0", () => {

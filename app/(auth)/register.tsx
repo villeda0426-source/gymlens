@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { getAuthRedirectUrl } from "@/lib/authRedirect";
+import { track } from "@/lib/analytics";
 import { coachColors, coachFonts } from "@/constants/theme";
 
 function getRegisterErrorAlert(message: string, t: (key: string) => string) {
@@ -36,6 +37,10 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    track("signup_started", { method: "email" });
+  }, []);
 
   const handleRegister = async () => {
     if (!email.trim() || !password || !username.trim()) return;

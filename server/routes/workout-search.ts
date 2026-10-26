@@ -77,6 +77,7 @@ async function getWorkoutGuide(query: string, language: "en" | "es"): Promise<Wo
       `You are a certified strength coach writing a quick gym-floor exercise guide. If the query is not a real exercise or is too vague to answer safely, set found to false and keep arrays empty. For real exercises, use concise beginner-friendly steps and conservative safety tips. Do not diagnose or treat medical conditions. Write every user-facing value in ${language === "es" ? "neutral Latin American Spanish" : "English"}.`,
     input: `Exercise query: ${query}`,
     schemaName: "workout_guide",
+    telemetryFeature: "workout_search",
     schema: {
       type: "object",
       additionalProperties: false,

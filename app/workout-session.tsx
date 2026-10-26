@@ -45,6 +45,7 @@ import {
 } from "@/lib/workoutJournalRules";
 import { useAuthStore } from "@/store/authStore";
 import { isActiveFor, useActiveWorkoutStore } from "@/store/activeWorkoutStore";
+import { track } from "@/lib/analytics";
 
 interface SessionExercise {
   id: string;
@@ -435,7 +436,15 @@ export default function WorkoutSessionScreen() {
     } else {
       setFinished(true);
       const id = sessionIdRef.current;
-      if (id) updateSessionTiming(id, seconds, true).catch(() => undefined);
+      if (id) {
+        updateSessionTiming(id, seconds, true)
+          .then(() => {
+            // Plan workouts are counted when their last exercise is marked
+            // done (coachTrainerStore); only ad-hoc workouts are counted here.
+            if (!isPlanWorkout) track("workout_completed", { kind: "adhoc" }, { dedupeKey: id });
+          })
+          .catch(() => undefined);
+      }
       // Keep the device copy while any set is still unsaved, so it can be
       // retried; clear it once everything is confirmed.
       if (isPlanWorkout && unsavedSets(queueRef.current).length === 0) clearActive();

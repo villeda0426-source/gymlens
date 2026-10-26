@@ -331,7 +331,7 @@ export default function TrainerScreen() {
     if (response.status === "plan_ready") {
       // The very first plan (onboarding) applies immediately — it's not a
       // "change" to an existing plan, so there's nothing to stage.
-      setPlan(response.plan);
+      setPlan(response.plan, "coach_chat");
       setNotice(t("trainer.plan_ready_notice"));
     } else if (response.status === "plan_updated") {
       // Stage it: CoachSuggestionCard renders it, and only "Apply today"
@@ -706,7 +706,7 @@ export default function TrainerScreen() {
     setPlanChoice(null);
     addConversationMessage({ role: "user", content: t("plan_options.chose", { id: option.id }) });
     if (choice.kind === "plan") {
-      setPlan(option.plan);
+      setPlan(option.plan, "coach_chat");
       addConversationMessage({ role: "assistant", content: option.summary });
       setNotice(t("trainer.plan_ready_notice"));
     } else if (plan && choice.source.type === "workout") {

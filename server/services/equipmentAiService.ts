@@ -29,6 +29,7 @@ export async function observeEquipment(base64Image: string): Promise<EquipmentOb
     ],
     schemaName: "equipment_observation",
     schema: EQUIPMENT_OBSERVATION_SCHEMA,
+    telemetryFeature: "equipment_observe",
     maxOutputTokens: 1200,
     timeoutMs: 30000,
   });
@@ -51,6 +52,7 @@ export async function identifyEquipment(base64Image: string): Promise<EquipmentI
       },
     ],
     schemaName: "equipment_identification",
+    telemetryFeature: "equipment_identify",
     schema: EQUIPMENT_IDENTIFICATION_SCHEMA,
     maxOutputTokens: 2200,
     timeoutMs: 60000,

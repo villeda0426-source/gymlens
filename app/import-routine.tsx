@@ -39,7 +39,7 @@ export default function ImportRoutineScreen() {
       return; // handleParse's review screen already shows 0-matched state; nothing to import
     }
     startNewThread();
-    setPlan(plan);
+    setPlan(plan, "import");
     router.replace("/plan");
   };
 

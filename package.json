@@ -17,6 +17,7 @@
     "smoke:api:local": "RELEASE_SMOKE_ALLOW_LOCAL=1 ts-node --project server/tsconfig.json scripts/release-smoke-test.ts",
     "check:release": "npm run typecheck && npm run typecheck:server && npm run smoke:api",
     "check:app-review": "ts-node scripts/app-review-preflight.ts",
+    "analytics:report": "ts-node scripts/analytics-report.ts",
     "start:server": "node dist-server/server/index.js",
     "server": "ts-node --project server/tsconfig.json server/index.ts",
     "server:dev": "nodemon --exec \"ts-node --project server/tsconfig.json server/index.ts\"",

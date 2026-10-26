@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { getAuthRedirectUrl } from "@/lib/authRedirect";
 import { Sentry } from "@/lib/sentry";
+import { track } from "@/lib/analytics";
 import { useAuthStore } from "@/store/authStore";
 import { coachColors, coachFonts } from "@/constants/theme";
 
@@ -67,6 +68,10 @@ export default function LoginScreen() {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+
+  useEffect(() => {
+    if (mode === "signup") track("signup_started", { method: "email" });
+  }, [mode]);
   const setUser = useAuthStore((state) => state.setUser);
 
   const showAuthError = (error: any, provider: "email" | "apple") => {
@@ -127,6 +132,9 @@ export default function LoginScreen() {
 
   const handleAppleSignIn = async () => {
     if (loading) return;
+    // Apple's one button both creates and signs in to accounts; reports treat
+    // it as a signup start only for installations with no earlier account.
+    track("signup_started", { method: "apple" });
     setLoading(true);
     try {
       Sentry.addBreadcrumb({ category: "auth.apple", message: "native_sign_in_started", level: "info" });

@@ -61,6 +61,7 @@ router.get("/:id/weight-factor", async (req: Request, res: Response) => {
         "Estimate conservative beginner starting loads for gym exercises. This is educational guidance, not a medical prescription.",
       input: `For ${equipment.name}, return a reasonable beginner starting load as a fraction of body weight between 0.05 and 1.5.`,
       schemaName: "weight_factor",
+      telemetryFeature: "equipment_weight_factor",
       schema: {
         type: "object",
         additionalProperties: false,

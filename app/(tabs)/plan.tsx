@@ -1265,7 +1265,7 @@ export default function PlanScreen() {
       enterCoachChat();
       const apply = () => {
         if (feedback.planComplete) {
-          setPlan(result.plan);
+          setPlan(result.plan, "feedback");
         } else {
           updatePlan(result.plan);
         }

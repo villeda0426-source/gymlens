@@ -1,5 +1,5 @@
 // Plan setup step 1 of 5 — "What's your main goal?" (docs/design/build-my-plan/Main.png)
-import React from "react";
+import React, { useEffect } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -11,6 +11,8 @@ import ContinueButton from "@/components/PlanSetup/ContinueButton";
 import { coachColors, coachFonts } from "@/constants/theme";
 import { usePlanSetupStore, type PlanSetupGoal } from "@/store/planSetupStore";
 import CoachIcon from "@/components/Coach/CoachIcon";
+import { useCoachTrainerStore } from "@/store/coachTrainerStore";
+import { track } from "@/lib/analytics";
 
 const GOALS: Array<{
   value: PlanSetupGoal;
@@ -28,6 +30,11 @@ export default function PlanSetupGoalScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { goal, setGoal } = usePlanSetupStore();
+
+  // Step 1 mounting is the start of a survey attempt (new or rebuild).
+  useEffect(() => {
+    track("coach_survey_started", { entry: useCoachTrainerStore.getState().plan ? "rebuild" : "new" });
+  }, []);
 
   return (
     <SafeScreen edges={["top", "bottom"]} style={styles.screen}>

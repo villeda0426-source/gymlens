@@ -153,6 +153,7 @@ async function generateEquipmentData(animationName: string): Promise<EquipmentDa
       "You are a fitness equipment catalog editor. Reject generic animation labels. For recognizable equipment or exercises, provide concise bilingual catalog data and conservative safety guidance.",
     input: `Animation library label: ${animationName}`,
     schemaName: "equipment_seed_data",
+    telemetryFeature: "lottie_seed",
     schema: {
       type: "object",
       additionalProperties: false,

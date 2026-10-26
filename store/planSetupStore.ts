@@ -194,7 +194,7 @@ export const usePlanSetupStore = create<PlanSetupState>((set, get) => ({
   replaceOption: (option) =>
     set((state) => ({ options: state.options?.map((item) => (item.id === option.id ? option : item)) ?? null })),
   chooseOption: (option) => {
-    useCoachTrainerStore.getState().setPlan(option.plan);
+    useCoachTrainerStore.getState().setPlan(option.plan, "setup");
     set({ options: null, buildStatus: "ready" });
   },
 

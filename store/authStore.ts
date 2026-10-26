@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useActiveWorkoutStore } from "@/store/activeWorkoutStore";
 import { useCoachTrainerStore } from "@/store/coachTrainerStore";
 import { apiFetch } from "@/lib/api";
+import { flushAnalyticsBeforeSignOut } from "@/lib/analytics";
 
 const GUEST_USES_KEY = "coachlift_guest_uses";
 const MAX_GUEST_USES = 3;
@@ -105,6 +106,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
+    await flushAnalyticsBeforeSignOut();
     useCoachTrainerStore.getState().resetChatSession();
     useActiveWorkoutStore.getState().clear();
     await supabase.auth.signOut();
@@ -124,6 +126,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await useCoachTrainerStore.getState().purgeTrainer();
       useActiveWorkoutStore.getState().clear();
       await AsyncStorage.removeItem(GUEST_USES_KEY);
+      await flushAnalyticsBeforeSignOut();
       await supabase.auth.signOut({ scope: "local" });
       set({ user: null, profile: null, isGuest: true, guestUses: 0 });
       return {};

@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { track } from "@/lib/analytics";
 import { create } from "zustand";
 import { CoachMessage, CoachPlan, CoachResponse, RestPreference, Units } from "@/lib/coachTrainer";
 
@@ -41,6 +42,8 @@ export type CoachWorkoutReview = {
 // explicitly taps "Apply" (CoachSuggestionCard) — see Phase 3 of the Coach
 // Forward plan. Deliberately not part of a thread's persisted history: it's
 // a live, in-progress prompt, not a message.
+export type PlanOrigin = "setup" | "coach_chat" | "feedback" | "import";
+
 export type PendingPlanChange = Extract<CoachResponse, { status: "plan_updated" }>;
 
 export type CoachAvatarConfig = {
@@ -68,7 +71,9 @@ interface CoachTrainerState {
   activeThreadId: string | null;
   hasLoaded: boolean;
   setUnits: (units: Units) => void;
-  setPlan: (plan: CoachPlan | null) => void;
+  // `origin` marks a newly generated/chosen plan for analytics; leave it out
+  // for re-applies and resets, which aren't new plans.
+  setPlan: (plan: CoachPlan | null, origin?: PlanOrigin) => void;
   updatePlan: (plan: CoachPlan) => void;
   setRestPreference: (preference: RestPreference) => void;
   setCoachAvatar: (avatar: Omit<CoachAvatarConfig, "createdAt">) => void;
@@ -249,7 +254,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
     persist(get());
   },
 
-  setPlan: (plan) => {
+  setPlan: (plan, origin) => {
     set((state) => {
       const normalizedPlan = normalizePlanTimeline(plan);
       return {
@@ -260,6 +265,9 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
       };
     });
     persist(get());
+    if (plan && origin) {
+      track("plan_generated", { origin, days_per_week: plan.days_per_week, timeline_weeks: plan.timeline_weeks });
+    }
   },
 
   updatePlan: (plan) => {
@@ -360,6 +368,7 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
   },
 
   markExerciseCompleted: (exerciseId) => {
+    let finished: { sessionIndex: number; occurrence: number } | null = null;
     set((state) => {
       if (state.completedExerciseIds.includes(exerciseId)) return state;
       const completedExerciseIds = [...state.completedExerciseIds, exerciseId];
@@ -368,9 +377,23 @@ export const useCoachTrainerStore = create<CoachTrainerState>((set, get) => ({
       const sessionCompletedAt = finishedSession
         ? [...state.sessionCompletedAt, new Date().toISOString()]
         : state.sessionCompletedAt;
+      if (finishedSession && state.plan && session) {
+        finished = { sessionIndex: state.plan.sessions.indexOf(session), occurrence: sessionCompletedAt.length };
+      }
       return { completedExerciseIds, sessionCompletedAt, ...syncActiveThread(state, { completedExerciseIds, sessionCompletedAt }) };
     });
     persist(get());
+    if (finished) {
+      const { sessionIndex, occurrence } = finished;
+      const daysPerWeek = Math.max(1, get().plan?.days_per_week ?? 1);
+      // Keyed to this plan thread's Nth completion, so un-marking and
+      // re-marking the last exercise doesn't count a second workout.
+      track(
+        "workout_completed",
+        { kind: "plan", session_index: sessionIndex, plan_week: Math.floor(sessionIndex / daysPerWeek) + 1 },
+        { dedupeKey: `${get().activeThreadId ?? "none"}:${sessionIndex}:${occurrence}` }
+      );
+    }
   },
 
   unmarkExerciseCompleted: (exerciseId) => {

@@ -1,6 +1,8 @@
 import "../global.css";
 import { Sentry } from "@/lib/sentry";
 import "@/lib/vexo";
+import { initAnalytics, setAnalyticsUser } from "@/lib/analytics";
+import AnalyticsScreenTracker from "@/lib/analytics/ScreenTracker";
 import React, { useEffect } from "react";
 import { Alert } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
@@ -99,10 +101,12 @@ function RootLayout() {
 
   useEffect(() => {
     getStoredLanguage().then((lang) => i18n.changeLanguage(lang));
+    void initAnalytics();
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       Sentry.setUser(session?.user ? { id: session.user.id, email: session.user.email } : null);
+      setAnalyticsUser(session?.user?.id ?? null);
       loadProfile();
     });
 
@@ -112,6 +116,7 @@ function RootLayout() {
       }
       setUser(session?.user ?? null);
       Sentry.setUser(session?.user ? { id: session.user.id, email: session.user.email } : null);
+      setAnalyticsUser(session?.user?.id ?? null);
       loadProfile();
     });
 
@@ -122,6 +127,7 @@ function RootLayout() {
           const { data: { session } } = await supabase.auth.getSession();
           setUser(session?.user ?? null);
           Sentry.setUser(session?.user ? { id: session.user.id, email: session.user.email } : null);
+          setAnalyticsUser(session?.user?.id ?? null);
           await loadProfile();
         }
       } catch (err: any) {
@@ -161,6 +167,7 @@ function RootLayout() {
                 </Stack>
                 <ServiceHealthMonitor />
                 <AuthGate />
+                <AnalyticsScreenTracker />
               </ForceUpdateGate>
             </FeedbackProvider>
           </AppErrorBoundary>

@@ -1,5 +1,6 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
+import { getInstallationId } from "@/lib/analytics/identity";
 
 const LOCAL_API_BASE = "http://localhost:3001";
 const REQUEST_TIMEOUT_MS = 30000;
@@ -55,10 +56,13 @@ export function getNativeAppVersion(): string {
 }
 
 export function getAppRequestHeaders(): Record<string, string> {
+  const installationId = getInstallationId();
   return {
     "x-spotlift-platform": Platform.OS,
     "x-spotlift-version": getNativeAppVersion(),
     "x-spotlift-build": String(getNativeBuildNumber()),
+    // Diagnostic only: the server never uses it for identity or access.
+    ...(installationId ? { "x-spotlift-installation": installationId } : {}),
   };
 }
 
