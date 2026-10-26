@@ -8,7 +8,7 @@ dotenv.config({ path: ".env.local", override: true });
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || process.env.API_BASE_URL;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+const ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
 if (!API_BASE || !SUPABASE_URL || !SERVICE_KEY || !ANON_KEY) {
   throw new Error("Production API and Supabase test configuration are required.");

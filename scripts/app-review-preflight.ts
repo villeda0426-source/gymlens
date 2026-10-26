@@ -25,7 +25,7 @@ async function main() {
   assert(english.common.continue === "Continue", "Camera pre-prompt must use neutral Continue wording");
 
   const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  const anonKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
   assert(supabaseUrl && anonKey, "Supabase URL and anonymous key are required for provider verification");
 
   const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=id_token`, {

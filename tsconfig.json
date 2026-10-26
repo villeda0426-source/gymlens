@@ -21,6 +21,7 @@
     "archive/**",
     "dist/**",
     "dist-server/**",
+    "spotlift-reddit-ops/**",
     "node_modules/**"
   ]
 }

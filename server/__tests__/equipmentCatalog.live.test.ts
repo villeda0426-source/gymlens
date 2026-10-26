@@ -9,7 +9,7 @@ import { createSupabaseEquipmentCatalog } from "../services/equipmentCatalogServ
 import { assessCatalogMatch, labelCodes, resolveManufacturer, resolveTypes } from "../services/equipmentMatching";
 
 const live = process.env.CATALOG_LIVE === "1";
-const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
+const anonKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
 
 function observation(partial: Partial<EquipmentObservation>): EquipmentObservation {
   return {
