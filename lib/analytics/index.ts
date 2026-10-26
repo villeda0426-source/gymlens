@@ -13,7 +13,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Crypto from "expo-crypto";
 import { AppState, Platform } from "react-native";
 import { getApiBase, getAppRequestHeaders, getNativeAppVersion, getNativeBuildNumber } from "@/lib/api";
-import { supabase } from "@/lib/supabase";
 import {
   ANALYTICS_SCHEMA_VERSION,
   sanitizeProperties,
@@ -34,6 +33,9 @@ const BUILD_ENABLED = process.env.EXPO_PUBLIC_ANALYTICS_ENABLED !== "false";
 const SESSION_IDLE_MS = 30 * 60_000;
 const REQUEST_TIMEOUT_MS = 10_000;
 const FLUSH_DEBOUNCE_MS = 3_000;
+// A flush can never hold the outbox longer than this (each request already
+// times out at REQUEST_TIMEOUT_MS; this is the backstop).
+const FLUSH_WATCHDOG_MS = 30_000;
 
 let initPromise: Promise<boolean> | null = null;
 let serverDisabled = false;
@@ -42,8 +44,15 @@ let segmentId = "";
 let sessionId = "";
 let backgroundedAt: number | null = null;
 let currentUserId: string | null = null;
+// Supplied by the root layout's auth listener. Analytics never calls
+// supabase.auth itself: getSession() can wait on the auth lock during
+// sign-out, which once left the outbox stuck until the app restarted.
+let accessToken: string | null = null;
+let initialized = false;
 let queue: ClientEvent[] = [];
 let flushing: Promise<void> | null = null;
+let flushStartedAt = 0;
+let flushRun = 0;
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let failures = 0;
 let retryAfter = 0;
@@ -72,14 +81,8 @@ async function loadOrCreate(key: string): Promise<{ id: string; created: boolean
   return { id, created: true };
 }
 
-async function authHeader(): Promise<Record<string, string>> {
-  try {
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  } catch {
-    return {};
-  }
+function authHeader(): Record<string, string> {
+  return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 }
 
 async function post(path: string, body: unknown, timeoutMs = REQUEST_TIMEOUT_MS): Promise<Response> {
@@ -90,7 +93,7 @@ async function post(path: string, body: unknown, timeoutMs = REQUEST_TIMEOUT_MS)
   try {
     return await fetch(`${base}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...getAppRequestHeaders(), ...(await authHeader()) },
+      headers: { "Content-Type": "application/json", ...getAppRequestHeaders(), ...authHeader() },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -155,6 +158,7 @@ export function initAnalytics(): Promise<boolean> {
           }
         });
 
+        initialized = true;
         if (installation.created) enqueue("app_first_open", {});
         void registerInstallation();
         scheduleFlush(FLUSH_DEBOUNCE_MS);
@@ -219,8 +223,10 @@ function scheduleFlush(delayMs: number) {
 }
 
 export function flushAnalytics(): Promise<void> {
-  if (flushing) return flushing;
-  flushing = (async () => {
+  if (flushing && Date.now() - flushStartedAt < FLUSH_WATCHDOG_MS) return flushing;
+  flushStartedAt = Date.now();
+  const run = ++flushRun;
+  const current = (async () => {
     try {
       while (enabled() && queue.length > 0 && Date.now() >= retryAfter) {
         const batch = nextBatch(queue);
@@ -245,31 +251,44 @@ export function flushAnalytics(): Promise<void> {
       debug("flush failed; retry in", retryAfter - Date.now(), "ms", error);
       scheduleFlush(0);
     } finally {
-      flushing = null;
+      // A watchdog-replaced flush must not clear its successor.
+      if (flushRun === run) flushing = null;
     }
   })();
-  return flushing;
+  flushing = current;
+  return current;
 }
 
-// Called from the root layout whenever the Supabase session changes.
-// Logout (or a direct switch to another account) rotates the identity
-// segment, so activity after it is never attributed to the previous user.
-export function setAnalyticsUser(userId: string | null): void {
-  void (async () => {
-    try {
-      if (!(await initAnalytics())) return;
-      if (userId === currentUserId) return;
-      const previous = currentUserId;
-      if (previous !== null) {
-        segmentId = Crypto.randomUUID();
-        await AsyncStorage.setItem(SEGMENT_KEY, segmentId);
-      }
-      currentUserId = userId;
-      if (userId) void registerInstallation();
-    } catch (error) {
-      debug("identity update failed", error);
+function applyUser(userId: string | null) {
+  if (userId === currentUserId) return;
+  if (currentUserId !== null) {
+    segmentId = Crypto.randomUUID();
+    AsyncStorage.setItem(SEGMENT_KEY, segmentId).catch(() => undefined);
+  }
+  currentUserId = userId;
+  if (userId) void registerInstallation();
+}
+
+// Called from the root layout whenever the Supabase session changes
+// (including token refreshes). Logout, or a direct switch to another
+// account, rotates the identity segment synchronously, so nothing queued
+// after it carries the previous user.
+export function setAnalyticsUser(userId: string | null, token: string | null = null): void {
+  accessToken = userId ? token : null;
+  try {
+    if (initialized) {
+      applyUser(userId);
+      return;
     }
-  })();
+  } catch (error) {
+    debug("identity update failed", error);
+    return;
+  }
+  void initAnalytics()
+    .then((ready) => {
+      if (ready) applyUser(userId);
+    })
+    .catch((error) => debug("identity update failed", error));
 }
 
 // Best effort before sign-out: send what's queued while the outgoing user's
@@ -284,6 +303,8 @@ export async function flushAnalyticsBeforeSignOut(timeoutMs = 2_000): Promise<vo
 
 let lastScreen: string | null = null;
 
+// Callers wait for the screen to settle first (lib/analytics/ScreenTracker),
+// so redirect flashes aren't counted.
 export function trackScreen(screen: string): void {
   if (screen === lastScreen) return;
   lastScreen = screen;

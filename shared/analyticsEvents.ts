@@ -47,8 +47,10 @@ export function isClientEventName(value: unknown): value is ClientEventName {
 const SCREEN_PATTERN = /^[a-z0-9_()[\]\-/]{1,80}$/i;
 
 export function screenNameFromSegments(segments: readonly string[]): string {
-  const name = segments.filter(Boolean).join("/");
-  return name || "index";
+  const parts = segments.filter(Boolean);
+  // A group's index route ("(tabs)") is reported as "(tabs)/index".
+  if (parts.length === 0 || /^\(.*\)$/.test(parts[parts.length - 1])) parts.push("index");
+  return parts.join("/");
 }
 
 export type AnalyticsProperties = Record<string, string | number>;

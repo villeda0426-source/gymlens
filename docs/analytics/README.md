@@ -29,6 +29,10 @@ lib/api.ts headers ─────────▶ request context ─▶ ai_usag
   owns it (`installation_identities`), which links that installation's
   pre-signup events to the account. Later accounts on the same phone start a
   new segment, so their activity is never merged with the previous user's.
+- **Access token**: handed to analytics by the root layout's auth listener
+  (sign-in, token refresh, sign-out). Analytics never calls `supabase.auth`
+  itself: `getSession()` can block on the auth lock during sign-out, which in
+  simulator testing (2026-10-26) froze delivery until the next launch.
 - **User id on events**: stored only when it equals the user verified from the
   bearer token of the delivering request. Otherwise null, resolved later via
   the segment (`analytics.events_resolved`). Client headers and body fields
@@ -46,7 +50,7 @@ lib/api.ts headers ─────────▶ request context ─▶ ai_usag
 | `plan_generated` | app | `store/coachTrainerStore.ts` `setPlan(plan, origin)`; origins at `store/planSetupStore.ts:197`, `app/(tabs)/trainer.tsx:334,709`, `app/(tabs)/plan.tsx:1268`, `app/import-routine.tsx:42` | a usable plan is saved as the active plan (survey option chosen, Coach plan ready/chosen, end-of-plan feedback plan, imported routine) | origin, days_per_week, timeline_weeks |
 | `workout_started` | database | trigger `analytics_workout_started` on `workout_sessions` insert | a workout session row is created (guided session start, or first exercise ticked on the Plan tab) | kind plan/adhoc, plan_week, session_index |
 | `workout_completed` | app | `store/coachTrainerStore.ts` `markExerciseCompleted` (plan); `app/workout-session.tsx` finish (ad-hoc, after the save succeeds) | a plan workout's last exercise is saved as done; an ad-hoc session's completion is saved | kind, plan_week, session_index |
-| `screen_view` | app | `lib/analytics/ScreenTracker.tsx`, mounted once in `app/_layout.tsx` | the active route pattern changes (initial screen included; same screen twice in a row is ignored) | `screen` = route pattern such as `equipment/[id]` |
+| `screen_view` | app | `lib/analytics/ScreenTracker.tsx`, mounted once in `app/_layout.tsx` | the active route pattern changes and stays for 500 ms (initial screen included; redirect flashes and the same screen twice in a row are ignored) | `screen` = route pattern such as `equipment/[id]`; a group's index is `(tabs)/index` |
 
 Rules:
 - Success events fire only after the action succeeded. Database events fire in

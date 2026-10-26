@@ -106,7 +106,7 @@ function RootLayout() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       Sentry.setUser(session?.user ? { id: session.user.id, email: session.user.email } : null);
-      setAnalyticsUser(session?.user?.id ?? null);
+      setAnalyticsUser(session?.user?.id ?? null, session?.access_token ?? null);
       loadProfile();
     });
 
@@ -116,7 +116,7 @@ function RootLayout() {
       }
       setUser(session?.user ?? null);
       Sentry.setUser(session?.user ? { id: session.user.id, email: session.user.email } : null);
-      setAnalyticsUser(session?.user?.id ?? null);
+      setAnalyticsUser(session?.user?.id ?? null, session?.access_token ?? null);
       loadProfile();
     });
 
@@ -127,7 +127,7 @@ function RootLayout() {
           const { data: { session } } = await supabase.auth.getSession();
           setUser(session?.user ?? null);
           Sentry.setUser(session?.user ? { id: session.user.id, email: session.user.email } : null);
-          setAnalyticsUser(session?.user?.id ?? null);
+          setAnalyticsUser(session?.user?.id ?? null, session?.access_token ?? null);
           await loadProfile();
         }
       } catch (err: any) {

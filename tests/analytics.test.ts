@@ -71,6 +71,7 @@ test("screen names come from route segments, not values", () => {
   assert.equal(screenNameFromSegments(["(tabs)", "plan"]), "(tabs)/plan");
   assert.equal(screenNameFromSegments(["equipment", "[id]"]), "equipment/[id]");
   assert.equal(screenNameFromSegments([]), "index");
+  assert.equal(screenNameFromSegments(["(tabs)"]), "(tabs)/index");
 });
 
 test("fact-derived ids are stable UUIDs", () => {
