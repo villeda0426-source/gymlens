@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Privacy Policy — SpotLift</title>
-  <meta name="description" content="Privacy Policy for SpotLift, the AI-powered gym equipment identifier for iOS." />
+  <meta name="description" content="How SpotLift handles account, fitness, AI, analytics, and diagnostic data." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
@@ -239,100 +239,108 @@
     <div class="page-header">
       <div class="badge">Legal</div>
       <h1>Privacy Policy</h1>
-      <p class="meta">App: SpotLift &nbsp;·&nbsp; Developer: Adan Villeda &nbsp;·&nbsp; Last updated: May 30, 2026</p>
+      <p class="meta">App: SpotLift &nbsp;·&nbsp; Developer: Adan Villeda &nbsp;·&nbsp; Last updated: October 25, 2026</p>
     </div>
 
     <div class="summary-card">
       <h2>The short version</h2>
       <ul class="summary-list">
-        <li>SpotLift does not collect or sell your personal data</li>
-        <li>Camera access is used only to scan gym equipment — images are not stored</li>
-        <li>No third-party tracking or advertising SDKs</li>
-        <li>Optional account creation uses Supabase for authentication only</li>
-        <li>You are always in control of your data</li>
+        <li>An account is required to use SpotLift’s training features.</li>
+        <li>We collect account details, training information, app usage, and diagnostics to operate and improve SpotLift.</li>
+        <li>Equipment photos and relevant Coach information are sent to OpenAI to provide AI features.</li>
+        <li>Usage analytics is linked to your account after sign-in; Sentry diagnostics includes your user ID and email.</li>
+        <li>We do not sell your data or use it for advertising or tracking across other companies’ apps and websites.</li>
       </ul>
     </div>
 
     <section>
       <h2>1. About This Policy</h2>
-      <p>This Privacy Policy describes how SpotLift ("the App"), developed by Adan Villeda ("we", "us"), handles information when you use our iOS application. We are committed to protecting your privacy and being transparent about our practices.</p>
+      <p>This policy explains how SpotLift, developed by Adan Villeda ("we" or "us"), collects, uses, and shares information when you use the app and its related services. It includes the account-linked analytics introduced for build 50.</p>
     </section>
 
     <section>
-      <h2>2. Information We Do Not Collect</h2>
-      <p>SpotLift is designed with privacy in mind. We do <strong>not</strong> collect, store, or sell:</p>
+      <h2>2. Information We Collect</h2>
       <ul>
-        <li>Personal identifiers (name, address, email) from unauthenticated users</li>
-        <li>Photos or images taken through the camera</li>
-        <li>Location data</li>
-        <li>Device identifiers or advertising IDs</li>
-        <li>Browsing history or usage patterns sold to third parties</li>
-        <li>Financial or payment information</li>
-        <li>Health or fitness data beyond what you explicitly save in the app</li>
+        <li><strong>Account information:</strong> your email address, user ID, name if provided, and sign-in method, such as email or Sign in with Apple. An account is required for training features.</li>
+        <li><strong>Training profile:</strong> your goals, training schedule, session length, equipment, experience level, and birth year.</li>
+        <li><strong>Health and training feedback:</strong> injury or health limitations you choose to share through the consent flow, and pain, energy, difficulty, or other information you submit in workout feedback or Coach messages.</li>
+        <li><strong>Training activity:</strong> plans, workout sessions, exercises, sets, repetitions, weights, completion history, and saved or scanned equipment.</li>
+        <li><strong>AI feature content:</strong> equipment images you submit and messages, training context, and feedback used to generate Coach responses and plans. Some Coach requests and results are saved to support background processing and your training experience.</li>
+        <li><strong>Support and feedback:</strong> ratings, categories, messages, and diagnostic details you submit when reporting a problem.</li>
+        <li><strong>Usage analytics:</strong> first app open, signup and survey steps, plan generation, workout starts and completions, screen names, timestamps, and limited training attributes such as goal, schedule, and experience level. We also record app version, build number, platform, OS version, and random installation and session identifiers.</li>
+        <li><strong>Diagnostics:</strong> crash reports, errors, performance traces, and app and device context. Sentry receives your user ID and email address when you are signed in.</li>
+        <li><strong>AI usage records:</strong> user ID, feature, provider and model, token counts, estimated cost, timing, success or failure, request ID, and app, build, platform, and installation metadata. These usage records do not contain prompt or response text; the content used to provide AI features is handled separately as described above.</li>
       </ul>
     </section>
 
     <section>
-      <h2>3. Camera Usage</h2>
-      <p>SpotLift requests access to your device camera solely to scan and identify gym equipment. When you point the camera at a machine:</p>
+      <h2>3. Camera, Photos, and Voice Input</h2>
+      <p>With your permission, SpotLift uses the camera or a photo you select to identify gym equipment. Images are transmitted through our service to OpenAI. We do not save the original scan photos in our application database, but our AI provider may retain submitted content under its data controls and policies. Equipment identification results and scan history may be saved.</p>
+      <p>If you use voice input, your device’s speech recognition service turns speech into text for Coach. Processing may involve Apple or your device’s speech service. The resulting text is handled like a typed Coach message. SpotLift does not upload voice recordings to its own API.</p>
+      <p>You can manage camera, photo, microphone, and speech recognition permissions in your device settings.</p>
+    </section>
+
+    <section>
+      <h2>4. How We Use Information</h2>
+      <p>We use information to authenticate you, save your training activity, identify equipment, personalize plans and Coach guidance, respond to support requests, protect and operate the service, investigate crashes, measure AI usage and costs, and improve SpotLift.</p>
+      <p>We do not sell your personal information, use it for targeted advertising, or share it with data brokers. We do not use it to track you across other companies’ apps and websites.</p>
+    </section>
+
+    <section>
+      <h2>5. Analytics and Identity</h2>
+      <p>Before signup, usage events are associated with a random identifier stored by the app. After successful signup or sign-in, we link activity from that sign-in period, including preceding signup steps, to your account. This helps us understand onboarding, common screens, and where users stop progressing.</p>
+      <p>Signing out starts a new identity period to separate accounts on a shared device. Clearing app data creates a new installation identifier; a fresh reinstall generally does too, although device backups may restore local data. Our first-party analytics does not use advertising identifiers, hardware serial numbers, or fingerprinting.</p>
+      <p>Analytics event properties exclude names, emails, Coach message text, scan images, and actual route parameter values. This does not make the events anonymous: they can be linked to your account. Sentry crash reporting is separate and includes email as described above.</p>
+    </section>
+
+    <section>
+      <h2>6. Service Providers and Sharing</h2>
+      <p>We use service providers to deliver SpotLift:</p>
       <ul>
-        <li>The image is processed in real time to identify the equipment</li>
-        <li>Images are sent securely to our AI identification service and are not stored on our servers</li>
-        <li>No photos are saved to your camera roll unless you explicitly choose to do so</li>
-        <li>Camera access can be revoked at any time in iOS Settings → SpotLift → Camera</li>
+        <li><strong>Supabase:</strong> account authentication and storage of account, training, and first-party analytics records.</li>
+        <li><strong>OpenAI:</strong> equipment image analysis, Coach responses, and workout planning, using the images and relevant training information sent for those features. Provider retention is governed by its applicable settings and <a href="https://developers.openai.com/api/docs/guides/your-data">API data controls</a>.</li>
+        <li><strong>Sentry:</strong> crash and performance reporting, including signed-in user IDs and email addresses.</li>
+        <li><strong>Railway:</strong> hosting our backend API and operational logs.</li>
+        <li><strong>YouTube / Google:</strong> obtaining and displaying equipment tutorial videos. Opening videos may involve YouTube’s own services and policies.</li>
+        <li><strong>Apple and device speech services:</strong> sign-in and optional speech-to-text features, as applicable.</li>
+        <li><strong>Google / Gmail:</strong> processing support correspondence and feedback sent through our email feedback feature.</li>
+        <li><strong>Netlify:</strong> hosting our public website and privacy policy; website requests are subject to the host’s processing of connection and operational data.</li>
       </ul>
+      <p>Providers process information under their applicable terms, settings, and privacy policies. We may also disclose information when required by law, to protect rights and security, or as part of a business transfer with appropriate privacy protections.</p>
     </section>
 
     <section>
-      <h2>4. Optional Account Creation</h2>
-      <p>SpotLift can be used without creating an account. If you choose to create an account to save equipment or access additional features:</p>
-      <ul>
-        <li>Authentication is handled by <strong>Supabase</strong>, a secure third-party service</li>
-        <li>We store only your email address and the equipment you choose to save</li>
-        <li>Your email is never sold, rented, or shared with advertisers</li>
-        <li>You may delete your account and all associated data at any time by contacting us</li>
-      </ul>
+      <h2>7. Retention and Account Deletion</h2>
+      <p>Account and training records are generally kept while your account exists. You can request deletion through the app’s Profile → Delete account flow or by contacting us. The deletion flow removes account records, training records, AI usage records associated with your user ID, and analytics rows directly linked to your account.</p>
+      <p>Raw usage events are subject to a 13-month retention limit, with daily cleanup while the backend retention task is operating. Events awaiting delivery on your device expire after 7 days; the queue is also limited to 500 events.</p>
+      <p>Events stored only under a random installation or identity-period identifier can remain until the analytics retention limit, including earlier events whose account link is removed during account deletion. Deleting the app alone does not delete server-side account data.</p>
+      <p>Third-party diagnostics, AI provider records, support correspondence, backups, and operational logs have separate retention rules. The app’s account deletion flow does not automatically erase every provider’s records. Contact us for help with an access or deletion request concerning those records. Information may also be retained where needed to meet legal obligations or protect service security.</p>
     </section>
 
     <section>
-      <h2>5. Analytics & Crash Reporting</h2>
-      <p>We may collect anonymous, non-identifiable usage data (such as which equipment categories are scanned most often) to improve the app. This data cannot be linked back to you individually and is never shared with advertising networks.</p>
+      <h2>8. Your Choices and Rights</h2>
+      <p>You can update supported profile information, choose what to include in Coach messages and feedback, decline to share health limitation details in the consent flow, manage device permissions, and request account deletion. Depending on where you live, you may also have rights to access, correct, delete, or obtain a copy of personal information, or object to certain uses. Contact us to make a request.</p>
+      <p>SpotLift does not currently provide an in-app switch for usage analytics. Device permission settings control camera, photos, microphone, and speech access; they do not disable account-linked usage analytics or crash reporting.</p>
     </section>
 
     <section>
-      <h2>6. Third-Party Services</h2>
-      <p>The App uses the following third-party services to function:</p>
-      <ul>
-        <li><strong>Supabase</strong> — authentication and database (optional, account users only)</li>
-        <li><strong>OpenAI</strong> — equipment identification, workout guidance, and Coach responses</li>
-        <li><strong>YouTube Data API</strong> — fetching tutorial videos for identified equipment</li>
-      </ul>
-      <p>None of these services receive your personal information for advertising or tracking purposes. Each service operates under its own privacy policy.</p>
+      <h2>9. Security and International Processing</h2>
+      <p>We use access controls and encrypted network connections to protect information. No system can guarantee absolute security. Our service providers may process information in countries other than your own, subject to applicable data protection requirements.</p>
     </section>
 
     <section>
-      <h2>7. Data Retention</h2>
-      <p>If you use the app without an account, no personal data is retained after your session ends. If you create an account, your saved equipment list is retained until you delete your account. You may request deletion of all your data at any time by emailing us.</p>
+      <h2>10. Children’s Privacy</h2>
+      <p>SpotLift is not directed at children under 13. If you believe a child under 13 has provided personal information, contact us so we can investigate and address the request.</p>
     </section>
 
     <section>
-      <h2>8. Children's Privacy</h2>
-      <p>SpotLift is not directed at children under the age of 13. We do not knowingly collect personal information from children. If you believe a child has provided us with personal information, please contact us and we will delete it promptly.</p>
-    </section>
-
-    <section>
-      <h2>9. Changes to This Policy</h2>
-      <p>We may update this Privacy Policy from time to time. Any changes will be posted on this page with an updated date. Continued use of the App after changes constitutes acceptance of the revised policy.</p>
-    </section>
-
-    <section>
-      <h2>10. Your Rights</h2>
-      <p>Depending on your location, you may have rights regarding your personal data, including the right to access, correct, or delete data we hold about you. To exercise any of these rights, please contact us using the information below.</p>
+      <h2>11. Changes and Contact</h2>
+      <p>We may update this policy as SpotLift changes. We will post the revised policy with an updated date and provide additional notice where required. For privacy questions or requests, contact Adan Villeda at <a href="mailto:villeda.0426@gmail.com">villeda.0426@gmail.com</a>.</p>
     </section>
 
     <div class="contact-card">
       <p style="font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: #1a1a1a; margin-bottom: 6px;">Questions or requests?</p>
-      <p>Reach out and we'll respond within 48 hours.</p>
+      <p>Contact us about your information or to request access, correction, or deletion.</p>
       <a href="mailto:villeda.0426@gmail.com">villeda.0426@gmail.com</a>
     </div>
 
