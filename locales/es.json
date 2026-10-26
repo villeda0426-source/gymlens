@@ -818,7 +818,7 @@
       "label": "Días de descanso",
       "recovery": "Según recuperación",
       "weekly": "Uno por semana",
-      "recovery_hint": "Entrena días seguidos; el descanso cae donde se juntarían sesiones fuertes de los mismos músculos, más uno al cerrar cada semana.",
+      "recovery_hint": "Entrena días seguidos con un día de descanso por semana, aprox. — se adelanta si se juntarían sesiones fuertes de los mismos músculos.",
       "weekly_hint": "Un día de descanso cierra cada semana. Entrena el resto de tus días seguidos."
     }
   },

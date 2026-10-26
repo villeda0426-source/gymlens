@@ -21,8 +21,8 @@ import {
   type Slot,
   type Tier,
 } from "./coachProgramming";
-import type { PlanSetupGoal, PlanSetupLocation, PlanSetupExperience, SessionMinutes } from "@/store/planSetupStore";
-import type { CoachExercise, CoachPlan, CoachSession, Units } from "@/lib/coachTrainer";
+import type { PlanSetupGoal, PlanSetupLocation, PlanSetupExperience, SessionMinutes } from "../store/planSetupStore";
+import type { CoachExercise, CoachPlan, CoachSession, Units } from "../lib/coachTrainer";
 
 type TemplateGoal = keyof typeof PRESCRIPTION.goalAdjust;
 

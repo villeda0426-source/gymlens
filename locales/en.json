@@ -818,7 +818,7 @@
       "label": "Rest days",
       "recovery": "By recovery",
       "weekly": "One per week",
-      "recovery_hint": "Train back to back; a rest lands where hard sessions for the same muscles would stack up, plus one to close each week.",
+      "recovery_hint": "Train back to back with about one rest day a week — moved earlier if hard sessions for the same muscles would stack up.",
       "weekly_hint": "One rest day closes each week. Train the rest of your days back to back."
     }
   },

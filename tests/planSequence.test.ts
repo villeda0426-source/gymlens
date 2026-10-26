@@ -4,6 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildPlanSequence, restAfterIndexes, type PlanSequenceItem } from "../lib/planSequence";
+import { buildTemplatePlan } from "../shared/buildTemplatePlan";
 import type { CoachPlan, CoachSession, RestPreference } from "../lib/coachTrainer";
 
 const LEVELS: CoachPlan["experience_level"][] = ["beginner", "intermediate", "advanced"];
@@ -65,6 +66,7 @@ function plan(days: number, level: CoachPlan["experience_level"], split: string[
 
 const sequence = (p: CoachPlan) => buildPlanSequence({ plan: p, completedExerciseIds: [], sessionCompletedAt: [] });
 const workouts = (items: PlanSequenceItem[]) => items.filter((item) => item.type === "workout");
+const pattern = (items: PlanSequenceItem[]) => items.map((item) => (item.type === "rest" ? "R" : "W")).join("");
 const restsInWeek = (items: PlanSequenceItem[], week: number) => items.filter((item) => item.type === "rest" && item.week === week).length;
 
 function longestTrainingRun(items: PlanSequenceItem[]): number {
@@ -106,9 +108,10 @@ for (const days of [3, 4, 5, 6]) {
 }
 
 test("hard same-muscle sessions are split up: full body every day is not stacked", () => {
+  const cap = { beginner: 2, intermediate: 3, advanced: 3 };
   for (const level of LEVELS) {
     const items = sequence(plan(4, level, ["full"]));
-    assert.ok(longestTrainingRun(items) <= 2, `${level}: ${longestTrainingRun(items)} full-body days in a row`);
+    assert.ok(longestTrainingRun(items) <= cap[level], `${level}: ${longestTrainingRun(items)} full-body days in a row`);
   }
 });
 
@@ -117,10 +120,56 @@ test("upper/lower alternation trains consecutive days with one rest closing the 
   assert.deepEqual([...rests], [3, 7]);
 });
 
-test("a beginner on 3 full-body days still gets recovery between them (recovery preference)", () => {
-  const items = sequence(plan(3, "beginner", ["full"]));
-  assert.equal(longestTrainingRun(items), 1);
-  // ...unless they choose one rest day per week.
+// The reported bug: a beginner's default plan (2-3 full-body days) came out
+// Workout, Rest, Workout, Rest...
+test("a beginner on 2-3 full-body days trains back to back instead of resting after every workout", () => {
+  for (const days of [2, 3]) {
+    const items = sequence(plan(days, "beginner", ["full"]));
+    assert.equal(workouts(items).length, days * 3);
+    assert.equal(longestTrainingRun(items), 2, pattern(items));
+    assert.ok(!pattern(items).includes("WRWR"), pattern(items));
+  }
+  // ...and one rest day per week is still there for anyone who wants it.
   const weekly = sequence(plan(3, "beginner", ["full"], "weekly"));
   assert.equal(restsInWeek(weekly, 1), 1);
+  assert.equal(longestTrainingRun(weekly), 3);
+});
+
+test("a recovery rest mid-week counts as that week's rest day: 3 full-body days get one rest a week", () => {
+  for (const level of ["intermediate", "advanced"] as const) {
+    const items = sequence(plan(3, level, ["full"]));
+    assert.equal(pattern(items), "WWWRWWWRWWW");
+  }
+});
+
+// Every plan the template engine builds (what Build My Plan shows) — all
+// experience levels, 2-6 days, both plan options.
+test("template plans never alternate workout/rest and keep to about one rest a week", () => {
+  for (const experience of LEVELS) {
+    for (const daysPerWeek of [2, 3, 4, 5, 6]) {
+      for (const style of ["standard", "alternate"] as const) {
+        const built = buildTemplatePlan({
+          goal: "hypertrophy",
+          daysPerWeek,
+          sessionMinutes: 45,
+          location: "full_gym",
+          experience,
+          avoidAreas: [],
+          lightModerate: false,
+          units: "lbs",
+          language: "en",
+          style,
+        });
+        assert.ok(built);
+        const weekly = built.sessions.slice(0, daysPerWeek);
+        const expanded = { ...built, sessions: Array.from({ length: daysPerWeek * 3 }, (_, index) => weekly[(index % daysPerWeek) % weekly.length]) };
+        const items = sequence(expanded);
+        const label = `${experience} ${daysPerWeek}d ${style}: ${pattern(items)}`;
+        assert.equal(workouts(items).length, daysPerWeek * 3, label);
+        assert.ok(!pattern(items).includes("WRWR"), label);
+        assert.ok(longestTrainingRun(items) >= 2, label);
+        for (const week of [1, 2, 3]) assert.ok(restsInWeek(items, week) <= 2, label);
+      }
+    }
+  }
 });

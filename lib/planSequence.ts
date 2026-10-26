@@ -4,10 +4,12 @@
 //
 // Rest days are placed by rule, so every plan gets them whether it came from
 // the template engine, the AI, or an imported routine. Training on
-// consecutive days is the norm, not the exception:
-// - one rest closes out each week of the block (when the week has room)
-// - extra rests only break up hard sessions on the same muscles: beginners
-//   never do two of those in a row, everyone else at most two
+// consecutive days is the norm, not the exception, and the plan never
+// alternates workout/rest:
+// - about one rest per week of the block: it closes the week, unless the
+//   week already had a recovery rest
+// - extra rests only break up runs of hard sessions on the same muscles:
+//   beginners at most two of those in a row, everyone else three
 // - a generous cap on consecutive training days, by experience
 // Someone who'd rather just take one rest day a week can choose that
 // instead (plan.rest_preference "weekly"): one rest closes each week and
@@ -42,11 +44,13 @@ const MAX_CONSECUTIVE_DAYS: Record<CoachPlan["experience_level"], number> = {
   advanced: 5,
 };
 
-// How many hard same-muscle sessions may run back to back.
+// How many hard same-muscle sessions may run back to back. Two hard
+// full-body days in a row is fine even for a beginner; a third is where
+// recovery starts to suffer.
 const MAX_SAME_MUSCLE_RUN: Record<CoachPlan["experience_level"], number> = {
-  beginner: 1,
-  intermediate: 2,
-  advanced: 2,
+  beginner: 2,
+  intermediate: 3,
+  advanced: 3,
 };
 
 type MuscleGroup = "legs" | "push" | "pull" | "core";
@@ -118,9 +122,7 @@ export function restAfterIndexes(plan: CoachPlan): Set<number> {
   const sessions = plan.sessions;
   const daysPerWeek = Math.max(1, Math.round(plan.days_per_week || 1));
   const maxStreak = MAX_CONSECUTIVE_DAYS[plan.experience_level] ?? 4;
-  // Beginners only space out same-muscle sessions when the week has room
-  // for it; someone who chose 4+ days still gets their 4+ days.
-  const maxSameMuscleRun = daysPerWeek >= 4 ? 2 : MAX_SAME_MUSCLE_RUN[plan.experience_level] ?? 2;
+  const maxSameMuscleRun = MAX_SAME_MUSCLE_RUN[plan.experience_level] ?? 3;
   // A week has 7 days: whatever training doesn't use is room for rest.
   const restBudgetPerWeek = Math.max(0, 7 - daysPerWeek);
 
@@ -145,10 +147,11 @@ export function restAfterIndexes(plan: CoachPlan): Set<number> {
 
     const overlaps = sharesHardMuscles(session, next);
     const endOfWeek = indexInWeek === daysPerWeek - 1;
+    // A recovery rest earlier in the week already is that week's rest day.
     const needsRest =
       streak >= maxStreak ||
       (overlaps && sameMuscleRun >= maxSameMuscleRun) ||
-      (endOfWeek && restBudgetPerWeek > 0);
+      (endOfWeek && restsThisWeek === 0);
 
     if (needsRest && restsThisWeek < restBudgetPerWeek) {
       rests.add(index);
