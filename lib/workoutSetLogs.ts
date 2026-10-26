@@ -216,12 +216,17 @@ export async function upsertSet(
 
 // Renumbering after a delete updates the row by id — an upsert keyed on
 // (workout_instance_id, set_number) would insert a new row instead.
+// Row level security refuses a write by matching no rows, not with an
+// error — so check a row was actually changed, or the set would look
+// removed until the log is reopened.
 export async function updateSetNumber(setId: string, setNumber: number): Promise<void> {
-  const { error } = await supabase.from("workout_set_logs").update({ set_number: setNumber }).eq("id", setId);
+  const { data, error } = await supabase.from("workout_set_logs").update({ set_number: setNumber }).eq("id", setId).select("id");
   if (error) throw error;
+  if (!data?.length) throw new Error("Set was not renumbered");
 }
 
 export async function deleteSet(setId: string): Promise<void> {
-  const { error } = await supabase.from("workout_set_logs").delete().eq("id", setId);
+  const { data, error } = await supabase.from("workout_set_logs").delete().eq("id", setId).select("id");
   if (error) throw error;
+  if (!data?.length) throw new Error("Set was not deleted");
 }

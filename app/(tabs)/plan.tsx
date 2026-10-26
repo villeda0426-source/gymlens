@@ -393,11 +393,14 @@ function WorkoutDetailModal({
   onOpenStretch,
   sessionNumber,
   onStart,
+  inProgress,
 }: {
   visible: boolean;
   session: CoachPlan["sessions"][number] | null;
   sessionNumber: number | null;
   onStart: () => void;
+  // Started and not finished (store/activeWorkoutStore.ts).
+  inProgress: boolean;
   completedIds: string[];
   completingId: string | null;
   onClose: () => void;
@@ -437,7 +440,7 @@ function WorkoutDetailModal({
           {completedCount < session.exercises.length ? (
             <TouchableOpacity style={styles.detailStartButton} activeOpacity={0.86} onPress={onStart} accessibilityRole="button">
               <Ionicons name="play" size={16} color={coachColors.card} />
-              <Text style={styles.detailStartText}>{t(completedCount > 0 ? "plan.continue_workout" : "home.start_workout")}</Text>
+              <Text style={styles.detailStartText}>{t(inProgress ? "plan.resume_workout" : completedCount > 0 ? "plan.continue_workout" : "home.start_workout")}</Text>
             </TouchableOpacity>
           ) : null}
 
@@ -1092,9 +1095,20 @@ export default function PlanScreen() {
     // has real content immediately instead of a thinner one it builds itself.
     const fallback = fallbackExerciseGuide(exercise, i18n.language?.startsWith("es") === true);
     setCurrentWorkoutGuide(fallback);
-    reopenWorkoutLabel.current = session.day_label;
     setWorkoutDetailVisible(false);
     const sessionIndex = plan?.sessions.findIndex((item) => item.day_label === session.day_label) ?? -1;
+    // The workout in progress: open the log from inside its session, so
+    // Back returns to the workout (and its sets and place) rather than here.
+    if (sessionIndex >= 0 && isActiveFor(activeWorkout, activeThreadId ?? null, sessionIndex, session.day_label)) {
+      requestAnimationFrame(() =>
+        router.push({
+          pathname: "/workout-session",
+          params: { sessionIndex: String(sessionIndex), openExercise: exercise.exercise_id },
+        })
+      );
+      return;
+    }
+    reopenWorkoutLabel.current = session.day_label;
     const planWeek = sessionIndex >= 0 ? Math.floor(sessionIndex / weekSize) + 1 : undefined;
     requestAnimationFrame(() =>
       router.push({
@@ -1446,6 +1460,9 @@ export default function PlanScreen() {
         visible={workoutDetailVisible}
         session={selectedSession}
         sessionNumber={selectedSessionIndex >= 0 ? selectedSessionIndex + 1 : null}
+        inProgress={
+          selectedSessionIndex >= 0 && isActiveFor(activeWorkout, activeThreadId ?? null, selectedSessionIndex, selectedSession?.day_label)
+        }
         onStart={() => {
           if (selectedSessionIndex >= 0) handleStartWorkout(selectedSessionIndex);
         }}

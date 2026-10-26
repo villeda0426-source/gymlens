@@ -69,11 +69,14 @@ export default function WorkoutSessionScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { exercise: adHocExercise, sessionIndex: sessionIndexParam, equipmentId } = useLocalSearchParams<{
+  const { exercise: adHocExercise, sessionIndex: sessionIndexParam, equipmentId, openExercise } = useLocalSearchParams<{
     exercise?: string;
     muscles?: string;
     sessionIndex?: string;
     equipmentId?: string;
+    // An exercise of this workout to open in the Workout Log right away (the
+    // Plan tab, for a workout in progress), so Back from the log lands here.
+    openExercise?: string;
   }>();
   const {
     plan,
@@ -613,6 +616,14 @@ export default function WorkoutSessionScreen() {
       },
     });
   };
+
+  const openedRequestedLog = useRef(false);
+  useEffect(() => {
+    if (!restored || !openExercise || openedRequestedLog.current) return;
+    openedRequestedLog.current = true;
+    void openExerciseLog(openExercise);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restored, openExercise]);
 
   const askCoachAboutExercise = () => {
     if (!currentExercise) return;
