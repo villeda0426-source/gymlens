@@ -41,3 +41,7 @@ The twelve optimized screenshots total about 526 KB. Offscreen screenshots load 
 Visually reviewed at 1440, 701, 390, and 320 CSS pixels. Exercised tour selection and keyboard navigation, gallery filtering, screenshot enlargement, dialog keyboard navigation and Escape, focus restoration, and the interactive Coach examples in the browser. Static checks cover JavaScript syntax, all referenced local assets, unique IDs, single H1, section links, three App Store links, and the support address.
 
 Reduced motion disables animation and smooth scrolling. Buttons have visible keyboard focus; tabs expose selection and roving focus; the modal uses native dialog behavior. No network request is made when someone uses the tour, filters, examples, or viewer.
+
+## Android signup restored
+
+The homepage links to `/android-beta` in the hero, navigation, final download section, and footer. That page links to the original Google Forms tester application and the existing Google Play opt-in URL for invited accounts. The original form was opened and verified to show the SpotLift Android beta title and tester questions; no application was submitted. The website does not claim a signup succeeded or collect tester data itself.
